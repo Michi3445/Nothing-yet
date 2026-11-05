@@ -712,8 +712,8 @@
     const to = zoomed ? zoomView() : fitView();
     if (instant || !cam || reducedMotion) return setCam(to);
     // weicher Kamerafahrt-Zoom: Faktor logarithmisch, sanft an- und auslaufend
-    const from = cam, t0 = performance.now(), dur = 2400;
-    const ease = u => (1 - Math.cos(Math.PI * u)) / 2;
+    const from = cam, t0 = performance.now(), dur = 1800;
+    const ease = u => 1 - Math.pow(1 - u, 3);
     (function step(now) {
       const u = Math.min(1, (now - t0) / dur), e = ease(u);
       setCam({ k: from.k * Math.pow(to.k / from.k, e), cx: from.cx + (to.cx - from.cx) * e, cy: from.cy + (to.cy - from.cy) * e });
@@ -887,15 +887,23 @@
     setTimeout(() => { location.href = t.url; }, 1300);
   }
 
+  // Drücken während Rauschen / Laden: sofort aus dem Fernseher herauszoomen
+  function skipIntro() {
+    timers.forEach(clearTimeout); timers.length = 0;
+    clearInterval(spinTimer);
+    screen.classList.remove('static'); av.classList.add('hide');
+    if (!screen.classList.contains('ready')) { screen.classList.add('ready'); t0 = performance.now(); clearInterval(timer); timer = setInterval(tick, 250); }
+    enterShelf(false);
+  }
   function enterShelf(fast) {
     state = 'shelf';
     try { sessionStorage.setItem('vhs-seen', '1'); } catch (e) {}
+    zoomed = false;
+    applyView(fast);
     screen.classList.add('glitch', 'static');
     setTimeout(() => {
       screen.classList.remove('glitch', 'static', 'inserting');
       screen.classList.add('shelf-mode');
-      zoomed = false;
-      applyView(fast);
       hint.textContent = touch ? 'KASSETTE ANTIPPEN' : '↑ ↓ ← → WÄHLEN · ENTER ABSPIELEN';
       const keep = sel; sel = -1; select(keep < 0 ? 0 : keep);
     }, fast ? 0 : 350);
@@ -1019,6 +1027,7 @@
     if (typeof h === 'string' && h.startsWith('seg')) return setLevel(+h.slice(3));
     if (state === 'off') return powerOn();
     if (state === 'title') return enterShelf(false);
+    if (state === 'booting' || state === 'loading') return skipIntro();
     if (state === 'shelf' && typeof h === 'number') { if (h === sel) play(); else select(h); }
   });
   document.addEventListener('keydown', e => {
@@ -1028,6 +1037,7 @@
     startMusic();
     if (state === 'off') return powerOn();
     if (state === 'title') return enterShelf(false);
+    if (state === 'booting' || state === 'loading') return skipIntro();
     if (state !== 'shelf') return;
     const k = e.key;
     if (k === 'ArrowUp') { e.preventDefault(); move(0, -1); }
