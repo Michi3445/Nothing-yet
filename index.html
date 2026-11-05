@@ -53,7 +53,7 @@
     opacity: 0; transition: opacity .3s;
     image-rendering: pixelated;
   }
-  .screen.on canvas.noise { opacity: .16; }
+  .screen.on canvas.noise { opacity: .22; }
   .screen.static canvas.noise, .screen.flash canvas.noise { opacity: .85; }
 
   .scanlines, .glass, .tracking { position: absolute; inset: 0; pointer-events: none; }
@@ -62,10 +62,81 @@
     z-index: 5;
   }
   .glass {
-    background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(0,0,0,.7) 100%),
-                linear-gradient(160deg, rgba(255,255,255,.08), transparent 35%);
+    background: radial-gradient(ellipse at 50% 50%, transparent 50%, rgba(0,0,0,.75) 100%),
+                linear-gradient(160deg, rgba(255,255,255,.09), transparent 35%);
+    box-shadow: inset 0 0 4px 1px #000, inset 0 0 12px 3px rgba(0,0,0,.55);
     z-index: 6;
   }
+  /* zweite Störlinie, die das Bild seitlich verzieht */
+  .jitter {
+    position: absolute; left: -5%; right: -5%; height: 4%; top: 30%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.12) 20%, rgba(255,46,136,.15) 50%, rgba(46,242,255,.12) 80%, transparent);
+    z-index: 4; display: none;
+  }
+  .screen.on .jitter { display: block; animation: jit 3.7s steps(1) infinite; }
+  @keyframes jit {
+    0%, 70% { top: 120%; }
+    71% { top: 22%; transform: translateX(-2%); }
+    74% { top: 61%; transform: translateX(3%); height: 2%; }
+    77% { top: 83%; transform: translateX(-1%); }
+    80%, 100% { top: 120%; }
+  }
+  .screen.on .content { animation: poweron .55s cubic-bezier(.2,.8,.2,1) both, flicker 4s infinite 1s, wobble 2.3s steps(1) infinite 1s; }
+  @keyframes wobble {
+    0%, 92%, 100% { transform: none; }
+    93% { transform: translateX(.6%) skewX(-1deg); }
+    95% { transform: translateX(-.5%); }
+    97% { transform: translateX(.3%) skewX(.6deg); }
+  }
+
+  /* Spiel-Vorschau auf dem Fernseher */
+  .p-img { position: absolute; inset: -4%; display: none; overflow: hidden; }
+  .p-img.has { display: block; }
+  .p-img img {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    filter: url(#vhs-rgb) saturate(1.35) contrast(1.15) brightness(.85) blur(.15px);
+    animation: pan 14s ease-in-out infinite alternate, shake 1.7s steps(1) infinite;
+  }
+  .p-img img.ghost { opacity: .28; mix-blend-mode: screen; transform: translateX(2.5%); filter: blur(.6px) saturate(2) hue-rotate(-20deg); animation: none; }
+  @keyframes pan { from { object-position: 0% 20%; scale: 1.06; } to { object-position: 100% 70%; scale: 1.16; } }
+  @keyframes shake {
+    0%, 86%, 100% { translate: 0 0; }
+    87% { translate: -1.2% 0; }
+    89% { translate: 1% .4%; }
+    91% { translate: -.4% 0; }
+  }
+  .p-img::after {
+    content: ''; position: absolute; inset: 0;
+    background:
+      linear-gradient(180deg, rgba(0,0,0,.4), transparent 22%, transparent 45%, rgba(0,0,0,.95) 72%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.04) 0 1px, transparent 1px 3px);
+  }
+  .preview.img { inset: 0; justify-content: flex-end; padding-bottom: 11%; gap: .4cqw; }
+  .preview.img .p-num, .preview.img .p-desc { display: none; }
+  .preview.img .p-name { font-size: 9cqw; }
+  .preview.img .p-tag { font-size: 3.6cqw; }
+  .preview.img .p-play { font-size: 4cqw; margin-top: .4cqw; }
+
+  /* Leichter VHS-Schleier über der ganzen Seite */
+  .vhs {
+    position: fixed; inset: 0; pointer-events: none; z-index: 20;
+  }
+  .vhs canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; opacity: .045; }
+  .vhs .lines { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px); }
+  .vhs .vig { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, transparent 60%, rgba(0,0,0,.45) 100%); }
+  .vhs .roll {
+    position: absolute; left: 0; right: 0; height: 7vh; top: -10vh;
+    background: linear-gradient(180deg, transparent, rgba(255,255,255,.035) 45%, rgba(255,255,255,.07) 50%, transparent);
+    animation: roll 11s linear infinite;
+  }
+  @keyframes roll { 0% { top: -10vh; } 55%, 100% { top: 110vh; } }
+  .vhs .bars { position: absolute; inset: 0; }
+  .vhs .bars i { position: absolute; left: 0; right: 0; display: block; mix-blend-mode: screen; }
+
+  /* Bild-Glitch alle paar Sekunden */
+  .scene.fg .screen { filter: url(#vhs-rgb-strong); }
+  .screen.fg2 .content { translate: 1.5% 0; }
+
   .tracking {
     height: 9%; top: -10%;
     background: linear-gradient(180deg, transparent, rgba(255,255,255,.08) 40%, rgba(255,255,255,.14) 50%, transparent);
@@ -147,6 +218,7 @@
 
   .screen.shelf-mode .title { display: none; }
   .screen.shelf-mode .preview { display: flex; }
+  .screen:not(.shelf-mode) .p-img, .screen.inserting .p-img { display: none !important; }
   .screen.inserting .title, .screen.inserting .preview { display: none; }
   .screen.inserting .insert { display: flex; }
 
@@ -177,12 +249,32 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .press, .cur, .p-play, .screen.on .content, .screen.on .tracking { animation: none !important; }
+    .press, .cur, .p-play, .screen.on .content, .screen.on .tracking, .screen.on .jitter, .p-img img, .vhs .roll { animation: none !important; }
     .scene { transition: none; }
   }
 </style>
 </head>
 <body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <filter id="vhs-rgb" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+      <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r"/>
+      <feOffset in="r" dx="-1.6" result="r2"/>
+      <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g"/>
+      <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b"/>
+      <feOffset in="b" dx="1.6" result="b2"/>
+      <feBlend in="r2" in2="g" mode="screen" result="rg"/>
+      <feBlend in="rg" in2="b2" mode="screen"/>
+    </filter>
+    <filter id="vhs-rgb-strong" x="-10%" y="-5%" width="120%" height="110%" color-interpolation-filters="sRGB">
+      <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r"/>
+      <feOffset in="r" dx="-2.5" result="r2"/>
+      <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g"/>
+      <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b"/>
+      <feOffset in="b" dx="2.5" dy=".5" result="b2"/>
+      <feBlend in="r2" in2="g" mode="screen" result="rg"/>
+      <feBlend in="rg" in2="b2" mode="screen"/>
+    </filter>
+  </svg>
   <div class="scene" id="scene">
     <canvas id="art" aria-label="Fernseher auf einem Regal mit Videokassetten"></canvas>
 
@@ -209,7 +301,8 @@
           <small id="insertSub"></small>
         </section>
 
-        <section class="preview" aria-live="polite">
+        <div class="p-img" id="pImgBox"><img id="pImg" alt=""><img id="pGhost" class="ghost" alt=""></div>
+        <section class="preview" id="preview" aria-live="polite">
           <div class="p-num" id="pNum"></div>
           <div class="p-name" id="pName"></div>
           <div class="p-tag" id="pTag"></div>
@@ -218,6 +311,7 @@
         </section>
       </div>
       <div class="tracking"></div>
+      <div class="jitter"></div>
       <div class="scanlines"></div>
       <div class="glass"></div>
     </div>
@@ -227,6 +321,7 @@
   <button class="sound" id="sound" aria-label="Musik an oder aus">♪ AN</button>
   <audio id="music" src="audio/intro.m4a" preload="auto" loop></audio>
   <div class="hint" id="hint"></div>
+  <div class="vhs" aria-hidden="true"><canvas id="vhsNoise" width="160" height="90"></canvas><div class="lines"></div><div class="vig"></div><div class="roll"></div><div class="bars" id="vhsBars"></div></div>
 
 <script>
 (() => {
@@ -266,7 +361,7 @@
       const W = 480, H = 270;
       const tv = { x: 150, y: 20, w: 180, h: 150 };
       const bezel = { x: tv.x + 12, y: tv.y + 10, w: tv.w - 24, h: 106 };
-      const screen = { x: bezel.x + 6, y: bezel.y + 6, w: bezel.w - 12, h: bezel.h - 12 };
+      const screen = { x: bezel.x + 4, y: bezel.y + 4, w: bezel.w - 8, h: bezel.h - 8 };
       const shelfY = tv.y + tv.h;
       const cab = { x: 34, y: shelfY + 14, w: 412, h: 74 };
       const tapes = [];
@@ -280,7 +375,7 @@
       const W = 270, H = 480;
       const tv = { x: 22, y: 26, w: 226, h: 184 };
       const bezel = { x: tv.x + 12, y: tv.y + 11, w: tv.w - 24, h: 136 };
-      const screen = { x: bezel.x + 6, y: bezel.y + 6, w: bezel.w - 12, h: bezel.h - 12 };
+      const screen = { x: bezel.x + 4, y: bezel.y + 4, w: bezel.w - 8, h: bezel.h - 8 };
       const shelfY = tv.y + tv.h;
       const cab = { x: 16, y: shelfY + 14, w: 238, h: 9 * 23 + 14 };
       const tapes = [];
@@ -451,9 +546,8 @@
     // Bezel
     rrect(bezel.x - 2, bezel.y - 2, bezel.w + 4, bezel.h + 4, 9, C.tv2);
     rrect(bezel.x - 1, bezel.y - 1, bezel.w + 2, bezel.h + 3, 9, C.tv5);
-    rrect(bezel.x, bezel.y, bezel.w, bezel.h, 8, C.bz1);
-    rrect(bezel.x + 1, bezel.y + 1, bezel.w - 2, bezel.h - 2, 8, C.bz2);
-    rrect(bezel.x + 3, bezel.y + 3, bezel.w - 6, bezel.h - 6, 7, C.bz0);
+    rrect(bezel.x, bezel.y, bezel.w, bezel.h, 10, C.bz2);
+    rrect(bezel.x + 1, bezel.y + 1, bezel.w - 2, bezel.h - 2, 10, C.bz0);
     // Schild + Rekorder
     const by = bezel.y + bezel.h;
     const rest = y + h - by;
@@ -511,11 +605,40 @@
     }
   }
 
+  // Farbversatz wie bei einem alten Band: Rot nach links, Blau nach rechts (halb gemischt)
+  function aberrate(shift, mix) {
+    const im = g.getImageData(0, 0, L.W, L.H), d = im.data, src = new Uint8ClampedArray(d), W = L.W;
+    for (let y = 0; y < L.H; y++) {
+      const row = y * W * 4;
+      for (let x = 0; x < W; x++) {
+        const i = row + x * 4;
+        const xr = Math.min(W - 1, x + shift), xb = Math.max(0, x - shift);
+        d[i] = d[i] * (1 - mix) + src[row + xr * 4] * mix;
+        d[i + 2] = d[i + 2] * (1 - mix) + src[row + xb * 4 + 2] * mix;
+      }
+    }
+    g.putImageData(im, 0, 0);
+  }
   function render() {
     if (!bgCache) return;
     g.putImageData(bgCache, 0, 0);
     drawPower();
     for (let i = 0; i < TAPES.length; i++) drawTape(i);
+    aberrate(1, .45);
+  }
+  // Einzelbild-Glitch: Streifen verschieben, Farben auseinanderziehen
+  function glitchFrame(strength) {
+    if (!bgCache) return;
+    render();
+    aberrate(2, .6);
+    const n = 3 + (Math.random() * 4 | 0);
+    for (let k = 0; k < n; k++) {
+      const h = 2 + (Math.random() * 10 | 0), y = Math.random() * (L.H - h) | 0;
+      const dx = ((Math.random() < .5 ? -1 : 1) * (2 + Math.random() * 8 * strength)) | 0;
+      const band = g.getImageData(0, y, L.W, h);
+      g.putImageData(band, dx, y);
+      if (Math.random() < .4) { g.fillStyle = Math.random() < .5 ? 'rgba(255,46,136,.25)' : 'rgba(46,242,255,.22)'; g.fillRect(0, y, L.W, 1); }
+    }
   }
 
   // ================= Szene einpassen / zoomen =================
@@ -535,7 +658,7 @@
     const s = L.screen;
     Object.assign(screen.style, { left: s.x + 'px', top: s.y + 'px', width: s.w + 'px', height: s.h + 'px' });
     // Bildschirmecken als Pixel-Treppe
-    const r = 6, pts = [];
+    const r = 9, pts = [];
     for (let j = 0; j <= r; j++) pts.push([inset(j, s.h, r), j]);
     const poly = [];
     pts.forEach(([k, j]) => poly.push(`${k}px ${j}px`));
@@ -665,6 +788,12 @@
     document.getElementById('pTag').textContent = t.tag;
     document.getElementById('pDesc').textContent = t.desc;
     document.getElementById('pPlay').textContent = t.url ? (touch ? '▶ NOCHMAL TIPPEN' : '▶ ENTER / KLICK') : '■ BALD VERFÜGBAR';
+    const box = document.getElementById('pImgBox'), prev = document.getElementById('preview');
+    if (t.url) {
+      const src = 'previews/' + t.url.split('/').pop().replace('.html', '.jpg');
+      document.getElementById('pImg').src = src; document.getElementById('pGhost').src = src;
+      box.classList.add('has'); prev.classList.add('img');
+    } else { box.classList.remove('has'); prev.classList.remove('img'); }
     screen.classList.add('flash');
     clearTimeout(select.f); select.f = setTimeout(() => screen.classList.remove('flash'), 140);
     render();
@@ -780,6 +909,36 @@
   // Linkliste für Screenreader und Suchmaschinen
   const list = document.getElementById('list');
   TAPES.forEach(t => { if (t.url) { const a = document.createElement('a'); a.href = t.url; a.textContent = t.name; list.appendChild(a); } });
+
+  // ================= VHS-Schleier + regelmäßiger Glitch =================
+  const vn = document.getElementById('vhsNoise'), vctx = vn.getContext('2d'), vimg = vctx.createImageData(160, 90);
+  let vf = 0;
+  (function vhsNoise() {
+    if (vf++ % 3 === 0) {
+      const d = vimg.data;
+      for (let i = 0; i < d.length; i += 4) { const v = Math.random() * 255 | 0; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; }
+      vctx.putImageData(vimg, 0, 0);
+    }
+    requestAnimationFrame(vhsNoise);
+  })();
+  const bars = document.getElementById('vhsBars');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function bigGlitch() {
+    if (reduce || document.hidden) return;
+    const s = .6 + Math.random() * .6;
+    glitchFrame(s);
+    scene.classList.add('fg'); screen.classList.add('fg2', 'flash');
+    bars.innerHTML = '';
+    for (let k = 0; k < 2 + (Math.random() * 3 | 0); k++) {
+      const b = document.createElement('i');
+      const c = ['rgba(255,255,255,.10)', 'rgba(255,46,136,.12)', 'rgba(46,242,255,.10)'][k % 3];
+      b.style.cssText = `top:${Math.random() * 100}vh;height:${2 + Math.random() * 14}px;background:${c};transform:translateX(${(Math.random() - .5) * 30}px)`;
+      bars.appendChild(b);
+    }
+    setTimeout(() => { glitchFrame(s * .7); screen.classList.remove('fg2'); }, 70);
+    setTimeout(() => { render(); scene.classList.remove('fg'); screen.classList.remove('flash'); bars.innerHTML = ''; }, 170);
+  }
+  (function schedule() { setTimeout(() => { if (state !== 'off') bigGlitch(); schedule(); }, 3000 + Math.random() * 3500); })();
 
   // ================= Start =================
   (async () => {
