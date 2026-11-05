@@ -19,4 +19,4 @@ Die Spiele in `games/` sind Kopien aus [Shittty-ahh-AI-games](https://github.com
 
 ## Musik
 
-`audio/intro.m4a` ist der erste Song (0:00–4:10) aus einem lizenzfreien Musikvideo. Er startet beim ersten Klick oder Tastendruck; mit `M` oder dem ♪-Knopf oben rechts lässt er sich ausschalten.
+`audio/intro.m4a` ist der erste Song (0:00–4:10) aus einem lizenzfreien Musikvideo. Er startet beim Laden (oder beim ersten Klick, falls der Browser Autoplay blockiert). Die Lautstärke stellt man an der Fernbedienung auf dem Regal ein (Balken anklicken oder ziehen, −/+, Mausrad, Tasten `+`/`-`); `M` oder der pinke Knopf schaltet stumm.
