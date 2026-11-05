@@ -688,7 +688,7 @@ async function startGame(entry, di, opts) {
   const appr = S.sd / S.ar;
   const firstT = G.notes.length ? G.notes[0].t : 0;
   G.endT = G.notes.length ? G.notes[G.notes.length - 1].t + 1.0 : Math.min(buf.duration, 10);
-  const startT = opts && opts.startT != null ? opts.startT : Math.min(0, firstT - (appr + 1.5) * G.speed);
+  const startT = opts && opts.startT != null ? (typeof opts.startT === 'function' ? opts.startT() : opts.startT) : Math.min(0, firstT - (appr + 1.5) * G.speed);
   G.t = startT;
   playFrom(buf, startT, G.speed);
   G.state = 'playing';
@@ -1466,7 +1466,7 @@ async function importSSPM(file) {
   if (m.cover) { try { cover = URL.createObjectURL(new Blob([m.cover], { type: 'image/png' })); } catch (e) { } }
   const dn = DIFF_NAMES[m.difficulty] || 'Map';
   addEntry({ id: 'sspm-' + hashStr(file.name + m.notes.length), kind: 'map', title: m.title || baseName(file.name), artist: m.mapper ? 'mapped by ' + m.mapper : '.sspm', bpm: 0,
-    dur: buf.duration, cover, buffer: buf, diffs: [{ name: dn, c: DIFF_COLS[m.difficulty] || '#3de1ff', notes: m.notes }] });
+    dur: buf.duration, cover, buffer: buf, raw: m.audio, diffs: [{ name: dn, c: DIFF_COLS[m.difficulty] || '#3de1ff', notes: m.notes }] });
 }
 async function importText(mapFile, audioFile) {
   showLoading('Reading map…', mapFile.name);
@@ -1474,10 +1474,11 @@ async function importText(mapFile, audioFile) {
   const notes = parseTextMap(txt);
   if (!notes.length) throw new Error(`${mapFile.name}: no notes found. Expected "id,x|y|ms,x|y|ms,…".`);
   showLoading('Decoding audio…', audioFile.name);
-  const buf = await decode(await audioFile.arrayBuffer()).catch(() => { throw new Error(`${audioFile.name}: the browser could not decode this audio.`); });
+  const raw = await audioFile.arrayBuffer();
+  const buf = await decode(raw.slice(0)).catch(() => { throw new Error(`${audioFile.name}: the browser could not decode this audio.`); });
   notes.sort((a, b) => a.t - b.t);
   addEntry({ id: 'txt-' + hashStr(mapFile.name + notes.length), kind: 'map', title: baseName(audioFile.name), artist: 'map: ' + mapFile.name, bpm: 0,
-    dur: buf.duration, buffer: buf, diffs: [{ name: 'Map', c: '#3de1ff', notes }] });
+    dur: buf.duration, buffer: buf, raw, diffs: [{ name: 'Map', c: '#3de1ff', notes }] });
 }
 function parseTextMap(txt) {
   txt = txt.trim();
@@ -1652,13 +1653,14 @@ async function analyzeAudio(buffer, onProg) {
 }
 async function importAudio(file) {
   showLoading('Decoding audio…', file.name);
-  const buf = await decode(await file.arrayBuffer()).catch(() => { throw new Error(`${file.name}: the browser could not decode this audio.`); });
+  const raw = await file.arrayBuffer();
+  const buf = await decode(raw.slice(0)).catch(() => { throw new Error(`${file.name}: the browser could not decode this audio.`); });
   if (buf.duration > 900) throw new Error('That song is longer than 15 minutes. Pick a shorter one.');
   showLoading('Mapping…', 'Finding beats and onsets');
   const info = await analyzeAudio(buf, p => $('#loadSub').textContent = `Finding beats and onsets · ${Math.round(p * 100)}%`);
   const seed = hashStr(file.name);
   addEntry({ id: 'audio-' + seed + '-' + LIB.length, kind: 'audio', title: baseName(file.name), artist: 'auto-map', bpm: info.bpm, dur: buf.duration,
-    hue: ['#5dffb0', '#b48cff'], buffer: buf, diffs: DIFFS.map((d, i) => ({ name: d.name, c: d.c, notes: makeChart(info, i, seed) })) });
+    hue: ['#5dffb0', '#b48cff'], buffer: buf, raw, diffs: DIFFS.map((d, i) => ({ name: d.name, c: d.c, notes: makeChart(info, i, seed) })) });
 }
 
 /* ================= boot ================= */
