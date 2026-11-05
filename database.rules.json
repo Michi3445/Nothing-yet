@@ -1,0 +1,22 @@
+{
+  "rules": {
+    "pg": {
+      "rooms": {
+        "$code": {
+          ".read": "auth != null",
+          ".write": "auth != null && (!data.exists() || data.child('host').val() === auth.uid)",
+          ".validate": "$code.matches(/^[A-HJ-NP-Z2-9]{4}$/) && newData.child('host').isString() && newData.child('created').isNumber()",
+          "song": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          },
+          "players": {
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && data.parent().parent().child('host').exists()",
+              ".validate": "newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 16"
+            }
+          }
+        }
+      }
+    }
+  }
+}

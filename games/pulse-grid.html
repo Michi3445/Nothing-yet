@@ -659,7 +659,7 @@ function setCursor(x, y) {
   G.path.push([G.cx, G.cy]);
 }
 
-async function startGame(entry, di) {
+async function startGame(entry, di, opts) {
   hideAll();
   G.state = 'loading';
   let buf = entry.buffer;
@@ -688,7 +688,7 @@ async function startGame(entry, di) {
   const appr = S.sd / S.ar;
   const firstT = G.notes.length ? G.notes[0].t : 0;
   G.endT = G.notes.length ? G.notes[G.notes.length - 1].t + 1.0 : Math.min(buf.duration, 10);
-  const startT = Math.min(0, firstT - (appr + 1.5) * G.speed);
+  const startT = opts && opts.startT != null ? opts.startT : Math.min(0, firstT - (appr + 1.5) * G.speed);
   G.t = startT;
   playFrom(buf, startT, G.speed);
   G.state = 'playing';
@@ -764,7 +764,7 @@ function update() {
   if (t > G.endT) finish();
 }
 function skipIntro() {
-  if (G.state !== 'playing' || !G.canSkip) return;
+  if (G.state !== 'playing' || !G.canSkip || (window.PGNet && PGNet.active())) return;
   const target = G.notes[0].t - (S.sd / S.ar + 1.2) * G.speed;
   playFrom(G.buf, target, G.speed); G.lastST = -1e9; G.canSkip = false; $('#skipBtn').hidden = true;
 }
@@ -804,6 +804,7 @@ function showResults(failed) {
   $('#results').hidden = false;
   drawTimeline();
   renderList();
+  if (window.PGNet) PGNet.onResults(failed || G.failedNF, acc, gr);
 }
 function drawTimeline() {
   const c = $('#timeline'), r = c.getBoundingClientRect(), dpr = DPR;
@@ -829,8 +830,8 @@ function resume() {
   lockPointer();
   G.state = 'countdown'; G.cdEnd = performance.now() + 1500;
 }
-function retry() { lockPointer(); ensureAudio(); stopMusic(); startGame(G.entry, G.di); }
-function toMenu() { stopMusic(); unlock(); hideAll(); $('#pauseBtn').hidden = true; $('#skipBtn').hidden = true; G.state = 'menu'; $('#menu').hidden = false; renderList(); }
+function retry() { if (window.PGNet && PGNet.inRoom()) return; lockPointer(); ensureAudio(); stopMusic(); startGame(G.entry, G.di); }
+function toMenu() { stopMusic(); unlock(); hideAll(); $('#pauseBtn').hidden = true; $('#skipBtn').hidden = true; G.state = 'menu'; $('#menu').hidden = false; renderList(); if (window.PGNet) PGNet.onMenu(); }
 
 let lockFailed = false;
 function lockPointer() {
@@ -1409,6 +1410,7 @@ $('#musicBtn').addEventListener('click', () => { ensureAudio(); actx.resume(); S
 addEventListener('pointerdown', () => { ensureAudio(); if (actx.state !== 'running') actx.resume(); }, { once: true });
 $('#play').addEventListener('click', () => {
   const e = curEntry(); const di = Math.min(sel.di, e.diffs.length - 1);
+  if (window.PGNet && PGNet.onPlay(e, di)) return;
   ensureAudio(); actx.resume();
   lockPointer();
   startGame(e, di);
@@ -1665,5 +1667,6 @@ renderMods(); renderList();
 setTimeout(async () => { for (const tr of TRACKS) { try { await renderTrack(tr); } catch (e) { console.warn(e); } } }, 600);
 window.__pg = { makeChart, G, S, M, LIB, parseSSPM, parseTextMap, analyzeAudio, startGame, renderTrack, TRACKS };
 </script>
-
+<script src="../firebase-config.js"></script>
+<script src="pulse-grid-online.js"></script>
 </body></html>
