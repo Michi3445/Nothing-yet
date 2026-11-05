@@ -241,10 +241,6 @@
     pointer-events: none;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .press, .cur, .p-play, .screen.on .content, .screen.on .tracking, .screen.on .jitter, .vhs .roll { animation: none !important; }
-    .scene { transition: none; }
-  }
 </style>
 </head>
 <body>
@@ -664,7 +660,8 @@
   const pCan = document.getElementById('pCan'), pctx = pCan.getContext('2d');
   const pBuf = document.createElement('canvas'), bctx = pBuf.getContext('2d', { willReadFrequently: true });
   const pPic = new Image();
-  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Zoom und VHS-Effekte gehören zur Seite und laufen immer, auch wenn das System "Animationen reduzieren" meldet
+  const reducedMotion = false;
 
   function setupLayout() {
     const portrait = innerHeight > innerWidth * 1.15;
@@ -1080,7 +1077,7 @@
     requestAnimationFrame(vhsNoise);
   })();
   const bars = document.getElementById('vhsBars');
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduce = false;
   function bigGlitch() {
     if (reduce || document.hidden || camMoving) return;
     const s = .6 + Math.random() * .6;
