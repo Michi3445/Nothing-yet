@@ -1,0 +1,675 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Abgabegespräch Training</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Design plan: sehr helle Klassenzimmer-Optik. Kühles Fast-Weiß, Tinten-Navy für Text,
+   die drei Moodle-Kalenderfarben als Fachsprache (grün = Praxis, blau = Theorie, orange = Abgabe),
+   Textmarker-Gelb als einziger Akzent im Titel. Bricolage Grotesque (Überschriften) + Figtree (Text). */
+:root{
+  --bg:#f5f9ff; --surface:#ffffff; --sunk:#edf3fc; --ink:#14233b; --muted:#566782; --line:#dbe5f2;
+  --navy:#1b3358; --on-navy:#ffffff;
+  --p:#2e9e5e; --p-soft:#e3f5eb; --p-ink:#1b7545;
+  --t:#3c78e6; --t-soft:#e5eefd; --t-ink:#2753b0;
+  --ab:#f08a24; --ab-hover:#f69a3d; --ab-soft:#fff0de; --ab-ink:#9a5200;
+  --hi:#fff0a0;
+  --ok:#2e9e5e; --warn:#e8a91f; --bad:#d8534f;
+  --radius:14px;
+  --head:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"Figtree","Segoe UI",system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}[hidden]{display:none!important}img{max-width:100%}
+body{background:var(--bg);color:var(--ink);font:400 16px/1.55 var(--body);padding-inline:clamp(16px,4vw,40px);padding-block:20px 56px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--t);outline-offset:2px;border-radius:6px}
+.shell{max-width:1120px;margin-inline:auto}
+.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;padding-block:8px 22px}
+.top h1{font:700 clamp(1.7rem,4.2vw,2.5rem)/1.1 var(--head);margin:0;letter-spacing:-.01em}
+.top h1 span{background:linear-gradient(transparent 58%,var(--hi) 58% 92%,transparent 92%);padding-inline:2px}
+.top p{margin:0;color:var(--muted);font-size:.9rem}
+.grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:30px;align-items:start}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr);gap:22px}}
+
+/* Lehrkraft */
+.teacher{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;display:grid;gap:14px;box-shadow:0 6px 24px -14px rgba(27,51,88,.25)}
+.portrait{position:relative;aspect-ratio:4/5;border-radius:10px;overflow:hidden;background:var(--sunk);display:grid;place-items:center;border:1px solid var(--line)}
+.portrait img{width:100%;height:100%;object-fit:cover;display:block}
+.portrait .ph{display:grid;place-items:center;gap:8px;text-align:center;padding:16px;color:var(--muted);font-size:.85rem}
+.portrait .ph svg{width:46%;height:auto}
+.portrait .pbtn{position:absolute;inset-inline:10px;bottom:10px}
+.tfields{display:grid;gap:10px;min-width:0}
+label.f{display:grid;gap:4px;font-size:.78rem;font-weight:600;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+label.f input,label.f select{font-size:1rem;font-weight:500;text-transform:none;letter-spacing:0;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 10px;min-width:0;width:100%}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:820px){
+  .teacher{grid-template-columns:120px minmax(0,1fr);align-items:start}
+  .portrait .pbtn{inset-inline:6px;bottom:6px}
+}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 16px;font-weight:600;font-size:.92rem;transition:background .15s,border-color .15s}
+.btn:hover{background:var(--sunk);border-color:#c5d4e8}
+.btn.small{padding:5px 12px;font-size:.82rem}
+.btn.primary{background:var(--ab);border-color:var(--ab);color:#14233b}
+.btn.primary:hover{background:var(--ab-hover)}
+.btn.navy{background:var(--navy);border-color:var(--navy);color:var(--on-navy)}
+.btn.navy:hover{background:#27447a}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+
+.ai{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 14px}
+.ai summary{cursor:pointer;font-weight:600;font-size:.95rem}
+.aibody{display:grid;gap:10px;margin-top:12px}
+/* Liste */
+.picker{margin-top:18px;display:grid;gap:10px}
+.picker h2{font:700 1rem/1.2 var(--head);margin:0;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:.85rem;font-weight:600;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--navy);border-color:var(--navy);color:var(--on-navy)}
+.list{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:420px;overflow-y:auto;padding-right:4px}
+@media (max-width:820px){.list{max-height:300px}}
+.item{width:100%;text-align:left;display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:10px;align-items:center;background:transparent;border:1px solid transparent;border-radius:10px;padding:8px 10px}
+.item:hover{background:var(--surface);border-color:var(--line)}
+.item[aria-current="true"]{background:var(--surface);border-color:var(--navy);box-shadow:0 2px 0 var(--navy)}
+.dot{width:10px;height:10px;border-radius:50%}
+.dot.P{background:var(--p)} .dot.T{background:var(--t)}
+.item b{display:block;font-weight:600;font-size:.93rem;line-height:1.25;overflow-wrap:anywhere}
+.item small{color:var(--muted);font-size:.78rem;font-variant-numeric:tabular-nums}
+.item .prog{font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* Hauptbereich */
+.ahead{display:grid;gap:10px;margin-bottom:18px}
+.code{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:.85rem;font-variant-numeric:tabular-nums;padding:4px 12px 4px 10px;border-radius:999px;width:fit-content}
+.code.P{background:var(--p-soft);color:var(--p-ink)} .code.T{background:var(--t-soft);color:var(--t-ink)}
+.code i{width:9px;height:9px;border-radius:50%;background:currentColor}
+.ahead h2{font:700 clamp(1.5rem,3.6vw,2.1rem)/1.15 var(--head);margin:0;text-wrap:balance}
+.kurz{margin:0;color:var(--muted);max-width:65ch}
+.facts{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.facts li{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:3px 10px;font-size:.85rem;font-variant-numeric:tabular-nums}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:20px;flex-wrap:wrap}
+.tab{background:transparent;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;padding:10px 16px;font-weight:600;color:var(--muted);border-radius:6px 6px 0 0}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ab)}
+
+/* Selbsttest */
+.qcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:clamp(16px,3vw,26px);display:grid;gap:14px;box-shadow:0 6px 24px -16px rgba(27,51,88,.3)}
+.qmeta{font-size:.8rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.qtext{font:700 clamp(1.15rem,2.6vw,1.45rem)/1.3 var(--head);margin:0;text-wrap:pretty;max-width:60ch}
+textarea{width:100%;min-height:96px;resize:vertical;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;line-height:1.5}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.muster{background:var(--hi);border-radius:10px;padding:12px 14px;max-width:70ch}
+.muster b{display:block;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
+.muster p{margin:0}
+.rate{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.rate span{font-weight:600;font-size:.9rem;margin-right:4px}
+.rbtn{border:2px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-weight:600;font-size:.9rem}
+.rbtn[data-r="2"]:hover,.rbtn[data-r="2"].on{border-color:var(--ok);background:var(--p-soft)}
+.rbtn[data-r="1"]:hover,.rbtn[data-r="1"].on{border-color:var(--warn);background:#fff6dc}
+.rbtn[data-r="0"]:hover,.rbtn[data-r="0"].on{border-color:var(--bad);background:#fde9e8}
+.fb{border-left:4px solid var(--t);background:var(--t-soft);border-radius:0 10px 10px 0;padding:10px 14px;white-space:pre-wrap;max-width:70ch}
+.steps{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:14px}
+.dots{display:flex;gap:6px;flex-wrap:wrap}
+.sd{width:30px;height:30px;border-radius:8px;border:2px solid var(--line);background:var(--surface);font-size:.8rem;font-weight:600;font-variant-numeric:tabular-nums}
+.sd.r2{background:var(--p-soft);border-color:var(--ok)} .sd.r1{background:#fff6dc;border-color:var(--warn)} .sd.r0{background:#fde9e8;border-color:var(--bad)}
+.sd[aria-current="true"]{box-shadow:0 0 0 3px var(--navy)}
+.sum{margin-top:18px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;color:var(--muted);font-size:.92rem}
+.sum b{color:var(--ink)}
+
+/* Gespräch */
+.scene{background:var(--ab-soft);border:1px solid #f6d3a6;border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;max-width:75ch}
+.scene .tag{display:inline-block;font-size:.75rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ab-ink);margin-right:8px}
+.start{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:clamp(16px,3vw,26px);display:grid;gap:14px;justify-items:start}
+.start p{margin:0;max-width:62ch}
+.notice{background:var(--sunk);border:1px dashed #b9c9de;border-radius:10px;padding:12px 14px;max-width:62ch;color:var(--muted)}
+.log{display:grid;gap:14px;margin-bottom:14px}
+.msg{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:start}
+.msg.me{grid-template-columns:minmax(0,1fr)}
+.av{width:44px;height:44px;border-radius:50%;overflow:hidden;background:var(--sunk);border:1px solid var(--line);display:grid;place-items:center;font:700 1rem var(--head);color:var(--navy)}
+.av img{width:100%;height:100%;object-fit:cover}
+.bub{background:var(--surface);border:1px solid var(--line);border-radius:4px 14px 14px 14px;padding:10px 14px;white-space:pre-wrap;overflow-wrap:anywhere;max-width:68ch;min-height:2.4em}
+.bub .who{display:block;font-size:.76rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.me .bub{justify-self:end;background:var(--t-soft);border-color:#cfdffa;border-radius:14px 4px 14px 14px}
+.msg.final .bub{background:var(--hi);border-color:#eadb78}
+.sysnote{justify-self:center;font-size:.82rem;color:var(--muted);background:var(--sunk);border-radius:999px;padding:3px 12px}
+.typing{opacity:.6}
+.composer{display:grid;gap:10px;position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 14px);padding-block:14px 4px}
+.hint{font-size:.82rem;color:var(--muted);margin:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+</head><body>
+<div class="shell">
+  <header class="top">
+    <h1><span>Abgabegespräch</span>-Training</h1>
+    <p>BFS26IT · Lernfeld 2 · BBS II Gifhorn — teste dich selbst oder lass dich von deiner Lehrkraft abfragen.</p>
+  </header>
+
+  <div class="grid">
+    <aside>
+      <section class="teacher" aria-label="Lehrkraft">
+        <div class="portrait" id="portrait"></div>
+        <div class="tfields">
+          <label class="f">Name der Lehrkraft
+            <input id="tname" type="text" placeholder="z. B. Herr Rosenau" autocomplete="off" maxlength="40">
+          </label>
+          <div class="two">
+            <label class="f">Anrede
+              <select id="tanrede"><option value="du">Du</option><option value="sie">Sie</option></select>
+            </label>
+            <label class="f">Strenge
+              <select id="tstreng"><option value="freundlich">freundlich</option><option value="normal">normal</option><option value="streng">streng</option></select>
+            </label>
+          </div>
+        </div>
+        <input type="file" id="pfile" accept="image/*" hidden>
+      </section>
+
+      <details class="ai" id="aicfg">
+        <summary>KI-Anbindung</summary>
+        <div class="aibody">
+          <label class="f">Anbieter
+            <select id="cmode"></select>
+          </label>
+          <label class="f" id="wkey">API-Key
+            <input id="ckey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…">
+          </label>
+          <label class="f" id="wbase">Basis-URL
+            <input id="cbase" type="text" autocomplete="off" spellcheck="false" placeholder="http://localhost:11434/v1">
+          </label>
+          <label class="f">Modell
+            <input id="cmodel" type="text" autocomplete="off" spellcheck="false">
+          </label>
+          <p class="hint" id="chint"></p>
+        </div>
+      </details>
+
+      <section class="picker" aria-label="Aufgaben">
+        <h2>Aufgabe wählen</h2>
+        <div class="chips" id="chips"></div>
+        <ul class="list" id="list"></ul>
+      </section>
+    </aside>
+
+    <main id="main"></main>
+  </div>
+</div>
+
+<script>
+/* ---------- Daten: Aufgaben aus den Moodle-Kursen LF2 Praxis & Theorie ---------- */
+const A=[
+{id:"2-0.0",typ:"P",titel:"Zeitmanagement",kurz:"Du planst deine Praxis-, Theorie- und Abgabetermine im Moodle-Kalender.",
+ fakten:["Grün = Praxis · Blau = Theorie · Orange = Abgabe","je 6 Termine pro Typ","Letzte Woche: max. 2 Abgaben, höchstens 1 in den letzten 3 Tagen"],
+ sz:"Du zeigst deinen Kalender. Die Lehrkraft prüft, ob deine Planung realistisch ist und ob du die Regeln für die letzte Woche eingehalten hast.",
+ q:[["Wie hast du deine Termine im Kalender angelegt und wofür stehen die Farben?","Grün = Praxis, Blau = Theorie, Orange = Abgabe. Je Typ 6 Termine. Am besten rückwärts vom Abgabetermin geplant."],
+    ["Welche Regel gilt für Abgaben in der letzten Woche?","Maximal 2 Abgaben, davon höchstens 1 in den letzten 3 Tagen. So bleibt nichts bis zum letzten Moment liegen."],
+    ["Was machst du, wenn du einen geplanten Termin nicht schaffst?","Früh Bescheid geben, Puffer nutzen, Prioritäten setzen (Abgaben zuerst), Termin neu legen und Kalender aktualisieren."],
+    ["Wo hast du Puffer eingeplant und warum?","Vor Abgaben und bei aufwendigen Aufgaben, wegen Krankheit, Technikproblemen und Unvorhergesehenem. Nicht alles auf den letzten Tag legen."]]},
+
+{id:"2-0.1/2",typ:"P",titel:"Systemadministratorische Aufgaben",kurz:"Du erledigst echte Aufträge in der Schul-IT. Pro Auftrag gibt es einen Rückmeldebogen.",
+ fakten:["Rückmeldebogen von Steve Rosenau pro Auftrag","Dokumentation deines Vorgehens"],
+ sz:"Du hast Aufträge in der Schul-IT erledigt und legst die Rückmeldebögen vor. Die Lehrkraft will wissen, was du konkret gemacht hast.",
+ q:[["Welchen Auftrag hast du erledigt und wie bist du vorgegangen?","Eigene Erfahrung. Wichtig: Problem benennen, Vorgehen in sinnvoller Reihenfolge, Ergebnis prüfen, Auftraggeber informieren."],
+    ["Was stand auf dem Rückmeldebogen und was nimmst du daraus mit?","Eigene Erfahrung. Wichtig: Kritik und Lob konkret wiedergeben und sagen, was du künftig anders machst."],
+    ["Was lief nicht wie geplant und wie hast du es gelöst?","Eigene Erfahrung. Wichtig: Fehlersuche systematisch (eingrenzen, testen), bei Bedarf nachfragen oder eskalieren."],
+    ["Wie sprichst du dich mit den Nutzern ab, bevor du etwas veränderst?","Auftrag klären, Zeitfenster vereinbaren, Datensicherung beachten, nach Abschluss Rückmeldung geben."]]},
+
+{id:"2-1.0",typ:"P",titel:"Namensschilder",kurz:"Du gestaltest Namensschilder für die BFS-IT und druckst sie per Serienbrief auf Etiketten.",
+ fakten:["54 × 90 mm","Durable-Halter","Logo · Vor- und Nachname · „BFS-IT“","Serienbrief + Etiketten · Excel-Abteilungsliste","Abgabe: PDF + Word"],
+ sz:"Du legst dein fertiges Namensschild und die Dateien vor. Die Lehrkraft will sehen, dass du den Serienbrief wirklich verstanden hast.",
+ q:[["Wie ist dein Namensschild aufgebaut und welche Maße hat es?","54 × 90 mm, passend für den Durable-Halter. Inhalt: Logo, Vor- und Nachname, „BFS-IT“."],
+    ["Wie funktioniert der Serienbrief in deiner Lösung?","Hauptdokument mit Platzhaltern (Seriendruckfelder) plus Datenquelle (Excel-Liste). Etiketten-Layout wählen, Vorschau prüfen, Zusammenführen."],
+    ["Warum nutzt du eine Excel-Liste als Datenquelle?","Daten werden einmal gepflegt, jede Zeile ergibt ein Schild, die Liste ist erweiterbar, keine Tippfehler durch Abtippen."],
+    ["Warum gibst du PDF und Word ab?","Word = bearbeitbare Quelle. PDF = layoutfest und auf jedem System gleich druckbar."],
+    ["Wie stellst du sicher, dass der Druck zu den 54 × 90 mm passt?","Richtiges Etikettenformat, Seitenränder prüfen, Skalierung auf 100 %, Probedruck und Vergleich mit Lineal oder Halter."]]},
+
+{id:"2-1.5",typ:"P",titel:"PC-Komponente tauschen",kurz:"Du tauschst eine Komponente und dokumentierst alles in einer Checkliste bzw. einem Protokoll.",
+ fakten:["Checkliste/Protokoll (A4)","Von der Auftragsannahme bis zur Kundenübergabe","Entscheidungen begründen"],
+ sz:"Ein Kunde hat seinen PC zur Reparatur gebracht. Du legst dein Protokoll vor, die Lehrkraft spielt den prüfenden Meister.",
+ q:[["Beschreibe den Ablauf von der Auftragsannahme bis zur Übergabe.","Auftrag und Fehler aufnehmen, Diagnose, ggf. Angebot und Freigabe, PC vom Strom trennen und ESD-Schutz, Tausch, Funktionstest, Dokumentation, Übergabe an den Kunden."],
+    ["Welche Schutzmaßnahmen beachtest du beim Öffnen des PCs?","Netzstecker ziehen, Restspannung entladen, ESD-Armband bzw. Erdung, Bauteile an den Kanten anfassen, Daten vorher sichern."],
+    ["Wozu dient die Checkliste bzw. das Protokoll?","Nichts wird vergessen, Nachweis gegenüber dem Kunden, Nachvollziehbarkeit, Absicherung bei Streit."],
+    ["Welche Entscheidung hast du getroffen und wie begründest du sie?","Eigene Entscheidung. Wichtig: Kompatibilität (Sockel/Steckplatz/Netzteil), Kosten, Kundenwunsch. Mit Argument statt „fand ich besser“."]]},
+
+{id:"2-1.6",typ:"P",titel:"Arbeitsspeicher tauschen",kurz:"Du rüstest RAM auf: Bestandsaufnahme, Angebot als PDF, Einbau nach Checkliste, Abnahme und Rückbau.",
+ fakten:["RAM-Art · verbauter RAM · freie Slots · max. Ausbau","Angebot als PDF","Einbau nach Checkliste","Abnahme + Rückbau"],
+ sz:"Ein Kunde möchte mehr Arbeitsspeicher. Du präsentierst Bestandsaufnahme, Angebot und Einbau.",
+ q:[["Wie findest du heraus, welcher RAM verbaut ist und wie viel maximal möglich ist?","Mit Tools (z. B. CPU-Z, Systeminformationen) oder Handbuch/Mainboard-Hersteller: Typ (DDR3/4/5), Takt, belegte und freie Slots, max. Ausbau durch Mainboard, CPU und Betriebssystem (32-Bit ca. 4 GB)."],
+    ["Worin unterscheiden sich DDR3, DDR4 und DDR5, und was ist DIMM vs. SO-DIMM?","Generationen sind untereinander nicht kompatibel (andere Kerbe, Spannung, Takt). DIMM = Desktop, SO-DIMM = Notebook (kleiner)."],
+    ["Warum ist Dual-Channel sinnvoll und worauf achtest du bei zwei Modulen?","Doppelte Speicherbandbreite. Möglichst gleiche Module, in die passenden Slots (farblich markiert). Sonst läuft alles mit dem langsamsten Modul."],
+    ["Was gehört in dein Angebot?","Produkt, Kapazität, Typ, Takt, Menge, Preis, Arbeitszeit, Mehrwertsteuer, Lieferzeit, Gültigkeit."],
+    ["Was bedeuten Abnahme und Rückbau bei deiner Aufgabe?","Abnahme: Funktion testen (BIOS/Windows erkennt den RAM, ggf. Speichertest) und Kunde bestätigt. Rückbau: PC wieder in den Ausgangszustand bringen."]]},
+
+{id:"2-1.7",typ:"P",titel:"Wartung eines PC",kurz:"Du erstellst einen chronologischen Wartungsplan und führst die Wartung durch.",
+ fakten:["Wartungsplan chronologisch","Arbeitssicherheit","Empfindliche Bauteile","Dokumentation"],
+ sz:"Du hast einen PC gewartet. Die Lehrkraft prüft Reihenfolge, Sicherheit und Dokumentation.",
+ q:[["In welcher Reihenfolge läuft dein Wartungsplan ab?","Vorbereiten und ggf. Daten sichern, ausschalten und trennen, öffnen, Staub entfernen, Lüfter/Kühler prüfen, Kabel und Steckverbindungen prüfen, Zusammenbau, Funktionstest, Updates, Dokumentation."],
+    ["Welche Punkte der Arbeitssicherheit beachtest du?","Netzstecker ziehen, Netzteil nie öffnen, ESD-Schutz, beim Ausblasen Lüfter festhalten und Staubmaske, sicherer Stand des Gehäuses."],
+    ["Welche Bauteile sind besonders empfindlich und wie schützt du sie?","RAM, CPU, Mainboard, Grafikkarte, Laufwerke. ESD-Armband, an den Kanten anfassen, antistatische Unterlage, keine Stöße bei HDDs."],
+    ["Warum ist regelmäßige Wartung sinnvoll?","Vorbeugung gegen Überhitzung, laute Lüfter, Leistungsverlust und Ausfälle. Längere Lebensdauer."]]},
+
+{id:"2-1.19",typ:"P",titel:"Video-Tutorial Prozessorwechsel",kurz:"In der Gruppe drehst du ein Video zum Prozessorwechsel. Grundlage ist eine angepasste Checkliste und ein Drehbuch.",
+ fakten:["Gruppe 3","Checkliste anpassen","Drehbuch","One-Shot-Video"],
+ sz:"Ihr stellt euer Tutorial vor. Die Lehrkraft fragt nach Technik und Zusammenarbeit.",
+ q:[["Wie läuft ein Prozessorwechsel Schritt für Schritt ab?","Strom trennen, Kühler abnehmen, Wärmeleitpaste entfernen, Sockelhebel öffnen, CPU entnehmen, neue CPU richtig ausgerichtet einsetzen (Markierung), Hebel schließen, neue Wärmeleitpaste, Kühler montieren, Lüfter anschließen, Test im BIOS."],
+    ["Was prüfst du vor dem Kauf einer neuen CPU?","Sockel, Chipsatz, BIOS-Version des Mainboards, Kühler-Eignung und TDP, unterstützter RAM."],
+    ["Was ist ein Drehbuch und warum war es bei euch wichtig?","Plan der Szenen mit Text, Handlungen und Zeiten. Bei One-Shot ohne Schnitt unverzichtbar."],
+    ["Welche Probleme gibt es bei einem One-Shot-Video?","Kein Schnitt: Jeder Fehler heißt Neustart. Deshalb proben, Material bereitlegen, Ton und Kamera testen, Reihenfolge exakt einhalten."],
+    ["Wie habt ihr in der Gruppe zusammengearbeitet?","Eigene Erfahrung. Wichtig: Rollen und Aufgaben verteilt, Absprachen, Zeitplan, Umgang mit Problemen."]]},
+
+{id:"2-2.3",typ:"P",titel:"Rauminspektion",kurz:"In der Gruppe prüft ihr PC-Räume der Schule und protokolliert Mängel auf dem iPad.",
+ fakten:["Gruppe 3","PC-Räume E66 · E69 · E73a · M66 · 103","iPad-Protokoll","Absprache mit der raumverantwortlichen Lehrkraft","Nicht behebbare Probleme → Steve Rosenau","E-Mail mit Kundenzufriedenheits-Feedback"],
+ sz:"Du präsentierst eure Rauminspektion. Die Lehrkraft fragt nach Vorgehen, Absprachen und Rückmeldung.",
+ q:[["Was prüft ihr bei der Inspektion eines PC-Raums?","Rechner, Monitore, Maus, Tastatur, Kabel, Netzwerk und Anmeldung, Software/Startverhalten, Ordnung. Mängel ins iPad-Protokoll."],
+    ["Wie lief die Absprache mit der raumverantwortlichen Lehrkraft?","Eigene Erfahrung. Wichtig: vorher Termin abstimmen, Unterricht nicht stören, Mängel besprechen, Rückmeldung einholen."],
+    ["Was passiert mit Problemen, die ihr nicht selbst beheben könnt?","Dokumentieren und an Steve Rosenau weitergeben."],
+    ["Wozu das Kundenzufriedenheits-Feedback per E-Mail und was gehört hinein?","Qualität messen und verbessern. Höflich und sachlich: Dank, kurze Fragen zur Zufriedenheit, Raum für Verbesserungsvorschläge."]]},
+
+{id:"2-1.1",typ:"T",titel:"Grafikleistung",kurz:"Ein Kunde arbeitet mit Autodesk Inventor und großen Baugruppen. Du berätst zur Grafikkarte.",
+ fakten:["Inventor 2024, über 1000 Bauteile","Ryzen 3 3200 mit iGPU · 32 GB DDR4 · Win10 64-Bit","Angebot + Erklärung","2-Minuten-Sprachnachricht"],
+ sz:"Du erklärst dem Kunden (der Lehrkraft), warum seine bisherige Grafiklösung nicht reicht und was du empfiehlst.",
+ q:[["Warum reicht die integrierte Grafik (iGPU) für Inventor mit über 1000 Bauteilen nicht?","iGPU teilt sich den Arbeitsspeicher, hat wenig eigene Rechenleistung und kaum Grafikspeicher. CAD mit großen Baugruppen braucht eine dedizierte Grafikkarte mit eigenem VRAM und passenden Treibern."],
+    ["Welche Kenngrößen einer Grafikkarte sind für CAD wichtig?","VRAM-Größe, Speicheranbindung/Bandbreite, GPU-Leistung, zertifizierte Treiber, Anschlüsse, Leistungsaufnahme (TDP), PCIe-Anschluss."],
+    ["Worauf achtest du bei der Kompatibilität im Angebot?","Freier PCIe-x16-Steckplatz, Netzteilleistung und Stromstecker, Platz im Gehäuse, Kühlung, Treiber für Windows 10 64-Bit."],
+    ["Wie baust du die 2-Minuten-Sprachnachricht auf?","Problem benennen, Empfehlung, kurze Begründung, Kosten, Rückfrage oder nächster Schritt. Laienverständlich, ohne Fachwörter-Flut."]]},
+
+{id:"2-1.3",typ:"T",titel:"Ergonomischer Arbeitsplatz",kurz:"Du beurteilst einen Arbeitsplatz mit einem Beurteilungsbogen und zeigst Folgen schlechter Ergonomie.",
+ fakten:["Beurteilungsbogen: mindestens 5 Kriterien i. O. / n. i. O.","Karikatur","Folgen schlechter Ergonomie"],
+ sz:"Du präsentierst deinen Beurteilungsbogen und deine Karikatur.",
+ q:[["Welche Kriterien hast du beurteilt und was ist jeweils „in Ordnung“?","Z. B. Bildschirmhöhe (Oberkante etwa auf Augenhöhe), Abstand (ca. 50–70 cm), Sitzhöhe und Rückenlehne, Winkel an Knie und Ellbogen, Handgelenk bei Maus/Tastatur, Blendfreiheit/Beleuchtung."],
+    ["Welche gesundheitlichen Folgen kann ein schlechter Arbeitsplatz haben?","Rücken- und Nackenschmerzen, Verspannungen, Mausarm/RSI, Kopfschmerzen, trockene und müde Augen."],
+    ["Was zeigt deine Karikatur und welche Aussage steckt dahinter?","Eigene Karikatur. Wichtig: ein deutlicher Fehler (übertrieben), erkennbare Aussage, Bezug zu den Kriterien."],
+    ["Wie würdest du einen Arbeitsplatz verbessern, der in mehreren Punkten n. i. O. ist?","Reihenfolge nach Wirkung: Stuhl und Tischhöhe, Bildschirmposition, Eingabegeräte, Licht. Jeweils konkret nennen, was geändert wird."]]},
+
+{id:"2-1.4",typ:"T",titel:"Neue Bildschirme an alten PCs",kurz:"Neue Monitore haben DVI, HDMI und DisplayPort, die alten PCs nur VGA. Du suchst Lösungen und empfiehlst eine.",
+ fakten:["VGA vs. DVI / HDMI / DisplayPort","Lösungen mit Vor- und Nachteilen","Kaufempfehlung: Produkt, Hersteller, Artikelnummer, Preis, Link, Begründung"],
+ sz:"Die Schule hat neue Monitore, aber nur VGA-PCs. Du stellst deine Lösungen und deine Empfehlung vor.",
+ q:[["Wie unterscheiden sich VGA, DVI, HDMI und DisplayPort?","VGA analog (nur Bild, Qualitätsverlust). DVI digital (teils analog). HDMI digital mit Ton. DisplayPort digital mit Ton, hohe Auflösungen."],
+    ["Welche Lösungsmöglichkeiten gibt es und was sind Vor- und Nachteile?","Adapter/Konverter (günstig, aber Qualität), Grafikkarte nachrüsten (sauber, Aufwand), Monitor mit VGA (altes Signal), neuer PC (teuer)."],
+    ["Warum reicht oft kein einfacher Adapter von VGA auf HDMI?","Analog und digital muss gewandelt werden. Dafür ist ein aktiver Konverter mit Chip und Stromversorgung nötig."],
+    ["Wie begründest du deine Kaufempfehlung?","Kompatibilität, Preis-Leistung, Qualität, Verfügbarkeit. Mit Produktname, Hersteller, Artikelnummer, Preis und Link belegt."]]},
+
+{id:"2-1.8",typ:"T",titel:"Selbst-Hilfe-Broschüre Sound",kurz:"Du schreibst eine Broschüre, mit der Anwender Soundprobleme selbst beheben, auch in BigBlueButton.",
+ fakten:["Hardware- und Software-Ursachen","Verständlich für Laien","BigBlueButton"],
+ sz:"Du erklärst der Lehrkraft (als Anwender) mit deiner Broschüre, wie sie ihr Soundproblem löst.",
+ q:[["In welcher Reihenfolge prüft man, wenn kein Ton kommt?","Lautstärke/Stummschaltung, richtiges Ausgabegerät, Kabel und Buchse (Farbe/Symbol), Treiber im Gerätemanager, anderes Gerät testen."],
+    ["Was sind typische Hardware- und was typische Software-Ursachen?","Hardware: Kabel locker, defekte Lautsprecher, falsche Buchse. Software: falscher Standard-Ausgang, fehlender Treiber, App-Einstellung, Update-Problem."],
+    ["Was prüfst du in BigBlueButton, wenn man dich nicht hört?","Mikrofonfreigabe im Browser, richtiges Mikrofon gewählt, Audiotest, nicht stummgeschaltet, kein anderes Programm blockiert das Mikro."],
+    ["Wie machst du die Broschüre für Laien verständlich?","Kurze Schritte, Bilder/Screenshots, einfache Wörter, vom Einfachen zum Komplexen."]]},
+
+{id:"2-1.9",typ:"T",titel:"Bildschirmberatung für Herrn Müller",kurz:"Du berätst Herrn Müller zu Bildschirmen und Grafikkarte und erstellst mindestens zwei Angebote.",
+ fakten:["Technologien · Kenngrößen · Gütesiegel","Mindestens 2 Angebote","Grafikkarte mit VGA + DVI"],
+ sz:"Die Lehrkraft spielt Herrn Müller, der keine Ahnung von Bildschirmen hat.",
+ q:[["Welche Bildschirmtechnologien gibt es und wofür eignen sie sich?","TN: schnell und günstig, schwächere Blickwinkel. IPS: gute Farben und Blickwinkel. VA: starker Kontrast. OLED: sehr guter Kontrast, teuer."],
+    ["Welche Kenngrößen vergleichst du?","Diagonale, Auflösung, Helligkeit, Kontrast, Reaktionszeit, Blickwinkel, Bildwiederholrate, Anschlüsse."],
+    ["Welche Gütesiegel kennst du und was sagen sie aus?","Z. B. TCO Certified, TÜV/GS, Blauer Engel. Sie belegen Ergonomie, Strahlung, Energieverbrauch, Sicherheit und Umweltaspekte."],
+    ["Warum eine Grafikkarte mit VGA und DVI?","Damit sowohl alte als auch neuere Monitore angeschlossen werden können."],
+    ["Wie begründest du Herrn Müller gegenüber deine Angebote?","Bedarf klären, zwei Optionen gegenüberstellen, Vor- und Nachteile in Alltagssprache, Preis, klare Empfehlung."]]},
+
+{id:"2-1.10",typ:"T",titel:"Ergonomische Eingabegeräte",kurz:"Für ein Ärztehaus wählst du ergonomische Mäuse und Tastaturen und zeigst die Beratung im Rollenspiel-Video.",
+ fakten:["Ärztehaus","Mindestens 2 Mäuse und 2 Tastaturen","Rollenspiel-Video"],
+ sz:"Die Lehrkraft spielt die Praxisleitung des Ärztehauses und lässt sich von dir beraten.",
+ q:[["Welche ergonomischen Mäuse hast du verglichen und was unterscheidet sie?","Z. B. Vertikalmaus, Trackball, kompakte Maus. Handhaltung, Handgröße, Eingewöhnung, Preis."],
+    ["Welche ergonomischen Tastaturen kommen in Frage?","Geteilte oder gewinkelte Tastatur, flache Bauweise, Handballenauflage, ggf. ohne Nummernblock."],
+    ["Was ist im Ärztehaus besonders wichtig?","Dauernutzung, Hygiene (abwischbar), Zuverlässigkeit, Lautstärke, Kosten für viele Plätze."],
+    ["Wie bist du im Beratungsgespräch vorgegangen?","Bedarf erfragen, Optionen vorstellen, Vor- und Nachteile, Preis, Empfehlung und Entscheidung klären."]]},
+
+{id:"2-1.11",typ:"T",titel:"Webcams",kurz:"Du vergleichst drei Webcam-Varianten mit Vor- und Nachteilen und Kosten.",
+ fakten:["3 Varianten","Vor- und Nachteile","Kosten"],
+ sz:"Du empfiehlst der Lehrkraft eine Webcam für den Online-Unterricht.",
+ q:[["Nach welchen Kriterien hast du die Webcams verglichen?","Auflösung (720p/1080p), Bildrate, Fokus, Sichtfeld, Mikrofon, Lichtempfindlichkeit, Anschluss (USB), Preis, Datenschutz (Blende)."],
+    ["Welche drei Varianten hast du gewählt und was spricht jeweils dafür und dagegen?","Eigene Auswahl: z. B. günstig, mittel, hochwertig. Jede mit konkretem Vorteil und Nachteil."],
+    ["Welche Webcam empfiehlst du und warum?","Eine Empfehlung mit Argumenten aus den Kriterien und den Kosten."],
+    ["Was ist beim Datenschutz zu beachten?","Abdeckblende oder Abschalten, Zugriffsrechte für Apps, keine unbeabsichtigte Übertragung."]]},
+
+{id:"2-1.14",typ:"T",titel:"Nutzwertanalyse",kurz:"Für 25 Personen wählst du per Nutzwertanalyse zwischen Mini-PC, Tower, Notebook und Thin Client.",
+ fakten:["25 Personen","Mini-PC · Tower · Notebook · Thin Client","30 % Anschaffung · 15 % Energie · 15 % Performance (CPU-Takt) · 20 % Home-Office · 10 % Platz","Rest: eigenes Kriterium"],
+ sz:"Du präsentierst deine Entscheidungstabelle und die Empfehlung.",
+ q:[["Welche Schritte hat eine Nutzwertanalyse?","Kriterien festlegen, gewichten (Summe 100 %), Alternativen mit Punkten bewerten, Punkte × Gewicht = Teilnutzen, Teilnutzen addieren, Rangfolge."],
+    ["Wie viel Prozent bleiben für dein eigenes Kriterium und warum?","30 + 15 + 15 + 20 + 10 = 90 %, also bleiben 10 %. Die Gewichte müssen zusammen 100 % ergeben."],
+    ["Welches eigene Kriterium hast du gewählt und wie begründest du es?","Eigene Wahl, z. B. Wartbarkeit, Sicherheit, Lärm. Es muss zum Einsatz für 25 Personen passen."],
+    ["Rechne ein Beispiel: 4 Punkte bei einem Kriterium mit 30 % Gewicht.","4 × 0,30 = 1,2 Punkte Teilnutzen."],
+    ["Wo liegen die Grenzen einer Nutzwertanalyse?","Gewichtung und Punktvergabe sind subjektiv. Ergebnis hängt davon ab. Hilfreich: Sensitivitätsprüfung."]]},
+
+{id:"2-1.15",typ:"T",titel:"Prozessoren vergleichen",kurz:"Du vergleichst mindestens 7 CPUs zwischen 100 und 200 Euro in Excel und schreibst Frau Nett eine E-Mail.",
+ fakten:["Mindestens 7 CPUs · 100–200 €","Mindestens 5 Kriterien","Excel-Tabelle","E-Mail an Frau Nett"],
+ sz:"Du präsentierst Frau Nett (der Lehrkraft) deinen Vergleich.",
+ q:[["Welche Kriterien hast du für den CPU-Vergleich gewählt?","Z. B. Kerne/Threads, Takt (Basis/Boost), Cache, TDP, Sockel, integrierte Grafik, Preis, Benchmark."],
+    ["Was ist der Unterschied zwischen Kernen, Threads und Takt?","Kerne = parallele Recheneinheiten. Threads = gleichzeitig bearbeitbare Aufgaben pro Kern. Takt = Geschwindigkeit eines Kerns."],
+    ["Wie hast du die Excel-Tabelle aufgebaut?","Eine Zeile pro CPU, Spalte pro Kriterium, ggf. Formeln (Preis-Leistung), Sortierung oder bedingte Formatierung für die Auswertung."],
+    ["Was steht in deiner E-Mail an Frau Nett?","Passende Anrede, Ergebnis in zwei bis drei Sätzen, Empfehlung mit Begründung, Hinweis auf die Anlage, Gruß."]]},
+
+{id:"2-1.17",typ:"T",titel:"Netzteil – Datenblattanalyse",kurz:"Du wählst aus vier Netzteilen das passende anhand der Datenblätter.",
+ fakten:["Mindestens 300 W bei 35 °C","System Power B9 300 W · 35,99 €","LC420H-12 V1.3 · 25,99 €","Pure Power 11 300 W · 47,90 €","TR2 S 350 W · 46,99 €"],
+ sz:"Du erklärst, warum du dich für ein bestimmtes Netzteil entschieden hast.",
+ q:[["Welche technischen Kriterien liest du aus dem Datenblatt?","Nennleistung und Dauerleistung bei 35 °C, Ströme auf der 12-V-Schiene, Effizienz (80 PLUS), Anschlüsse, Schutzschaltungen (OVP, OCP, SCP), Lüfter/Lautstärke."],
+    ["Was bedeutet die Angabe „bei 35 °C“?","Netzteile liefern bei hohen Temperaturen weniger. Die Angabe zeigt die Leistung unter realistischer Wärme."],
+    ["Welche ökonomischen und ökologischen Kriterien betrachtest du?","Ökonomisch: Preis, Garantie, Betriebskosten. Ökologisch: Effizienz, Stromverbrauch, Materialien/Recycling."],
+    ["Was gehört zur Produktsicherheit?","Prüfzeichen (CE, GS, TÜV), Schutzfunktionen, Brandschutz-Eigenschaften."],
+    ["Welches Netzteil empfiehlst du und warum?","Eine Entscheidung mit Kriterien aus den Datenblättern belegen, nicht nur nach dem Preis."]]},
+
+{id:"2-2.1",typ:"T",titel:"Elektro-Fischer",kurz:"Für die Firma Elektro-Fischer erstellst du Lasten- und Pflichtenheft und weist die Mitarbeiter ein.",
+ fakten:["Lastenheft · Pflichtenheft","Anforderungen der Mitarbeiter","Einweisung"],
+ sz:"Die Lehrkraft spielt Herrn Fischer, den Auftraggeber.",
+ q:[["Was ist der Unterschied zwischen Lastenheft und Pflichtenheft?","Lastenheft: Auftraggeber beschreibt, was gewünscht wird. Pflichtenheft: Auftragnehmer beschreibt, wie und womit er es umsetzt."],
+    ["Welche Anforderungen der Mitarbeiter hast du berücksichtigt?","Konkrete Wünsche der Mitarbeiter benennen und zeigen, wie sie im Pflichtenheft landen."],
+    ["Wie hast du die Einweisung der Mitarbeiter geplant?","Zielgruppe berücksichtigen, einfache Schritte, Beispiele, kurze Anleitung, Zeit für Fragen."],
+    ["Wie stellst du sicher, dass die Lösung am Ende abgenommen werden kann?","Klare, prüfbare Anforderungen, Abnahmekriterien, Test mit dem Kunden."]]},
+
+{id:"2-2.2",typ:"T",titel:"Drucker, Kopierer, Scanner",kurz:"Du berätst zu Multifunktionsgeräten für Büros mit unterschiedlichem Druckvolumen.",
+ fakten:["100 / 1.500 / 3.000 / 10.000 Seiten pro Woche","Schnittstellen · Auslastung · Platz","Feinstaub · Lärm · Lieferzeit · Wartung · Sicherheit","Mindestens 2 Geräte + Handout","Zusatz: Kaufen vs. Leasen"],
+ sz:"Die Lehrkraft spielt die Büroleitung und fragt nach deiner Empfehlung.",
+ q:[["Wann empfiehlst du Tinte, wann Laser?","Wenige Seiten, Farbe, geringe Anschaffung: Tinte. Viele Seiten, niedrige Seitenkosten: Laser. Beachten: Feinstaub und Lärm im Büro."],
+    ["Wie wählst du das Gerät nach Druckvolumen?","Wochenvolumen auf Monat hochrechnen und mit empfohlener bzw. maximaler Monatsleistung vergleichen. 100 und 10.000 Seiten pro Woche brauchen sehr unterschiedliche Geräte."],
+    ["Welche Schnittstellen sind wichtig?","USB, LAN, WLAN, ggf. Mobildruck. Je nach Zahl der Nutzer und Netzwerk."],
+    ["Was spricht für Kaufen, was für Leasen?","Kaufen: Eigentum, langfristig günstig. Leasen: planbare Raten, Service meist enthalten, aktuelle Technik, aber Vertragsbindung."],
+    ["Welche Sicherheitsaspekte beachtest du?","Zugriff per PIN/Karte, vertrauliche Ausdrucke nicht liegen lassen, Festplatte des Geräts sichern bzw. löschen."]]}
+];
+
+/* ---------- Zustand ---------- */
+const LS="abgabegespraech-training-v1";
+const S={name:"",photo:"",anrede:"du",streng:"normal",rate:{},cur:A[0].id,tab:"test",filter:"alle"};
+const qpos={},drafts={},convs={};
+let sample=null,sampleState="pending",busy=false,ctrl=null;
+const CK="abgabegespraech-training-ki-v1";
+const CFG={mode:"anthropic",key:"",base:"",model:""};
+try{const r=localStorage.getItem(CK);if(r){const o=JSON.parse(r);["mode","key","base","model"].forEach(k=>{if(typeof o[k]==="string")CFG[k]=o[k]})}}catch(e){}
+function saveCfg(){try{localStorage.setItem(CK,JSON.stringify(CFG))}catch(e){}}
+const DEF={anthropic:{model:"claude-sonnet-5-5",hint:"Key von console.anthropic.com. Er bleibt nur in diesem Browser."},
+  openai:{model:"gpt-4o-mini",base:"https://api.openai.com/v1",hint:"Key von platform.openai.com. Er bleibt nur in diesem Browser."},
+  compat:{model:"",hint:"Jeder Dienst mit OpenAI-kompatibler Schnittstelle, z. B. lokales Ollama (http://localhost:11434/v1). Key ggf. leer lassen."}};
+function aiReady(){
+  if(CFG.mode==="builtin")return !!sample;
+  if(CFG.mode==="compat")return !!CFG.base.trim()&&!!CFG.model.trim();
+  return !!CFG.key.trim();
+}
+async function llm(input,o={}){
+  if(CFG.mode==="builtin")return sample(input,o);
+  const msgs=(typeof input==="string"?[{role:"user",content:input}]:input).map(m=>({role:m.role,content:m.content}));
+  const model=CFG.model.trim()||(DEF[CFG.mode]&&DEF[CFG.mode].model)||"";
+  let url,headers={"content-type":"application/json"},body;
+  if(CFG.mode==="anthropic"){
+    url="https://api.anthropic.com/v1/messages";
+    headers["x-api-key"]=CFG.key.trim();headers["anthropic-version"]="2023-06-01";headers["anthropic-dangerous-direct-browser-access"]="true";
+    body={model,max_tokens:1500,messages:msgs};
+  }else{
+    const base=(CFG.mode==="openai"?DEF.openai.base:CFG.base.trim()).replace(/\/+$/,"");
+    url=base+"/chat/completions";
+    if(CFG.key.trim())headers.authorization="Bearer "+CFG.key.trim();
+    body={model,messages:msgs};
+  }
+  let res;
+  try{res=await fetch(url,{method:"POST",headers,body:JSON.stringify(body),signal:o.signal})}
+  catch(e){if(e&&e.name==="AbortError")throw e;throw{code:"network",message:"Keine Verbindung zum Anbieter. Läuft die Seite als lokale Datei und stimmen URL und Key?"}}
+  const raw=await res.text();let j;try{j=JSON.parse(raw)}catch(e){j=null}
+  if(!res.ok){const m=j&&(j.error&&(j.error.message||j.error))||raw.slice(0,200);throw{code:res.status===429?"rate_limited":"http_"+res.status,message:"HTTP "+res.status+": "+(typeof m==="string"?m:JSON.stringify(m))}}
+  const text=CFG.mode==="anthropic"?((j&&j.content||[]).map(b=>b.text||"").join("")):(j&&j.choices&&j.choices[0]&&j.choices[0].message&&j.choices[0].message.content)||"";
+  if(!text)throw{code:"empty",message:"Leere Antwort vom Anbieter"};
+  if(o.onText)o.onText({text});
+  return{text,truncated:false};
+}
+try{const r=localStorage.getItem(LS);if(r){const o=JSON.parse(r);["name","photo","anrede","streng"].forEach(k=>{if(typeof o[k]==="string")S[k]=o[k]});if(o.rate&&typeof o.rate==="object")S.rate=o.rate}}catch(e){}
+function save(){try{localStorage.setItem(LS,JSON.stringify({name:S.name,photo:S.photo,anrede:S.anrede,streng:S.streng,rate:S.rate}))}catch(e){}}
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const byId=id=>A.find(a=>a.id===id);
+const key=(a,i)=>a.id+"#"+i;
+const tName=()=>S.name.trim()||"Lehrkraft";
+function stat(a){let s=0,w=0,n=0;a.q.forEach((_,i)=>{const r=S.rate[key(a,i)];if(r===2)s++;else if(r===1)w++;else if(r===0)n++});return{s,w,n,o:a.q.length-s-w-n}}
+
+/* ---------- Lehrkraft-Karte ---------- */
+const phSVG='<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="36" r="17" fill="none" stroke="#9db4d3" stroke-width="3"/><path d="M16 92c2-20 16-30 34-30s32 10 34 30" fill="none" stroke="#9db4d3" stroke-width="3" stroke-linecap="round"/></svg>';
+function renderPortrait(){
+  const p=$("#portrait");p.innerHTML="";
+  if(S.photo){const im=document.createElement("img");im.src=S.photo;im.alt="Foto: "+tName();p.appendChild(im)}
+  else{const d=document.createElement("div");d.className="ph";d.innerHTML=phSVG+"<span>Hier erscheint das Foto deiner Lehrkraft</span>";p.appendChild(d)}
+  const b=document.createElement("button");b.className="btn small pbtn";b.type="button";b.id="pbtn";b.textContent=S.photo?"Foto ändern":"Foto hochladen";
+  b.onclick=()=>$("#pfile").click();p.appendChild(b);
+}
+$("#pfile").addEventListener("change",e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  const fr=new FileReader();
+  fr.onload=()=>{const im=new Image();im.onload=()=>{
+    const m=640,k=Math.min(1,m/Math.max(im.width,im.height));
+    const c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+    c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+    S.photo=c.toDataURL("image/jpeg",.86);save();renderPortrait();if(S.tab==="talk"&&!busy)renderPanel()};
+    im.src=fr.result};
+  fr.readAsDataURL(f);e.target.value="";
+});
+$("#tname").value=S.name;$("#tanrede").value=S.anrede;$("#tstreng").value=S.streng;
+$("#tname").addEventListener("input",e=>{S.name=e.target.value;save()});
+$("#tname").addEventListener("input",()=>{const t=$("#tab-talk");if(t)t.textContent="Abgabegespräch mit "+tName()});
+$("#tname").addEventListener("change",()=>{if(!busy)renderPortrait()});
+$("#tanrede").addEventListener("change",e=>{S.anrede=e.target.value;save()});
+$("#tstreng").addEventListener("change",e=>{S.streng=e.target.value;save()});
+
+/* ---------- Liste ---------- */
+function renderChips(){
+  const c=$("#chips");c.innerHTML="";
+  [["alle","Alle"],["P","Praxis"],["T","Theorie"]].forEach(([v,l])=>{
+    const b=document.createElement("button");b.type="button";b.className="chip";b.textContent=l;b.setAttribute("aria-pressed",S.filter===v);
+    b.onclick=()=>{S.filter=v;renderChips();renderList()};c.appendChild(b)});
+}
+function renderList(){
+  const ul=$("#list");ul.innerHTML="";
+  A.filter(a=>S.filter==="alle"||a.typ===S.filter).forEach(a=>{
+    const st=stat(a),li=document.createElement("li"),b=document.createElement("button");
+    b.type="button";b.className="item";if(a.id===S.cur)b.setAttribute("aria-current","true");
+    b.innerHTML='<span class="dot '+a.typ+'"></span><span><small>'+esc(a.id)+'</small><b>'+esc(a.titel)+'</b></span><span class="prog" title="sicher gekonnt">'+st.s+'/'+a.q.length+'</span>';
+    b.onclick=()=>{if(busy)return;S.cur=a.id;renderList();renderMain()};
+    li.appendChild(b);ul.appendChild(li)});
+}
+
+/* ---------- Hauptbereich ---------- */
+function renderMain(){
+  const a=byId(S.cur);
+  $("#main").innerHTML=
+   '<div class="ahead"><div class="code '+a.typ+'"><i></i>'+esc(a.id)+' · '+(a.typ==="P"?"Praxis":"Theorie")+'</div>'+
+   '<h2>'+esc(a.titel)+'</h2><p class="kurz">'+esc(a.kurz)+'</p>'+
+   '<ul class="facts">'+a.fakten.map(f=>'<li>'+esc(f)+'</li>').join("")+'</ul></div>'+
+   '<div class="tabs" role="tablist"><button class="tab" role="tab" id="tab-test" data-t="test">Selbsttest</button>'+
+   '<button class="tab" role="tab" id="tab-talk" data-t="talk">Abgabegespräch mit '+esc(tName())+'</button></div><div id="panel"></div>';
+  document.querySelectorAll(".tab").forEach(b=>{b.setAttribute("aria-selected",b.dataset.t===S.tab);b.onclick=()=>{if(busy)return;S.tab=b.dataset.t;document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x.dataset.t===S.tab));renderPanel()}});
+  renderPanel();
+}
+let lastReady=false;
+function renderPanel(){ lastReady=aiReady(); if(S.tab==="test")renderTest(); else renderTalk(); }
+
+/* ---------- Selbsttest ---------- */
+function renderTest(){
+  const a=byId(S.cur),i=qpos[a.id]||0,k=key(a,i),r=S.rate[k],p=$("#panel");
+  const stt=stat(a);
+  p.innerHTML=
+   '<div class="qcard"><div class="qmeta">Frage '+(i+1)+' von '+a.q.length+'</div>'+
+   '<h3 class="qtext">'+esc(a.q[i][0])+'</h3>'+
+   '<label class="f" for="myans" style="text-transform:none;letter-spacing:0;font-size:.9rem">Deine Antwort in eigenen Worten (erst aufschreiben, dann vergleichen)</label>'+
+   '<textarea id="myans" placeholder="Schreibe oder sprich dir die Antwort kurz vor …"></textarea>'+
+   '<div class="row"><button class="btn navy" type="button" id="show">Musterantwort zeigen</button>'+
+   (aiReady()?'<button class="btn" type="button" id="aicheck">Von '+esc(tName())+' prüfen lassen</button>':'')+'</div>'+
+   '<div id="aifb" class="fb" hidden></div>'+
+   '<div id="reveal" hidden><div class="muster"><b>Musterantwort</b><p>'+esc(a.q[i][1])+'</p></div>'+
+   '<div class="rate" style="margin-top:12px"><span>Wie war das bei dir?</span>'+
+   '<button class="rbtn" data-r="2" type="button">Sitzt</button><button class="rbtn" data-r="1" type="button">Wackelig</button><button class="rbtn" data-r="0" type="button">Nicht gewusst</button></div></div></div>'+
+   '<div class="steps"><div class="dots" role="group" aria-label="Fragen"></div>'+
+   '<div class="row"><button class="btn" type="button" id="prev"'+(i===0?" disabled":"")+'>Zurück</button><button class="btn" type="button" id="next"'+(i===a.q.length-1?" disabled":"")+'>Weiter</button></div></div>'+
+   '<div class="sum"><span><b>'+stt.s+'</b> sicher · <b>'+stt.w+'</b> wackelig · <b>'+stt.n+'</b> nicht gewusst · <b>'+stt.o+'</b> offen</span>'+
+   '<button class="btn small" type="button" id="reset">Stand zurücksetzen</button></div>';
+  const ta=$("#myans");ta.value=drafts[k]||"";ta.oninput=()=>{drafts[k]=ta.value};
+  const dots=p.querySelector(".dots");
+  a.q.forEach((_,j)=>{const d=document.createElement("button");d.type="button";d.className="sd";const rr=S.rate[key(a,j)];if(rr!==undefined)d.classList.add("r"+rr);d.textContent=j+1;d.setAttribute("aria-label","Frage "+(j+1));if(j===i)d.setAttribute("aria-current","true");d.onclick=()=>{qpos[a.id]=j;renderTest()};dots.appendChild(d)});
+  const rev=$("#reveal");
+  const mark=()=>p.querySelectorAll(".rbtn").forEach(b=>b.classList.toggle("on",S.rate[k]!==undefined&&String(S.rate[k])===b.dataset.r));
+  if(r!==undefined){rev.hidden=false;$("#show").textContent="Musterantwort ausblenden"}
+  mark();
+  $("#show").onclick=()=>{rev.hidden=!rev.hidden;$("#show").textContent=rev.hidden?"Musterantwort zeigen":"Musterantwort ausblenden"};
+  p.querySelectorAll(".rbtn").forEach(b=>b.onclick=()=>{S.rate[k]=+b.dataset.r;save();renderList();
+    if(i<a.q.length-1){qpos[a.id]=i+1}renderTest()});
+  $("#prev").onclick=()=>{qpos[a.id]=i-1;renderTest()};
+  $("#next").onclick=()=>{qpos[a.id]=i+1;renderTest()};
+  $("#reset").onclick=()=>{a.q.forEach((_,j)=>delete S.rate[key(a,j)]);qpos[a.id]=0;save();renderList();renderTest()};
+  const ai=$("#aicheck");
+  if(ai)ai.onclick=async()=>{
+    const fb=$("#aifb");fb.hidden=false;
+    if(!ta.value.trim()){fb.textContent="Schreib erst kurz deine Antwort auf, dann kann ich sie prüfen.";return}
+    ai.disabled=true;fb.textContent="Ich lese deine Antwort …";
+    try{
+      const r=await llm("Du bist "+tName()+", Lehrkraft für Informatik an einer Berufsfachschule, und prüfst eine mündliche Antwort zu einer Abgabe. "+
+        "Aufgabe: "+a.id+" "+a.titel+". Frage: "+a.q[i][0]+"\nMusterantwort (nur für dich): "+a.q[i][1]+"\nAntwort des Schülers: "+ta.value.trim()+
+        "\n\nGib auf Deutsch in höchstens 4 kurzen Sätzen Rückmeldung ("+(S.anrede==="sie"?"Sie-Form":"Du-Form")+"): Was stimmt, was fehlt oder ist ungenau. Keine Note, kein Markdown.",
+        {cache:false,onText:({text})=>{fb.textContent=text}});
+      fb.textContent=r.text;
+    }catch(e){fb.textContent=errMsg(e)}
+    ai.disabled=false;
+  };
+}
+
+function errMsg(e){
+  if(e&&e.code==="not_granted"){sample=null;sampleState="denied";return "Der Zugriff auf die KI wurde nicht erlaubt. Der Selbsttest funktioniert trotzdem weiter."}
+  if(e&&e.code==="network")return e.message;
+  if(e&&e.code==="rate_limited")return "Gerade zu viele Anfragen. Warte einen Moment und versuche es dann noch einmal.";
+  return "Das hat gerade nicht geklappt"+(e&&e.message?" ("+e.message+")":"")+". Versuche es noch einmal.";
+}
+
+/* ---------- Abgabegespräch (KI spielt die Lehrkraft) ---------- */
+function instr(a){
+  const streng={freundlich:"freundlich und ermutigend; bei Hängern gibst du kleine Denkanstöße",normal:"sachlich und fair; bei vagen Antworten fragst du nach",streng:"streng und genau; du verlangst Fachbegriffe und Begründungen, fragst mehrfach nach und gibst keine Tipps"}[S.streng];
+  const du=S.anrede==="sie"?"Sieze den Schüler.":"Duze den Schüler.";
+  return "Du spielst "+tName()+", Lehrkraft an der BBS II Gifhorn (Berufsfachschule Informatik, Lernfeld 2). Du führst ein mündliches Abgabegespräch zur Aufgabe „"+a.id+" "+a.titel+"“ mit einem Schüler. "+
+   "Der Schüler übt, du bleibst durchgehend in der Rolle. Sprich Deutsch. "+du+" Deine Haltung: "+streng+".\n\n"+
+   "Aufgabenbeschreibung: "+a.kurz+"\nEckdaten: "+a.fakten.join("; ")+"\nSituation: "+a.sz+"\n\n"+
+   "Gedächtnisstütze (nur für dich, nie vorlesen oder verraten): "+a.q.map(x=>"Frage: "+x[0]+" → Erwartet: "+x[1]).join(" | ")+"\n\n"+
+   "Regeln: Stelle in jeder Nachricht genau EINE Frage, höchstens 3 Sätze, keine Aufzählungen. Reagiere erst kurz (ein Satz) auf die letzte Antwort, dann kommt die nächste Frage oder eine Nachfrage. "+
+   "Mische Fragen zum Vorgehen, zum Fachwissen, zur Begründung von Entscheidungen und zum Transfer („Was wäre, wenn …?“). Du kannst die Fragen aus der Gedächtnisstütze umformulieren und eigene stellen. "+
+   "Wenn der Schüler „weiß ich nicht“ sagt, hilf höchstens mit einem kleinen Hinweis (je nach Haltung) und gehe weiter. Insgesamt etwa 6 Fragen. "+
+   "Wenn die Nachricht des Schülers mit [ENDE] beginnt oder etwa 6 Fragen beantwortet sind, beende das Gespräch mit einem Abschlussfeedback in genau diesem Aufbau: "+
+   "„Einschätzung: Note X (1–6)“ in einer Zeile, dann „Das war stark:“ (1–2 Punkte), „Das solltest du nachlernen:“ (1–3 konkrete Punkte), „Tipp:“ (ein Satz). Kein weiteres Markdown.";
+}
+function getConv(){return convs[S.cur]||null}
+function renderTalk(){
+  const a=byId(S.cur),p=$("#panel"),c=getConv();
+  p.innerHTML='<div class="scene"><span class="tag">Situation</span>'+esc(a.sz)+'</div><div id="talkbody"></div>';
+  const body=$("#talkbody");
+  if(!aiReady()&&!(CFG.mode==="builtin"&&sampleState==="pending")){
+    body.innerHTML='<div class="notice">Für die KI-Lehrkraft fehlt noch eine Anbindung. Trage links unter „KI-Anbindung“ deinen API-Key ein. Bis dahin funktioniert der Selbsttest.</div>';return}
+  if(!c){
+    body.innerHTML='<div class="start"><p>'+esc(tName())+' stellt dir etwa sechs Fragen zu deiner Abgabe, hakt nach und gibt dir am Ende eine Einschätzung mit Lernlücken. Antworte so, wie du es in der echten Abgabe tun würdest.</p>'+
+     '<button class="btn primary" type="button" id="go">Gespräch beginnen</button>'+
+     '<p class="hint">Beim ersten Start fragt Claude kurz um Erlaubnis.</p></div>';
+    $("#go").onclick=()=>startTalk(a);return}
+  body.innerHTML='<div class="log" id="log" aria-live="polite"></div>'+
+   '<div class="composer"><textarea id="msg" placeholder="Deine Antwort …" aria-label="Deine Antwort"></textarea>'+
+   '<div class="row"><button class="btn primary" type="button" id="send">Antworten</button>'+
+   '<button class="btn" type="button" id="endbtn">Gespräch beenden &amp; Bewertung</button>'+
+   '<button class="btn" type="button" id="restart">Neu starten</button></div>'+
+   '<p class="hint">Strg/Cmd + Enter sendet. Die Lehrkraft stellt immer nur eine Frage.</p></div>';
+  const log=$("#log");
+  c.msgs.forEach((m,idx)=>{ if(idx===0)return; addBubble(m.role,m.content,{note:m.note,final:m.final}) });
+  if(c.msgs.length===1)ask(a);
+  wireTalk(a);updateComposer();
+}
+function addBubble(role,text,o={}){
+  const log=$("#log");if(!log)return null;
+  if(o.note){const n=document.createElement("div");n.className="sysnote";n.textContent=text;log.appendChild(n);return n}
+  const m=document.createElement("div");m.className="msg"+(role==="user"?" me":"")+(o.final?" final":"");
+  if(role!=="user"){const av=document.createElement("div");av.className="av";
+    if(S.photo){const im=document.createElement("img");im.src=S.photo;im.alt="";av.appendChild(im)}else av.textContent=(tName()[0]||"L").toUpperCase();m.appendChild(av)}
+  const b=document.createElement("div");b.className="bub";
+  const who=document.createElement("span");who.className="who";who.textContent=role==="user"?"Du":tName();b.appendChild(who);
+  const t=document.createElement("span");t.className="t";t.textContent=text;b.appendChild(t);m.appendChild(b);log.appendChild(m);
+  m.scrollIntoView({block:"nearest",behavior:"smooth"});
+  return t;
+}
+function updateComposer(){
+  const c=getConv();if(!c||!$("#send"))return;
+  const off=busy||c.ended;
+  $("#msg").disabled=off;$("#send").disabled=off;$("#endbtn").disabled=off||c.msgs.length<3;
+  $("#restart").disabled=busy;
+  if(c.ended)$("#msg").placeholder="Das Gespräch ist beendet. Starte neu, um es noch einmal zu versuchen.";
+}
+function wireTalk(a){
+  $("#send").onclick=()=>send(a);
+  $("#msg").onkeydown=e=>{if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();send(a)}};
+  $("#endbtn").onclick=()=>finish(a);
+  $("#restart").onclick=()=>{delete convs[S.cur];renderTalk()};
+}
+async function startTalk(a){
+  if(CFG.mode==="builtin"&&!sample){await readySample}
+  if(!aiReady()){renderTalk();return}
+  convs[a.id]={msgs:[{role:"user",content:instr(a)+"\n\nDer Schüler betritt den Raum. Begrüße ihn kurz (ein Satz) und stelle die erste Frage."}],ended:false};
+  renderTalk();
+}
+async function ask(a,onFail){
+  const c=convs[a.id];if(!c||busy)return;
+  busy=true;updateComposer();
+  const t=addBubble("assistant","…");if(t)t.parentElement.classList.add("typing");
+  ctrl=new AbortController();
+  try{
+    const r=await llm(c.msgs.map(m=>({role:m.role,content:m.content})),{cache:false,signal:ctrl.signal,onText:({text})=>{if(t){t.parentElement.classList.remove("typing");t.textContent=text;t.scrollIntoView({block:"nearest"})}}});
+    const final=/Einschätzung:/i.test(r.text)||c.ending;
+    c.msgs.push({role:"assistant",content:r.text,final:!!final});
+    if(t){t.textContent=r.text;t.parentElement.classList.remove("typing");if(final)t.closest(".msg").classList.add("final")}
+    if(final)c.ended=true;
+  }catch(e){
+    const isStart=c.msgs.length===1;
+    let restore="";
+    if(!isStart){const last=c.msgs.pop();if(last.note)c.ending=false;else restore=last.raw||""}
+    else delete convs[a.id];
+    busy=false;
+    const text=errMsg(e);
+    renderTalk();
+    const msg=$("#msg");if(msg&&restore)msg.value=restore;
+    const note=document.createElement("div");note.className="notice";note.textContent=text;
+    const b=$("#talkbody");if(b)b.insertBefore(note,b.firstChild);
+    return;
+  }
+  c.ending=false;
+  busy=false;updateComposer();
+  const m=$("#msg");if(m&&!m.disabled)m.focus({preventScroll:true});
+}
+function send(a){
+  const c=convs[a.id],m=$("#msg");if(!c||busy||c.ended)return;
+  const v=m.value.trim();if(!v)return;
+  m.value="";
+  c.msgs.push({role:"user",content:v,raw:v});
+  addBubble("user",v);
+  ask(a);
+}
+function finish(a){
+  const c=convs[a.id];if(!c||busy||c.ended)return;
+  c.ending=true;
+  c.msgs.push({role:"user",content:"[ENDE] Bitte beende das Gespräch jetzt und gib dein Abschlussfeedback im vorgegebenen Aufbau.",note:true});
+  addBubble("user","Gespräch beendet – Bewertung angefordert",{note:true});
+  ask(a);
+}
+
+/* ---------- Start ---------- */
+const readySample=(async()=>{
+  try{ if(window.claude&&claude.use){ sample=await claude.use("sample") } }catch(e){sample=null}
+  sampleState=sample?"ok":"none";
+  buildCfg();
+  if(S.tab==="test"&&$("#panel"))renderTest(); else if(S.tab==="talk"&&!busy&&$("#panel"))renderPanel();
+  return sample;
+})();
+function buildCfg(){
+  const sel=$("#cmode");sel.innerHTML="";
+  const opts=[["anthropic","Anthropic (Claude) – eigener Key"],["openai","OpenAI – eigener Key"],["compat","OpenAI-kompatibel (eigene URL)"]];
+  if(sample)opts.unshift(["builtin","Claude (eingebaut, ohne Key)"]);
+  opts.forEach(([v,l])=>{const o=document.createElement("option");o.value=v;o.textContent=l;sel.appendChild(o)});
+  if(!opts.some(o=>o[0]===CFG.mode))CFG.mode=opts[0][0];
+  sel.value=CFG.mode;showCfg();
+}
+function showCfg(){
+  const m=CFG.mode,d=DEF[m]||{};
+  $("#wkey").hidden=m==="builtin";$("#wbase").hidden=m!=="compat";
+  $("#cmodel").parentElement.hidden=m==="builtin";
+  $("#ckey").value=CFG.key;$("#cbase").value=CFG.base;$("#cmodel").value=CFG.model;
+  $("#cmodel").placeholder=d.model||"Modellname";
+  $("#chint").textContent=m==="builtin"?"Läuft über Claude, ohne eigenen Key.":(d.hint||"");
+  if(m!=="builtin"&&!aiReady())$("#aicfg").open=true;
+}
+$("#cmode").addEventListener("change",e=>{CFG.mode=e.target.value;saveCfg();showCfg();if(!busy)renderPanel()});
+[["#ckey","key"],["#cbase","base"],["#cmodel","model"]].forEach(([id,k])=>{
+  $(id).addEventListener("input",e=>{CFG[k]=e.target.value;saveCfg();if(!busy&&aiReady()!==lastReady)renderPanel()});
+});
+renderPortrait();renderChips();renderList();renderMain();
+</script>
+</body></html>

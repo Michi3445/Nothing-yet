@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Solitaire</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:#008080;font:12px/1.25 Tahoma,"MS Sans Serif",Verdana,Arial,sans-serif;color:#000;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#desktop{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:10px}
+#desktop.max{padding:0}
+
+/* Win95-Rahmen */
+.raised{border:1px solid;border-color:#fff #000 #000 #fff;box-shadow:inset -1px -1px #808080,inset 1px 1px #dfdfdf}
+.sunken{border:1px solid;border-color:#808080 #fff #fff #808080;box-shadow:inset 1px 1px #000,inset -1px -1px #dfdfdf}
+
+.win{display:flex;flex-direction:column;width:min(100%,860px);height:min(100%,780px);background:#c0c0c0;padding:3px}
+.win.max{width:100%;height:100%}
+.title{display:flex;align-items:center;gap:4px;height:20px;padding:2px 3px;background:linear-gradient(90deg,#000080,#1084d0);color:#fff;font-weight:bold}
+.title .t{flex:1;white-space:nowrap;overflow:hidden}
+.ticon{width:14px;height:14px;background:#fff;border:1px solid #000;color:#e00000;font-size:10px;line-height:11px;text-align:center}
+.tb{display:flex;gap:2px}
+.tb button{min-width:0;width:16px;height:14px;padding:0;font:bold 9px/1 Arial,sans-serif}
+.tb button:last-child{margin-left:2px}
+
+.menubar{display:flex;padding:2px 0 1px}
+.mi{position:relative;padding:2px 8px}
+.mi.open{border:1px solid;border-color:#808080 #fff #fff #808080;padding:1px 7px}
+.dd{position:absolute;left:0;top:100%;z-index:5000;min-width:210px;background:#c0c0c0;padding:2px;border:1px solid;border-color:#fff #000 #000 #fff;box-shadow:inset -1px -1px #808080,inset 1px 1px #dfdfdf,2px 2px 0 rgba(0,0,0,.5)}
+.dd .it{position:relative;display:flex;justify-content:space-between;gap:24px;padding:3px 10px 3px 22px;white-space:nowrap}
+.dd .it:hover{background:#000080;color:#fff}
+.dd .it.dis{color:#808080;text-shadow:1px 1px #fff;pointer-events:none}
+.dd .it.on::before{content:"\2022";position:absolute;left:8px}
+.dd .sep{height:2px;margin:3px 1px;border-top:1px solid #808080;border-bottom:1px solid #fff}
+
+#board{position:relative;flex:1;min-height:0;margin-top:2px;background:#008000;overflow:hidden;touch-action:none}
+.status{display:flex;gap:2px;margin-top:3px}
+.status .sunken{padding:2px 6px}
+#sScore{flex:1}
+#sTime{width:110px}
+
+/* Karten */
+.slot{position:absolute;z-index:0;border:2px solid rgba(0,0,0,.38)}
+.slot.stock::after{content:"";position:absolute;left:50%;top:50%;width:46%;aspect-ratio:1;transform:translate(-50%,-50%);border:max(3px,.5vw) solid #00b000;border-radius:50%}
+.card{position:absolute;background:#fff;border:1px solid #000;overflow:hidden;cursor:default;font-family:Arial,"Segoe UI Symbol",Helvetica,sans-serif}
+.card.drag{cursor:grabbing}
+.card.down .face{display:none}
+.card:not(.down) .back{display:none}
+.face{position:absolute;inset:0}
+.red{color:#e40000}.blk{color:#000}
+.idx{position:absolute;display:flex;flex-direction:column;align-items:center;line-height:1;font-weight:bold}
+.idx i{font-style:normal;font-size:.95em}
+.idx.tl{left:6%;top:3%}
+.idx.br{right:6%;bottom:3%;transform:rotate(180deg)}
+.pips{position:absolute;left:34%;right:34%;top:21%;bottom:21%}
+.pip{position:absolute;transform:translate(-50%,-50%);font-size:1.2em;line-height:1}
+.idx b{letter-spacing:-.06em}
+.pip.ace{font-size:3em}
+.fc{position:absolute;left:23%;right:23%;top:14%;bottom:14%;border:1px solid currentColor;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;font-weight:bold;font-family:Georgia,"Times New Roman",serif;background:repeating-linear-gradient(135deg,#fff 0 3px,#f4ecc8 3px 6px)}
+.fc span{font-size:2.3em}
+.fc i{font-style:normal;font-size:1.6em}
+
+.back{position:absolute;inset:0;border-radius:inherit;background:#fff}
+.back::after{content:"";position:absolute;inset:3px;border:1px solid #000;border-radius:2px;background-color:var(--bc);background-image:repeating-linear-gradient(45deg,transparent 0 3px,var(--bl) 3px 4px),repeating-linear-gradient(-45deg,transparent 0 3px,var(--bl) 3px 4px)}
+#board{--bc:#0000b4;--bl:#8c8cff}
+#board[data-back="1"]{--bc:#b40000;--bl:#ff9c9c}
+#board[data-back="2"]{--bc:#006400;--bl:#8fdc8f}
+#board[data-back="3"] .back::after{background:repeating-conic-gradient(#000 0 25%,#c0c0c0 0 50%) 0 0/10px 10px}
+
+.wincv{position:absolute;left:0;top:0;z-index:3000}
+
+/* Dialoge, Buttons */
+button{min-width:75px;padding:4px 10px;background:#c0c0c0;font:inherit;color:#000;border:1px solid;border-color:#fff #000 #000 #fff;box-shadow:inset -1px -1px #808080,inset 1px 1px #dfdfdf;outline:none;cursor:default}
+button:active{border-color:#000 #fff #fff #000;box-shadow:inset 1px 1px #808080;padding:5px 9px 3px 11px}
+button.def{box-shadow:0 0 0 1px #000,inset -1px -1px #808080,inset 1px 1px #dfdfdf}
+.ov{position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center}
+.dlg{background:#c0c0c0;padding:3px;min-width:260px;max-width:min(92vw,430px);box-shadow:inset -1px -1px #808080,inset 1px 1px #dfdfdf,4px 4px 0 rgba(0,0,0,.45)}
+.dbody{padding:14px 16px 8px;line-height:1.45}
+.dbtn{display:flex;justify-content:center;gap:8px;padding:6px 10px 10px}
+
+/* Desktop-Icon */
+#icon{position:absolute;left:18px;top:18px;width:76px;text-align:center;color:#fff;cursor:default}
+#icon .ic{width:32px;height:38px;margin:0 auto 4px;background:#fff;border:1px solid #000;color:#e00000;font-size:22px;line-height:36px;border-radius:3px}
+#icon span{background:#008080;padding:1px 2px}
+</style>
+</head>
+<body>
+<div id="desktop">
+  <div id="icon" hidden><div class="ic">&hearts;&#xFE0E;</div><span>Solitaire</span></div>
+  <div class="win raised" id="win">
+    <div class="title">
+      <div class="ticon">&hearts;&#xFE0E;</div>
+      <div class="t">Solitaire</div>
+      <div class="tb">
+        <button id="bMin" title="Minimieren">_</button>
+        <button id="bMax" title="Maximieren">&#9633;</button>
+        <button id="bClose" title="Schließen">&#10005;</button>
+      </div>
+    </div>
+    <div class="menubar" id="menubar"></div>
+    <div id="board" class="sunken" data-back="0"></div>
+    <div class="status">
+      <div class="sunken" id="sScore"></div>
+      <div class="sunken" id="sTime"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(()=>{
+'use strict';
+
+const SUIT=['\u2660\uFE0E','\u2665\uFE0E','\u2666\uFE0E','\u2663\uFE0E'];
+const RANK=['','A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const BACKS=['Blau','Rot','Grün','Schach'];
+const PIPS=(()=>{
+  const six=[[0,0],[1,0],[0,.5],[1,.5],[0,1],[1,1]];
+  const eight=[[0,0],[1,0],[0,1/3],[1,1/3],[0,2/3],[1,2/3],[0,1],[1,1]];
+  return [null,[[.5,.5]],[[.5,0],[.5,1]],[[.5,0],[.5,.5],[.5,1]],
+    [[0,0],[1,0],[0,1],[1,1]],[[0,0],[1,0],[0,1],[1,1],[.5,.5]],six,
+    [...six,[.5,.25]],[...six,[.5,.25],[.5,.75]],[...eight,[.5,.5]],[...eight,[.5,1/6],[.5,5/6]]];
+})();
+
+const $=s=>document.querySelector(s);
+const board=$('#board'), win=$('#win');
+const isRed=c=>c.s===1||c.s===2;
+
+const store={
+  get(){try{return JSON.parse(localStorage.getItem('solitaire95'))||{}}catch(e){return {}}},
+  set(o){try{localStorage.setItem('solitaire95',JSON.stringify(o))}catch(e){}}
+};
+const settings=Object.assign({draw:3,back:0},store.get());
+if(settings.draw!==1&&settings.draw!==3) settings.draw=3;
+if(!(settings.back>=0&&settings.back<BACKS.length)) settings.back=0;
+board.dataset.back=settings.back;
+
+let G, undoStack=[], timer=null, drag=null, pending=null, lastClick=null, winCv=null;
+const cards=[], els=[], L={tab:[],found:[],cw:0,ch:0};
+const S={stock:null,waste:null,found:[],tab:[]};
+
+/* ---------- Aufbau ---------- */
+function faceHTML(c){
+  const col=isRed(c)?'red':'blk', su=SUIT[c.s], rk=RANK[c.r];
+  let h=`<div class="face ${col}"><div class="idx tl"><b>${rk}</b><i>${su}</i></div><div class="idx br"><b>${rk}</b><i>${su}</i></div>`;
+  if(c.r>=11) h+=`<div class="fc"><span>${rk}</span><i>${su}</i></div>`;
+  else{
+    h+='<div class="pips">';
+    for(const [x,y] of PIPS[c.r]){
+      h+=`<span class="pip${c.r===1?' ace':''}" style="left:${x*100}%;top:${y*100}%">${su}</span>`;
+    }
+    h+='</div>';
+  }
+  return h+'</div>';
+}
+function mkSlot(cls){const d=document.createElement('div');d.className='slot '+(cls||'');board.appendChild(d);return d}
+function init(){
+  S.stock=mkSlot('stock');S.stock.dataset.p='stock';
+  S.waste=mkSlot();
+  for(let i=0;i<4;i++)S.found.push(mkSlot());
+  for(let i=0;i<7;i++)S.tab.push(mkSlot());
+  for(let s=0;s<4;s++)for(let r=1;r<=13;r++){
+    const c={id:cards.length,s,r,up:false};
+    cards.push(c);
+    const el=document.createElement('div');
+    el.className='card down';el.dataset.id=c.id;
+    el.innerHTML=faceHTML(c)+'<div class="back"></div>';
+    board.appendChild(el);els.push(el);
+  }
+  newGame();
+}
+
+function newGame(){
+  stopWin();
+  clearInterval(timer);
+  const deck=cards.slice();
+  for(let i=deck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[deck[i],deck[j]]=[deck[j],deck[i]]}
+  G={stock:[],waste:[],found:[[],[],[],[]],tab:[[],[],[],[],[],[],[]],score:0,time:0,started:false,won:false,fan:0,recycles:0};
+  let k=0;
+  deck.forEach(c=>c.up=false);
+  for(let i=0;i<7;i++)for(let j=0;j<=i;j++){const c=deck[k++];c.up=(j===i);G.tab[i].push(c)}
+  while(k<52)G.stock.push(deck[k++]);
+  undoStack=[];drag=null;pending=null;lastClick=null;
+  els.forEach(e=>{e.style.visibility='';e.style.transform='';e.classList.remove('drag')});
+  render();status();
+}
+
+/* ---------- Darstellung ---------- */
+function render(){
+  const W=board.clientWidth,H=board.clientHeight;
+  const cw=Math.max(28,Math.floor(Math.min(96,W/7.6,H/4.7)));
+  const ch=Math.round(cw*1.4);
+  const gap=Math.min((W-7*cw)/8,cw*.22);
+  const x0=Math.round((W-(7*cw+6*gap))/2);
+  const X=i=>Math.round(x0+i*(cw+gap));
+  const m=Math.max(6,Math.round(cw*.12)), tabY=m+ch+Math.round(cw*.28);
+  L.cw=cw;L.ch=ch;
+  const rad=Math.max(3,Math.round(cw*.07))+'px', fs=(ch*.13)+'px';
+  for(const el of els){const s=el.style;s.width=cw+'px';s.height=ch+'px';s.borderRadius=rad;s.fontSize=fs;s.transform=''}
+  const slot=(el,x,y)=>{const s=el.style;s.left=x+'px';s.top=y+'px';s.width=cw+'px';s.height=ch+'px';s.borderRadius=rad};
+  slot(S.stock,X(0),m);slot(S.waste,X(1),m);
+  for(let f=0;f<4;f++){slot(S.found[f],X(3+f),m);L.found[f]={x:X(3+f),y:m,w:cw,h:ch}}
+  for(let i=0;i<7;i++)slot(S.tab[i],X(i),tabY);
+  const put=(c,x,y,z)=>{const s=els[c.id].style;s.left=x+'px';s.top=y+'px';s.zIndex=z;els[c.id].classList.toggle('down',!c.up)};
+
+  G.stock.forEach((c,i)=>put(c,X(0),m,i+1));
+  const wl=G.waste.length, base=Math.max(0,wl-G.fan), off=Math.round(cw*.22);
+  G.waste.forEach((c,i)=>put(c,X(1)+(i>=base?(i-base)*off:0),m,i+1));
+  for(let f=0;f<4;f++)G.found[f].forEach((c,i)=>put(c,X(3+f),m,i+1));
+
+  const avail=H-tabY-m, od=Math.round(ch*.07), ou=Math.round(ch*.22);
+  G.tab.forEach((col,i)=>{
+    let sum=0;
+    for(let j=0;j<col.length-1;j++)sum+=col[j].up?ou:od;
+    const k=(sum>0&&sum+ch>avail)?Math.max(.25,(avail-ch)/sum):1;
+    let y=tabY,last=tabY;
+    col.forEach((c,j)=>{put(c,X(i),Math.round(y),j+1);last=y;y+=(c.up?ou:od)*k});
+    L.tab[i]={x:X(i),y:tabY,w:cw,h:Math.round(last+ch-tabY)};
+  });
+}
+function status(){
+  $('#sScore').textContent='Punkte: '+G.score+(G.won?'  –  Gewonnen!':'');
+  $('#sTime').textContent='Zeit: '+G.time;
+}
+
+/* ---------- Regeln ---------- */
+function canTab(c,pile){
+  if(!pile.length)return c.r===13;
+  const t=pile[pile.length-1];
+  return t.up&&isRed(t)!==isRed(c)&&t.r===c.r+1;
+}
+function canFound(c,pile){
+  if(!pile.length)return c.r===1;
+  const t=pile[pile.length-1];
+  return t.s===c.s&&t.r+1===c.r;
+}
+function locate(c){
+  let j=G.stock.indexOf(c);if(j>=0)return{t:'stock',i:0,j};
+  j=G.waste.indexOf(c);if(j>=0)return{t:'waste',i:0,j};
+  for(let f=0;f<4;f++){j=G.found[f].indexOf(c);if(j>=0)return{t:'found',i:f,j}}
+  for(let t=0;t<7;t++){j=G.tab[t].indexOf(c);if(j>=0)return{t:'tab',i:t,j}}
+}
+
+/* ---------- Undo / Timer ---------- */
+function snap(){
+  const p=a=>a.map(c=>c.id*2+(c.up?1:0));
+  return JSON.stringify({st:p(G.stock),w:p(G.waste),f:G.found.map(p),t:G.tab.map(p),sc:G.score,fan:G.fan,rc:G.recycles});
+}
+function restore(str){
+  const o=JSON.parse(str);
+  const u=a=>a.map(v=>{const c=cards[v>>1];c.up=!!(v&1);return c});
+  G.stock=u(o.st);G.waste=u(o.w);G.found=o.f.map(u);G.tab=o.t.map(u);
+  G.score=o.sc;G.fan=o.fan;G.recycles=o.rc;
+}
+function startTimer(){G.started=true;timer=setInterval(()=>{G.time++;status()},1000)}
+function pushUndo(){
+  undoStack.push(snap());
+  if(undoStack.length>600)undoStack.shift();
+  if(!G.started)startTimer();
+}
+function undo(){
+  if(!undoStack.length||G.won||winCv)return;
+  restore(undoStack.pop());render();status();
+}
+const addScore=d=>{G.score=Math.max(0,G.score+d)};
+
+/* ---------- Züge ---------- */
+function drawStock(){
+  if(G.won)return;
+  if(G.stock.length){
+    pushUndo();
+    const n=Math.min(settings.draw,G.stock.length);
+    for(let i=0;i<n;i++){const c=G.stock.pop();c.up=true;G.waste.push(c)}
+    G.fan=n;
+  }else if(G.waste.length){
+    pushUndo();
+    const pen=settings.draw===1?100:(G.recycles>=3?20:0);
+    while(G.waste.length){const c=G.waste.pop();c.up=false;G.stock.push(c)}
+    G.fan=0;G.recycles++;addScore(-pen);
+  }else return;
+  render();status();
+}
+function moveStack(stack,from,to){
+  pushUndo();
+  const src=from.t==='waste'?G.waste:from.t==='tab'?G.tab[from.i]:G.found[from.i];
+  const dst=to.t==='tab'?G.tab[to.i]:G.found[to.i];
+  src.splice(src.length-stack.length,stack.length);
+  dst.push(...stack);
+  let d=0;
+  if(from.t==='waste'){d+=to.t==='tab'?5:10;G.fan=G.waste.length?Math.max(1,G.fan-1):0}
+  else if(from.t==='tab'){
+    if(to.t==='found')d+=10;
+    const t=src[src.length-1];
+    if(t&&!t.up){t.up=true;d+=5}
+  }else if(from.t==='found'&&to.t==='tab')d-=15;
+  addScore(d);
+  checkWin();render();status();
+}
+function autoFound(c,from){
+  if(G.won)return;
+  const pile=from.t==='waste'?G.waste:from.t==='tab'?G.tab[from.i]:null;
+  if(!pile||pile[pile.length-1]!==c)return;
+  for(let f=0;f<4;f++)if(canFound(c,G.found[f])){moveStack([c],from,{t:'found',i:f});return}
+}
+function checkWin(){
+  if(!G.found.every(f=>f.length===13))return;
+  G.won=true;clearInterval(timer);
+  if(G.time>=30)addScore(Math.round(700000/G.time));
+  setTimeout(winAnim,350);
+}
+
+/* ---------- Maus / Touch ---------- */
+let px=0,py=0;
+board.addEventListener('pointerdown',e=>{
+  if(G.won||winCv)return;
+  if(e.pointerType==='mouse'&&e.button!==0)return;
+  const t=e.target.closest('.card,.slot');
+  if(!t)return;
+  if(t.classList.contains('slot')){if(t.dataset.p==='stock'){pending='stock';px=e.clientX;py=e.clientY}return}
+  const c=cards[+t.dataset.id],loc=locate(c);
+  if(loc.t==='stock'){pending='stock';px=e.clientX;py=e.clientY;return}
+  if(!c.up)return;
+  let stack;
+  if(loc.t==='tab')stack=G.tab[loc.i].slice(loc.j);
+  else{
+    const pile=loc.t==='waste'?G.waste:G.found[loc.i];
+    if(loc.j!==pile.length-1)return;
+    stack=[c];
+  }
+  drag={stack,from:{t:loc.t,i:loc.i},c,x:e.clientX,y:e.clientY,moved:false,dx:0,dy:0};
+});
+window.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+  if(!drag.moved){
+    if(Math.hypot(dx,dy)<5)return;
+    drag.moved=true;
+    drag.base=drag.stack.map(c=>({l:parseFloat(els[c.id].style.left),t:parseFloat(els[c.id].style.top)}));
+    drag.stack.forEach((c,i)=>{els[c.id].classList.add('drag');els[c.id].style.zIndex=2000+i});
+  }
+  drag.dx=dx;drag.dy=dy;
+  drag.stack.forEach(c=>{els[c.id].style.transform=`translate(${dx}px,${dy}px)`});
+});
+window.addEventListener('pointerup',e=>{
+  if(pending==='stock'){
+    pending=null;
+    if(Math.hypot(e.clientX-px,e.clientY-py)<8)drawStock();
+    return;
+  }
+  if(!drag)return;
+  const d=drag;drag=null;
+  if(!d.moved){
+    const now=Date.now();
+    if(lastClick&&lastClick.id===d.c.id&&now-lastClick.t<420){lastClick=null;autoFound(d.c,d.from)}
+    else lastClick={id:d.c.id,t:now};
+    return;
+  }
+  const cw=L.cw,ch=L.ch,x=d.base[0].l+d.dx,y=d.base[0].t+d.dy;
+  let best=null,bo=cw*ch*.18;
+  const test=(r,tgt)=>{
+    const ox=Math.max(0,Math.min(x+cw,r.x+r.w)-Math.max(x,r.x));
+    const oy=Math.max(0,Math.min(y+ch,r.y+r.h)-Math.max(y,r.y));
+    if(ox*oy>bo){bo=ox*oy;best=tgt}
+  };
+  for(let i=0;i<7;i++){
+    if(d.from.t==='tab'&&d.from.i===i)continue;
+    if(canTab(d.stack[0],G.tab[i]))test(L.tab[i],{t:'tab',i});
+  }
+  if(d.stack.length===1)for(let f=0;f<4;f++){
+    if(d.from.t==='found'&&d.from.i===f)continue;
+    if(canFound(d.stack[0],G.found[f]))test(L.found[f],{t:'found',i:f});
+  }
+  d.stack.forEach(c=>{els[c.id].classList.remove('drag');els[c.id].style.transform=''});
+  if(best)moveStack(d.stack,d.from,best);else render();
+});
+window.addEventListener('pointercancel',()=>{
+  pending=null;
+  if(drag){const d=drag;drag=null;if(d.moved){d.stack.forEach(c=>{els[c.id].classList.remove('drag');els[c.id].style.transform=''});render()}}
+});
+
+/* ---------- Gewinn-Animation (hüpfende Karten) ---------- */
+function drawCardCanvas(ctx,c,x,y,w,h){
+  const r=Math.max(3,w*.07);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+  ctx.fillStyle='#fff';ctx.fill();ctx.lineWidth=1;ctx.strokeStyle='#000';ctx.stroke();
+  ctx.fillStyle=isRed(c)?'#e40000':'#000';
+  const f=h*.13;
+  ctx.font=`bold ${f}px Arial,"Segoe UI Symbol",sans-serif`;
+  ctx.textAlign='left';ctx.textBaseline='top';
+  ctx.fillText(RANK[c.r],x+w*.07,y+h*.03);
+  ctx.fillText(SUIT[c.s],x+w*.07,y+h*.03+f);
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.font=`${h*.4}px Arial,"Segoe UI Symbol",sans-serif`;
+  ctx.fillText(SUIT[c.s],x+w/2,y+h*.56);
+}
+function winAnim(){
+  if(!G.won||winCv)return;
+  const W=board.clientWidth,H=board.clientHeight,cw=L.cw,ch=L.ch,sc=cw/80;
+  const cv=document.createElement('canvas');
+  cv.width=W;cv.height=H;cv.className='wincv';
+  board.appendChild(cv);winCv=cv;
+  const ctx=cv.getContext('2d');
+  const queue=[];
+  for(let r=13;r>=1;r--)for(let f=0;f<4;f++)queue.push({c:G.found[f][r-1],f});
+  const fl=[];let frame=0;
+  cv.addEventListener('pointerdown',()=>finish());
+  function finish(){
+    if(winCv!==cv)return;
+    cv.remove();winCv=null;
+    dialog('Solitaire','Herzlichen Glückwunsch, du hast gewonnen!<br>Punkte: '+G.score+'<br>Zeit: '+G.time+' s<br><br>Noch ein Spiel?',
+      [{l:'Ja',f:newGame},{l:'Nein'}]);
+  }
+  function step(){
+    if(winCv!==cv)return;
+    if(frame%22===0&&queue.length){
+      const q=queue.shift(),Lf=L.found[q.f];
+      els[q.c.id].style.visibility='hidden';
+      fl.push({c:q.c,x:Lf.x,y:Lf.y,vx:(2+Math.random()*4)*sc*(Math.random()<.5?-1:1),vy:-Math.random()*5*sc});
+    }
+    for(let i=fl.length-1;i>=0;i--){
+      const p=fl[i];
+      p.vy+=.45*sc;p.x+=p.vx;p.y+=p.vy;
+      if(p.y+ch>H){p.y=H-ch;p.vy=-p.vy*.82}
+      drawCardCanvas(ctx,p.c,Math.round(p.x),Math.round(p.y),cw,ch);
+      if(p.x+cw<0||p.x>W)fl.splice(i,1);
+    }
+    frame++;
+    if(!queue.length&&!fl.length){finish();return}
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+function stopWin(){if(winCv){winCv.remove();winCv=null}}
+
+/* ---------- Dialoge ---------- */
+function dialog(title,html,buttons){
+  const ov=document.createElement('div');
+  ov.className='ov';
+  ov.innerHTML=`<div class="dlg raised"><div class="title"><div class="t">${title}</div></div><div class="dbody">${html}</div><div class="dbtn"></div></div>`;
+  buttons.forEach((b,i)=>{
+    const bt=document.createElement('button');
+    bt.textContent=b.l;if(i===0)bt.className='def';
+    bt.onclick=()=>{ov.remove();if(b.f)b.f()};
+    ov.querySelector('.dbtn').appendChild(bt);
+  });
+  document.body.appendChild(ov);
+}
+const showRules=()=>dialog('Spielregeln',
+  '<b>Ziel:</b> Alle Karten nach Farbe von Ass bis König auf die vier Ablagestapel oben rechts legen.<br><br>'+
+  '<b>Spalten:</b> Karten absteigend und in wechselnden Farben stapeln. Auf leere Spalten dürfen nur Könige.<br><br>'+
+  '<b>Vorrat:</b> Klick zieht Karten auf den Ablagestapel. Ist der Vorrat leer, wendet ein Klick den Stapel wieder.<br><br>'+
+  '<b>Doppelklick</b> auf eine Karte legt sie automatisch auf einen Ablagestapel.<br><br>'+
+  '<b>Wertung:</b> Ablage → Spalte +5, → Ablagestapel +10, Karte aufgedeckt +5, Ablagestapel → Spalte −15, Vorrat wenden −100 (bei einer Karte) bzw. −20 (ab dem 4. Durchgang bei drei Karten). Zeitbonus beim Sieg.',
+  [{l:'OK'}]);
+const showAbout=()=>dialog('Info über Solitaire','<b>Solitaire</b> (Klondike)<br>Nachbau im Retro-Stil.<br><br>F2: Neues Spiel &nbsp;·&nbsp; Strg+Z: Rückgängig',[{l:'OK'}]);
+
+/* ---------- Menü ---------- */
+function setDraw(n){settings.draw=n;store.set(settings);newGame()}
+function setBack(i){settings.back=i;board.dataset.back=i;store.set(settings)}
+const menus={
+  'Spiel':()=>[
+    {l:'Geben',k:'F2',f:newGame},
+    {l:'Rückgängig',k:'Strg+Z',f:undo,dis:!undoStack.length||G.won},
+    '-',
+    {l:'Eine Karte ziehen',on:settings.draw===1,f:()=>setDraw(1)},
+    {l:'Drei Karten ziehen',on:settings.draw===3,f:()=>setDraw(3)},
+    '-',
+    ...BACKS.map((n,i)=>({l:'Kartenrücken: '+n,on:settings.back===i,f:()=>setBack(i)}))
+  ],
+  'Hilfe':()=>[{l:'Spielregeln',f:showRules},{l:'Info über Solitaire',f:showAbout}]
+};
+const mb=$('#menubar');let openName=null;
+Object.keys(menus).forEach(n=>{const b=document.createElement('div');b.className='mi';b.dataset.n=n;b.textContent=n;mb.appendChild(b)});
+function closeMenus(){
+  openName=null;
+  mb.querySelectorAll('.dd').forEach(d=>d.remove());
+  mb.querySelectorAll('.mi.open').forEach(m=>m.classList.remove('open'));
+}
+function openMenu(b){
+  closeMenus();
+  openName=b.dataset.n;b.classList.add('open');
+  const dd=document.createElement('div');dd.className='dd';
+  menus[openName]().forEach(it=>{
+    const d=document.createElement('div');
+    if(it==='-'){d.className='sep'}
+    else{
+      d.className='it'+(it.on?' on':'')+(it.dis?' dis':'');
+      d.innerHTML=`<span>${it.l}</span><span>${it.k||''}</span>`;
+      d.addEventListener('click',e=>{e.stopPropagation();closeMenus();it.f()});
+    }
+    dd.appendChild(d);
+  });
+  b.appendChild(dd);
+}
+mb.addEventListener('pointerdown',e=>{
+  if(e.target.closest('.dd'))return;
+  const b=e.target.closest('.mi');if(!b)return;
+  e.stopPropagation();
+  openName===b.dataset.n?closeMenus():openMenu(b);
+});
+mb.addEventListener('pointerover',e=>{
+  const b=e.target.closest('.mi');
+  if(b&&openName&&openName!==b.dataset.n)openMenu(b);
+});
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#menubar'))closeMenus()});
+
+/* ---------- Fenster-Buttons, Tastatur ---------- */
+const hide=()=>{win.style.display='none';$('#icon').hidden=false};
+$('#bClose').onclick=hide;$('#bMin').onclick=hide;
+$('#icon').onclick=()=>{win.style.display='';$('#icon').hidden=true;render()};
+$('#bMax').onclick=()=>{
+  win.classList.toggle('max');$('#desktop').classList.toggle('max');
+  render();
+};
+window.addEventListener('keydown',e=>{
+  if(e.key==='F2'){e.preventDefault();newGame()}
+  else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo()}
+});
+window.addEventListener('resize',()=>{if(G&&win.style.display!=='none')render()});
+
+init();
+})();
+</script>
+</body>
+</html>
