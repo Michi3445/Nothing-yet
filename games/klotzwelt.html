@@ -2034,10 +2034,10 @@ const Hand={
  // poses: [x,y,z, rx,ry,rz, scale]  (hand scene, camera at origin looking down -z)
  T:{arm:[.45,-.38,-.8,1.9,.3,-.4,.62],block:[.42,-.3,-.9,.12,.62,0,.27],flat:[.56,-.3,-.9,-.1,.5,0,.36],item:[.5,-.3,-.95,-.15,-.5,-.65,.5],tool:[.5,-.3,-.95,-.15,-.5,-.65,.5],bow:[.5,-.4,-.95,-.1,-.5,.8,.55]},
  // arm while something is held (fist behind the item)
- H:{block:[.5,-.5,-.75,1.9,.3,-.4,.62],flat:[.62,-.42,-.8,1.4,-.2,-.9,.5],item:[.62,-.42,-.8,1.4,-.2,-.9,.5],tool:[.62,-.42,-.8,1.4,-.2,-.9,.5],bow:[.62,-.42,-.8,1.4,-.2,-.9,.5]},
+ H:{block:[.5,-.5,-.75,1.9,.3,-.4,.62],flat:[.62,-.42,-.8,1.4,-.2,-.9,.5],item:[.62,-.42,-.8,1.4,-.2,-.9,.5],tool:[.6,-.4,-.85,2.0,-.1,-.7,.5],bow:[.62,-.42,-.8,1.4,-.2,-.9,.5]},
  cur:-1,swing:0,swingT:0,equip:1,item:null,mesh:null,arm:null,lastSel:-1,eat:0,eating:false,draw:0,lt:0,kind:'arm',
  // tools: handle in the fist, rising up and to the left towards the crosshair, axe/pick head facing the centre
- toolPose(){const u=new THREE.Vector3(-.35,.9,-.3).normalize(),n=new THREE.Vector3(-.6,0,1);n.sub(u.clone().multiplyScalar(n.dot(u))).normalize();const v=new THREE.Vector3().crossVectors(n,u).multiplyScalar(-1);
+ toolPose(){const u=new THREE.Vector3(-.25,.7,-.75).normalize(),n=new THREE.Vector3(-.6,0,1);n.sub(u.clone().multiplyScalar(n.dot(u))).normalize();const v=new THREE.Vector3().crossVectors(n,u).multiplyScalar(-1);
   const X=u.clone().add(v).multiplyScalar(Math.SQRT1_2),Y=u.clone().sub(v).multiplyScalar(Math.SQRT1_2);const e=new THREE.Euler().setFromRotationMatrix(new THREE.Matrix4().makeBasis(X,Y,n),'XYZ');return[.5,-.3,-.95,e.x,e.y,e.z,.5]},
  init(){this.T.tool=this.toolPose();const hs=R.hs;this.g=new THREE.Group();hs.add(this.g);this.matBlk=entMat(null,true,false);this.matItm=entMat(ITEXT,true,true);
   // arm (skin with sleeve, shoulder at +y, hand at -y)
