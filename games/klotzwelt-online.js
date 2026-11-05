@@ -16,7 +16,8 @@
   const DAY_MS = 12 * 60 * 1000;
   const N = { db: null, uid: null, offset: 0, wid: null, code: null, doc: null, name: '',
     edits: new Map(), byChunk: new Map(), mine: new Map(), out: new Map(), cap: 0,
-    players: new Map(), avatars: new Map(), refs: [], joinedAt: 0, lastPos: '', posT: 0, flushT: 0 };
+    players: new Map(), avatars: new Map(), refs: [], joinedAt: 0, lastPos: '', posT: 0, flushT: 0,
+    be: new Map(), beByChunk: new Map(), beSent: new Map(), locks: new Map(), open: null, items: new Map(), remote: false, wxo: null };
   const serverNow = () => Date.now() + N.offset;
   const on = () => !!N.wid && !!G.meta && G.meta.net === N.wid;
   const store = {
@@ -67,7 +68,7 @@
   function record(w, x, y, z) {
     if (y < 0 || y >= WH) return;
     const id = w.get(x, y, z), m = w.getM(x, y, z), k = keyOf(x, y, z);
-    N.out.set(k, id + ',' + m); remember(k, x, y, z, id, m);
+    N.out.set(k, id + ',' + m); remember(k, x, y, z, id, m); beCheck(w, x, y, z, id);
   }
   World.prototype.setBlock = function (x, y, z, id, m, fl) {
     const r = oSet.call(this, x, y, z, id, m, fl);
@@ -85,6 +86,8 @@
     if (this === G.world && on()) {
       const s = N.byChunk.get(CKEY(cx, cz));
       if (s) for (const k of s) { const e = N.edits.get(k); if (e) oSet.call(this, e[0], e[1], e[2], e[3], e[4], LIQ[e[3]] ? 2 : 0); }
+      const b = N.beByChunk.get(CKEY(cx, cz));
+      if (b) for (const k of b) { const e = N.be.get(k); if (e) beApply(this, e[0], e[1], e[2], e[3]); }
     }
     return r;
   };
@@ -114,6 +117,189 @@
     for (const [k, v] of N.out) { obj[k] = v; N.mine.set(k, v); }
     N.out.clear();
     kw('edits/' + N.wid).update(obj).catch(e => { console.error(e); UI.msg('Änderung konnte nicht gespeichert werden: ' + errText(e), '#ff7a6a'); });
+  }
+
+  /* ---------- chests & furnaces ---------- */
+  // kw/be/WID/x_y_z → JSON string; kw/locks/WID/x_y_z → { u, n, t } while someone has it open
+  const BE_IDS = () => [B.chest, B.furnace, B.furnace_lit];
+  const st2a = s => s ? [s.id, s.n, s.d || 0] : 0;
+  const a2st = a => Array.isArray(a) && a[1] > 0 ? { id: a[0] | 0, n: a[1] | 0, d: a[2] | 0 } : null;
+  function beSer(o, full) {
+    if (o.t === 'chest') return JSON.stringify({ t: 'c', i: o.items.map(st2a) });
+    const r = { t: 'f', a: st2a(o.in), b: st2a(o.fuel), c: st2a(o.out), by: o.by || N.uid };
+    if (full) { r.bu = o.burn | 0; r.bm = o.burnMax | 0; r.ck = o.cook | 0; }
+    return JSON.stringify(r);
+  }
+  function beRemember(k, x, y, z, obj) {
+    if (obj) N.be.set(k, [x, y, z, obj]); else N.be.delete(k);
+    const ck = CKEY(x >> 4, z >> 4); let s = N.beByChunk.get(ck);
+    if (obj) { if (!s) { s = new Set(); N.beByChunk.set(ck, s); } s.add(k); } else if (s) s.delete(k);
+  }
+  // copy a stored record into the world (in place, so an open chest window updates live)
+  function beApply(w, x, y, z, obj) {
+    const c = w.chunkAt(x, z); if (!c || c.state < 1) return;
+    const id = w.get(x, y, z);
+    if (obj.t === 'c') {
+      if (id !== B.chest) return;
+      let be = w.beAt(x, y, z); if (!be || be.t !== 'chest') { be = { t: 'chest', items: new Array(27).fill(null) }; w.setBE(x, y, z, be); }
+      for (let i = 0; i < 27; i++) be.items[i] = a2st(obj.i && obj.i[i]);
+      return be;
+    }
+    if (id !== B.furnace && id !== B.furnace_lit) return;
+    let be = w.beAt(x, y, z); if (!be || be.t !== 'furnace') { be = { t: 'furnace', in: null, fuel: null, out: null, burn: 0, burnMax: 0, cook: 0 }; w.setBE(x, y, z, be); }
+    be.in = a2st(obj.a); be.fuel = a2st(obj.b); be.out = a2st(obj.c); be.by = obj.by || null;
+    if (obj.bu !== undefined) { be.burn = obj.bu | 0; be.burnMax = obj.bm | 0; be.cook = obj.ck | 0; }
+    const lit = be.burn > 0, want = lit ? B.furnace_lit : B.furnace;
+    if (id !== want) { const m = w.getM(x, y, z); oSet.call(w, x, y, z, want, m, 1 | 4); w.setBE(x, y, z, be); }
+    return be;
+  }
+  function beRemote(k, val) {
+    const p = k.split('_'), x = +p[0], y = +p[1], z = +p[2];
+    if (val === null) { beRemember(k, x, y, z, null); N.beSent.delete(k); return; }
+    let obj; try { obj = JSON.parse(val); } catch (e) { return; }
+    beRemember(k, x, y, z, obj);
+    if (N.beSent.get(k) === val) return;   // our own write coming back
+    N.beSent.set(k, val);
+    const w = G.world; if (w && on()) beApply(w, x, y, z, obj);
+  }
+  function bePush(o, full) {
+    if (!on()) return;
+    const k = keyOf(o.x, o.y, o.z), s = beSer(o, full);
+    if (N.beSent.get(k) === s) return;
+    N.beSent.set(k, s);
+    kw('be/' + N.wid + '/' + k).set(s).catch(e => { console.error(e); UI.msg('Truhe/Ofen konnte nicht gespeichert werden: ' + errText(e), '#ff7a6a'); });
+  }
+  // a furnace runs on exactly one computer: whoever used it last, or (if they left) the first player by id
+  function runsHere(o) {
+    if (!o.by || o.by === N.uid) return true;
+    if (N.players.has(o.by)) return false;
+    let first = N.uid; for (const u of N.players.keys()) if (u < first) first = u;
+    return first === N.uid;
+  }
+  const oFurn = World.prototype.furnaceTick;
+  World.prototype.furnaceTick = function (o) {
+    if (this !== G.world || !on()) return oFurn.call(this, o);
+    if (!runsHere(o)) return;
+    const before = beSer(o);
+    oFurn.call(this, o);
+    const be = this.beAt(o.x, o.y, o.z) || o;
+    if (o.by && o.by !== N.uid) be.by = N.uid;    // taking over from someone who left
+    const now = performance.now(), changed = beSer(be) !== before;
+    if (changed || (be.burn > 0 && now - (be._pt || 0) > 2000)) { be._pt = now; bePush(be, true); }
+  };
+  // block placed/broken: a chest or furnace that is gone loses its record
+  function beCheck(w, x, y, z, id) {
+    const k = keyOf(x, y, z);
+    if (N.be.has(k) && BE_IDS().indexOf(id) < 0) { beRemember(k, x, y, z, null); N.beSent.delete(k); kw('be/' + N.wid + '/' + k).remove().catch(() => { }); }
+  }
+  // opening: one player per chest/furnace at a time, so nothing gets duplicated
+  const oShow = UI.show;
+  UI.show = function (name, data) {
+    if (!on() || (name !== 'chest' && name !== 'furnace') || !data || !data.be) return oShow.apply(this, arguments);
+    const be = data.be, k = keyOf(be.x, be.y, be.z), lk = N.locks.get(k);
+    if (lk && lk.u !== N.uid && N.players.has(lk.u)) {
+      UI.msg((lk.n || 'Jemand') + ' benutzt gerade ' + (name === 'chest' ? 'diese Truhe.' : 'diesen Ofen.'), '#ffe9a8');
+      return;
+    }
+    if (name === 'furnace') be.by = N.uid;
+    const ref = kw('locks/' + N.wid + '/' + k);
+    ref.set({ u: N.uid, n: N.name, t: firebase.database.ServerValue.TIMESTAMP }).catch(() => { });
+    ref.onDisconnect().remove();
+    const r = oShow.apply(this, arguments);
+    const cur = UI.cur;
+    if (cur && cur.name === name) {
+      N.open = be;
+      const oTick = cur.tick, oClose = cur.close;
+      cur.tick = function (dt) { if (oTick) oTick.call(this, dt); bePush(be, name === 'furnace'); };
+      cur.close = function () {
+        const res = oClose.apply(this, arguments);
+        bePush(be, name === 'furnace'); N.open = null;
+        ref.remove().catch(() => { }); ref.onDisconnect().cancel();
+        return res;
+      };
+    }
+    return r;
+  };
+
+  /* ---------- dropped items ---------- */
+  // kw/items/WID/PUSHID → { x, y, z, id, n, d, vx, vy, vz, p, ts }; picking up = deleting it first
+  const ITEM_LIFE = 300;
+  const oSpawn = Ents.spawnItem;
+  Ents.spawnItem = function () {
+    const e = oSpawn.apply(this, arguments);
+    if (e && on() && G.world) {
+      e.mergeT = 1e9;    // stacks don't merge online, every item is its own record
+      if (N.cap > 0 && !N.remote) Promise.resolve().then(() => shareItem(e));   // after the caller set .pick
+    }
+    return e;
+  };
+  for (const k of ['dropHeld']) capture(Play, k);
+  capture(G, 'onDeath');
+  if (typeof window.dropStack === 'function') { const f = window.dropStack; window.dropStack = function () { N.cap++; try { return f.apply(this, arguments); } finally { N.cap--; } }; }
+  const r2 = v => Math.round(v * 100) / 100;
+  function shareItem(e) {
+    if (e.dead || e.nid || !on()) return;
+    const ref = kw('items/' + N.wid).push();
+    e.nid = ref.key; N.items.set(ref.key, e);
+    ref.set({ x: r2(e.x), y: r2(e.y), z: r2(e.z), id: e.stack.id, n: e.stack.n, d: e.stack.d || 0, vx: r2(e.vx), vy: r2(e.vy), vz: r2(e.vz), p: r2(Math.max(0, e.pick)), ts: firebase.database.ServerValue.TIMESTAMP })
+      .catch(err => { console.error(err); });
+  }
+  function itemRemote(key, v) {
+    if (!v || N.items.has(key)) return;
+    const age = v.ts ? (serverNow() - v.ts) / 1000 : 0;
+    if (age > ITEM_LIFE - 1) { kw('items/' + N.wid + '/' + key).remove().catch(() => { }); return; }
+    if (!G.world || !on()) return;
+    N.remote = true;
+    let e; try { e = oSpawn.call(Ents, +v.x, +v.y, +v.z, { id: v.id | 0, n: v.n | 0, d: v.d | 0 }, +v.vx || 0, +v.vy || 0, +v.vz || 0); } finally { N.remote = false; }
+    if (!e) return;
+    e.nid = key; e.mergeT = 1e9; e.pick = Math.max(0, (+v.p || 0) - age); e.life = ITEM_LIFE - age;
+    N.items.set(key, e);
+  }
+  function itemGone(key) {
+    const e = N.items.get(key); N.items.delete(key);
+    if (e && !e.dead) e.dead = true;
+  }
+  const oItemUpd = ItemEnt.prototype.update;
+  ItemEnt.prototype.update = function (dt, w, P) {
+    if (!this.nid || !on()) return oItemUpd.call(this, dt, w, P);
+    if (this.claiming) return;
+    const inv = Inv, oAdd = inv.add; let want = false;
+    inv.add = function (st) { want = true; return st.n; };   // pretend it didn't fit; the database decides
+    try { oItemUpd.call(this, dt, w, P); } finally { inv.add = oAdd; }
+    if (this.dead) { if (N.items.get(this.nid) === this) { N.items.delete(this.nid); kw('items/' + N.wid + '/' + this.nid).remove().catch(() => { }); } return; }
+    if (want) claimItem(this);
+  };
+  function claimItem(e) {
+    e.claiming = true;
+    const key = e.nid, wid = N.wid;
+    kw('items/' + wid + '/' + key).transaction(cur => cur === null ? undefined : null, (err, ok) => {
+      e.claiming = false;
+      if (err) { console.error(err); return; }
+      N.items.delete(key);
+      if (!ok || N.wid !== wid) { e.dead = true; return; }
+      const left = Inv.add(e.stack);
+      if (left < e.stack.n) { G.sfx('pop', .5, e.x, e.y, e.z); G.onPickup && G.onPickup(e.stack.id); }
+      e.dead = true;
+      if (left > 0) { N.cap++; try { Ents.spawnItem(G.player.x, G.player.y + .5, G.player.z, { id: e.stack.id, n: left, d: e.stack.d || 0 }, 0, 1, 0); } finally { N.cap--; } }
+    }, false);
+  }
+
+  /* ---------- weather ---------- */
+  // the same sky for everybody: rain and thunder follow server time, /weather overrides it for 10 minutes
+  const WX_SLOT = 6 * 60 * 1000;
+  function netWeather() {
+    const now = serverNow(), o = N.wxo;
+    if (o && now < o.until) return [o.rain ? 1 : 0, o.th ? 1 : 0];
+    const r = hash(N.doc.seed | 0, Math.floor(now / WX_SLOT), 77, 3) / 4294967296;
+    return [r < .25 ? 1 : 0, r < .08 ? 1 : 0];
+  }
+  if (typeof CMD === 'object' && CMD.weather) {
+    const oW = CMD.weather;
+    CMD.weather = function (a) {
+      const r = oW.apply(this, arguments);
+      if (on()) kw('wx/' + N.wid).set({ rain: G.wx.target ? 1 : 0, th: G.wx.thTarget ? 1 : 0, until: Math.round(serverNow() + 10 * 60 * 1000) }).catch(e => UI.msg('Wetter nicht geteilt: ' + errText(e), '#ff7a6a'));
+      return r;
+    };
   }
 
   /* ---------- other players ---------- */
@@ -207,6 +393,7 @@
   };
   // one clock for everybody: the time of day follows the server time
   G.advanceTime = function (dt, noWeather) {
+    if (on() && N.doc) { const [rn, th] = netWeather(), wx = this.wx; wx.target = rn; wx.thTarget = th; wx.t = 1e9; }
     oAdvance.call(this, dt, noWeather);
     if (on() && N.doc) this.tod = ((serverNow() - N.doc.created) / DAY_MS + .04) % 1;
   };
@@ -230,9 +417,13 @@
   function listen(ref, ev, fn) { ref.on(ev, fn, e => { console.error(e); }); N.refs.push([ref, ev, fn]); }
   async function enter(wid) {
     const db = await initFirebase();
-    const [docS, editS, saveS] = await Promise.all([kw('worlds/' + wid).get(), kw('edits/' + wid).get(), kw('saves/' + wid + '/' + N.uid).get()]);
+    const [docS, editS, saveS, beS, wxS] = await Promise.all([kw('worlds/' + wid).get(), kw('edits/' + wid).get(), kw('saves/' + wid + '/' + N.uid).get(),
+      kw('be/' + wid).get(), kw('wx/' + wid).get()]);
     const doc = docS.val(); if (!doc) throw new Error('Diese Welt gibt es nicht mehr.');
     N.wid = wid; N.doc = doc; N.code = doc.code; N.edits.clear(); N.byChunk.clear(); N.mine.clear(); N.out.clear(); N.players.clear(); N.lastPos = '';
+    N.be.clear(); N.beByChunk.clear(); N.beSent.clear(); N.locks.clear(); N.items.clear(); N.open = null; N.wxo = wxS.val() || null;
+    const bes = beS.val() || {};
+    for (const k in bes) { const p = k.split('_'); try { const o = JSON.parse(bes[k]); N.beSent.set(k, bes[k]); beRemember(k, +p[0], +p[1], +p[2], o); } catch (e) { } }
     const ed = editS.val() || {};
     for (const k in ed) { const p = k.split('_'), q = String(ed[k]).split(','); remember(k, +p[0], +p[1], +p[2], +q[0] | 0, +q[1] | 0); }
     const sv = saveS.val();
@@ -252,6 +443,15 @@
     if (!on()) { disconnect(); return; }
     listen(kw('edits/' + wid), 'child_added', s => applyRemote(s.key, s.val()));
     listen(kw('edits/' + wid), 'child_changed', s => applyRemote(s.key, s.val()));
+    listen(kw('be/' + wid), 'child_added', s => beRemote(s.key, s.val()));
+    listen(kw('be/' + wid), 'child_changed', s => beRemote(s.key, s.val()));
+    listen(kw('be/' + wid), 'child_removed', s => beRemote(s.key, null));
+    listen(kw('locks/' + wid), 'child_added', s => N.locks.set(s.key, s.val()));
+    listen(kw('locks/' + wid), 'child_changed', s => N.locks.set(s.key, s.val()));
+    listen(kw('locks/' + wid), 'child_removed', s => N.locks.delete(s.key));
+    listen(kw('items/' + wid), 'child_added', s => itemRemote(s.key, s.val()));
+    listen(kw('items/' + wid), 'child_removed', s => itemGone(s.key));
+    listen(kw('wx/' + wid), 'value', s => { N.wxo = s.val() || null; });
     const pl = kw('players/' + wid);
     // whoever is already here gets no "joined" message
     const here = (await pl.get()).val() || {};
@@ -268,7 +468,7 @@
     N.refs = [];
     if (N.wid && N.db) { const me = kw('players/' + N.wid + '/' + N.uid); me.remove().catch(() => { }); me.onDisconnect().cancel(); }
     for (const uid of [...N.avatars.keys()]) dropAvatar(uid);
-    N.wid = null; N.doc = null; N.code = null; N.players.clear(); N.out.clear();
+    N.wid = null; N.doc = null; N.code = null; N.players.clear(); N.out.clear(); N.items.clear(); N.locks.clear(); N.open = null;
     try { history.replaceState(null, '', location.pathname); } catch (e) { }
   }
   addEventListener('beforeunload', () => { if (on()) { try { G.saveNow(); } catch (e) { } } });
