@@ -159,6 +159,7 @@
     100% { transform: translate(0); filter: none; }
   }
 
+  .hint.big { font-size: 26px; color: var(--text); bottom: 46%; animation: blink 1.1s steps(1) infinite; text-shadow: 2px 0 var(--pink), -2px 0 var(--cyan); }
   .sound {
     position: fixed; top: 10px; right: 12px; z-index: 10;
     font: 20px 'VT323', monospace; letter-spacing: .1em;
@@ -598,7 +599,7 @@
     if (state !== 'off') return;
     state = 'booting';
     ledOn = true; render();
-    hint.textContent = '';
+    hint.textContent = ''; hint.classList.remove('big');
     screen.classList.add('on', 'static');
     av.classList.remove('hide');
     const fast = seen();
@@ -635,7 +636,7 @@
   // Gesicht im Leerlauf: blinzeln, umschauen, zwinkern
   let faceTimer = null;
   function idleFace() {
-    const frames = ['(/ _ )', '(/ _ )', '(/ _ )', '(- _ -)', '(/ _ )', '( /_ )', '( /_ )', '(/ _ )', '(/ _ )', '(/_  )', '(/_  )', '(/ _ )', '(^ _ ^)', '(^ _ ^)', '(/ _ )'];
+    const frames = ['(/ _ )', '(/ _ )', '(/ _ )', '(- _ -)', '(/ _ )', '(/ _ )', '(/ _ )', '(/ _ )', '(- _ -)', '(/ _ )', '(^ _ ^)', '(^ _ ^)', '(/ _ )'];
     let f = 0;
     clearInterval(faceTimer);
     faceTimer = setInterval(() => {
@@ -732,13 +733,15 @@
   const showSound = () => { soundBtn.textContent = muted ? '♪ AUS' : '♪ AN'; soundBtn.classList.toggle('off', muted); };
   showSound();
   let fadeT = null;
+  const VOL = .3;
+  function startFade() {
+    clearInterval(fadeT);
+    fadeT = setInterval(() => { music.volume = Math.min(VOL, music.volume + .02); if (music.volume >= VOL) clearInterval(fadeT); }, 80);
+  }
   function startMusic() {
     if (muted || !music.paused) return;
     music.volume = 0;
-    music.play().then(() => {
-      clearInterval(fadeT);
-      fadeT = setInterval(() => { music.volume = Math.min(.6, music.volume + .03); if (music.volume >= .6) clearInterval(fadeT); }, 80);
-    }).catch(() => {});
+    music.play().then(startFade).catch(() => {});
   }
   function toggleSound() {
     muted = !muted;
@@ -784,7 +787,17 @@
     setupLayout();
     zoomed = !seen();
     applyView(true);
-    setTimeout(powerOn, 500);
+    // Musik schon beim Laden: Browser erlauben Ton erst nach einer Eingabe.
+    // Klappt Autoplay nicht, wartet der Fernseher auf den ersten Klick / Tastendruck.
+    if (muted) { setTimeout(powerOn, 500); return; }
+    music.volume = 0;
+    music.play().then(() => {
+      startFade();
+      setTimeout(powerOn, 500);
+    }).catch(() => {
+      hint.classList.add('big');
+      hint.textContent = touch ? '▶ TIPPEN ZUM EINSCHALTEN' : '▶ KLICK ODER TASTE ZUM EINSCHALTEN';
+    });
   })();
 })();
 </script>
