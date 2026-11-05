@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NAUTO-MOD · VHS·VISION</title>
+<meta name="description" content="Nauto-moD: Portierung der Naruto Mod von AHZNB auf Minecraft 1.21.1 (NeoForge).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0612; --panel: #140b1d; --line: #3d2552;
+    --text: #e8ddff; --dim: #8a7fa3;
+    --pink: #ff2e88; --cyan: #2ef2ff; --green: #39ff6a; --orange: #ff8a2e;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html { background: var(--bg); }
+  body {
+    min-height: 100vh; color: var(--text); background: var(--bg);
+    font: 22px/1.35 'VT323', ui-monospace, monospace; letter-spacing: .03em;
+    overflow-x: hidden;
+  }
+  /* VHS-Schleier wie auf der Startseite */
+  .vhs { position: fixed; inset: 0; pointer-events: none; z-index: 20; }
+  .vhs canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; opacity: .05; }
+  .vhs .lines { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px); }
+  .vhs .vig { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0,0,0,.55) 100%); }
+  .vhs .roll { position: absolute; left: 0; right: 0; height: 8vh; top: -10vh; background: linear-gradient(180deg, transparent, rgba(255,255,255,.04) 50%, transparent); animation: roll 9s linear infinite; }
+  @keyframes roll { 0% { top: -10vh; } 60%, 100% { top: 110vh; } }
+  body.glitch main { translate: 6px 0; filter: drop-shadow(-3px 0 rgba(255,46,136,.7)) drop-shadow(3px 0 rgba(46,242,255,.6)); }
+
+  main { max-width: 880px; margin: 0 auto; padding: 22px 16px 60px; animation: on .7s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes on { 0% { transform: scaleY(.01); filter: brightness(5); } 60% { transform: scaleY(1.03); filter: brightness(1.6); } 100% { transform: none; filter: none; } }
+
+  .osd { display: flex; justify-content: space-between; color: var(--dim); font-size: 18px; margin-bottom: 18px; }
+  .osd .rec { color: var(--pink); }
+  .osd .rec::before { content: '● '; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .back { color: var(--cyan); text-decoration: none; }
+  .back:hover, .back:focus-visible { color: #fff; text-shadow: 0 0 8px var(--cyan); outline: none; }
+
+  pre.logo {
+    font: 15px/1.05 ui-monospace, 'Courier New', monospace; color: var(--orange);
+    text-shadow: 2px 0 rgba(255,46,136,.75), -2px 0 rgba(46,242,255,.55), 0 0 14px rgba(255,138,46,.45);
+    overflow: hidden; white-space: pre; margin: 6px 0 4px;
+  }
+  h1 { font-size: 64px; line-height: 1; font-weight: normal; letter-spacing: .08em;
+       text-shadow: 3px 0 var(--pink), -3px 0 var(--cyan); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .tag { color: var(--cyan); font-size: 24px; margin-top: 4px; }
+  .lead { margin: 18px 0 8px; font-size: 24px; }
+  .lead b { color: var(--orange); font-weight: normal; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 6px; }
+  .chips span { border: 2px solid var(--line); padding: 1px 10px 0; color: var(--text); background: var(--panel); }
+  .chips span.hot { border-color: var(--green); color: var(--green); }
+
+  h2 { font-weight: normal; font-size: 32px; color: var(--pink); margin: 34px 0 12px; letter-spacing: .1em; }
+  h2::before { content: '▶ '; color: var(--text); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .card { background: var(--panel); border: 2px solid var(--line); padding: 12px 14px 14px; position: relative; }
+  .card::after { content: ''; position: absolute; inset: 4px; border: 1px dashed rgba(255,255,255,.06); pointer-events: none; }
+  .card h3 { font-weight: normal; font-size: 26px; color: var(--cyan); margin-bottom: 4px; }
+  .card p { color: var(--text); opacity: .88; }
+  .card .ico { float: right; color: var(--orange); font-size: 26px; }
+
+  ul.keys { list-style: none; padding: 0; display: grid; gap: 6px; }
+  ul.keys li { display: flex; gap: 12px; align-items: baseline; }
+  kbd { font: inherit; min-width: 70px; text-align: center; padding: 0 8px; border: 2px solid var(--text);
+        border-bottom-width: 4px; color: #fff; background: #1f1530; }
+
+  .box { border: 2px solid var(--pink); background: rgba(255,46,136,.06); padding: 14px 16px; }
+  .box.green { border-color: var(--green); background: rgba(57,255,106,.05); }
+  .box p + p { margin-top: 8px; }
+  .box a, .credit a { color: var(--cyan); }
+  .bar { font-family: ui-monospace, monospace; font-size: 15px; color: var(--green); margin-top: 6px; }
+
+  footer { margin-top: 40px; color: var(--dim); font-size: 18px; text-align: center; }
+
+  @media (max-width: 560px) {
+    body { font-size: 20px; }
+    h1 { font-size: 46px; }
+    pre.logo { font-size: 9px; }
+    kbd { min-width: 56px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="osd"><a class="back" href="./" id="back">◀ ZURÜCK ZUM REGAL</a><span class="rec">TAPE 09 · PLAY</span></div>
+
+  <pre class="logo" aria-hidden="true">
+ _   _    _    _   _ _____ ___         __  __  ___  ____
+| \ | |  / \  | | | |_   _/ _ \       |  \/  |/ _ \|  _ \
+|  \| | / _ \ | | | | | || | | |_____ | |\/| | | | | | | |
+| |\  |/ ___ \| |_| | | || |_| |_____|| |  | | |_| | |_| |
+|_| \_/_/   \_\\___/  |_| \___/       |_|  |_|\___/|____/</pre>
+  <h1 class="sr">NAUTO-MOD</h1>
+  <div class="tag">NARUTO-MOD FÜR MINECRAFT 1.21.1 · NEOFORGE</div>
+
+  <p class="lead">Eine Portierung der <b>Naruto Mod von AHZNB</b> von Minecraft 1.12.2 (Forge) auf Minecraft 1.21.1 (NeoForge), mit vielen eigenen Ideen obendrauf.</p>
+
+  <div class="chips">
+    <span class="hot">PORTIERUNG KOMPLETT</span>
+    <span>VERSION 0.5.10</span>
+    <span>MINECRAFT 1.21.1</span>
+    <span>NEOFORGE</span>
+    <span>MEHRSPIELER</span>
+  </div>
+  <div class="bar" aria-hidden="true">PORT [####################] 100%</div>
+
+  <h2>WAS DRIN IST</h2>
+  <div class="grid">
+    <div class="card"><span class="ico">✦</span><h3>JUTSUS</h3><p>Ninjutsu, Elemente und Spezial-Jutsus mit Chakra-Kosten, Aufladen, Rängen und Cooldowns. Neu dabei: Nachtsicht und ein Erd-Golem.</p></div>
+    <div class="card"><span class="ico">◉</span><h3>AUGEN</h3><p>Dojutsu wie Sharingan und Byakugan lassen sich anlegen und ablegen. Susanoo hat eine neue erste Stufe als Rippenkäfig.</p></div>
+    <div class="card"><span class="ico">☲</span><h3>BIJUU</h3><p>Die Schwanzbestien mit mehreren Formen, steuerbar in Blickrichtung, eigene Farben je Bijuu und eine aufladbare Bijuu-Bombe.</p></div>
+    <div class="card"><span class="ico">⧉</span><h3>KLONE</h3><p>Klone und Beschwörungen folgen, warten, greifen an oder lösen sich auf. Eine Übersicht zeigt alle auf einen Blick.</p></div>
+    <div class="card"><span class="ico">⟳</span><h3>JUTSU-MODUS</h3><p>Eine Taste nimmt die gewählte Rolle in die Hand, das Mausrad wechselt den Jutsu. Das gehaltene Item kommt danach zurück.</p></div>
+    <div class="card"><span class="ico">▤</span><h3>HANDBUCH</h3><p>Eine Jutsu-Übersicht mit Suche, Filter und Lernweg, dazu festes Training: Kampf-XP lernen ein gewähltes Ziel.</p></div>
+  </div>
+
+  <h2>STEUERUNG</h2>
+  <ul class="keys">
+    <li><kbd>B</kbd> Auswahlrad mit allen ausgerüsteten Rollen</li>
+    <li><kbd>J</kbd> Jutsu-Menü und Lernziel</li>
+    <li><kbd>H</kbd> Übersicht für Klone und Beschwörungen</li>
+    <li><kbd>R</kbd> Augen anlegen, <kbd>⇧ R</kbd> ablegen</li>
+    <li><kbd>Z / Y</kbd> erste Augen-Fähigkeit</li>
+    <li><kbd>RAD</kbd> Jutsu wechseln, mit Schleichen das Element</li>
+  </ul>
+
+  <h2>FÜR DEN HOST</h2>
+  <div class="box green">
+    <p>Beim ersten Start legt die Mod <code>config/narutomod-server.toml</code> an. Dort lassen sich XP-Tempo, Chakra-Regeneration, wie oft Bosse und Ninjas spawnen und PvP einstellen. Änderungen greifen, während das Spiel läuft.</p>
+  </div>
+
+  <h2>DOWNLOAD</h2>
+  <div class="box">
+    <p><b>Kein Download.</b> Die Nutzungsbedingungen des Original-Mods erlauben nicht, fertige .jar-Dateien zu veröffentlichen, zu verkaufen oder auf Servern einzusetzen, die Geld verdienen. Diese Version ist nur für den privaten Gebrauch.</p>
+  </div>
+
+  <h2>CREDITS</h2>
+  <p class="credit">Alle Ideen, Texturen, Modelle, Sounds und der ursprüngliche Code stammen von <b>AHZNB</b>: <a href="https://github.com/AHZNB/naruto_mod" target="_blank" rel="noopener">github.com/AHZNB/naruto_mod</a>. Diese Seite ist ein inoffizielles Fanprojekt.</p>
+
+  <footer>■ STOP · <a class="back" href="./">◀ ZURÜCK ZUM REGAL</a></footer>
+</main>
+<div class="vhs" aria-hidden="true"><canvas id="n" width="160" height="90"></canvas><div class="lines"></div><div class="vig"></div><div class="roll"></div></div>
+<script>
+  // Zurück: echtes Zurück (Regal ohne Intro), wenn man vom Regal kam
+  document.querySelectorAll('.back').forEach(a => a.addEventListener('click', e => {
+    if (document.referrer && new URL(document.referrer).pathname.replace(/index\.html$/, '') === location.pathname.replace(/nauto-mod\.html$/, '') && history.length > 1) { e.preventDefault(); history.back(); }
+  }));
+  addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'Backspace') document.getElementById('back').click(); });
+  // Rauschen + gelegentlicher Glitch
+  const c = document.getElementById('n'), x = c.getContext('2d'), im = x.createImageData(160, 90);
+  let f = 0;
+  (function loop() {
+    if (f++ % 3 === 0) { const d = im.data; for (let i = 0; i < d.length; i += 4) { const v = Math.random() * 255 | 0; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; } x.putImageData(im, 0, 0); }
+    requestAnimationFrame(loop);
+  })();
+  (function g() { setTimeout(() => { document.body.classList.add('glitch'); setTimeout(() => document.body.classList.remove('glitch'), 90 + Math.random() * 80); g(); }, 3500 + Math.random() * 4000); })();
+</script>
+</body>
+</html>
