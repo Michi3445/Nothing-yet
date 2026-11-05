@@ -702,7 +702,7 @@
     const b = L.bezel;
     return { k: Math.min(innerHeight * 1.08 / b.h, innerWidth / b.w), cx: b.x + b.w / 2, cy: b.y + b.h / 2 };
   }
-  let cam = null, camAnim = 0;
+  let cam = null, camAnim = 0, camMoving = false;
   function setCam(v) {
     cam = v;
     scene.style.transform = `translate(${innerWidth / 2 - v.cx * v.k}px, ${innerHeight / 2 - v.cy * v.k}px) scale(${v.k})`;
@@ -714,6 +714,10 @@
     const to = zoomed ? zoomView() : fitView();
     if (instant || !cam || reducedMotion) { setCam(to); if (done) done(); return; }
     const from = cam, start = performance.now();
+    // während der Fahrt als eigene Grafikebene verschieben (GPU), statt jedes Bild neu zu malen
+    scene.style.willChange = 'transform'; camMoving = true;
+    const end = done;
+    done = () => { scene.style.willChange = ''; camMoving = false; if (end) end(); };
     const ease = u => (1 - Math.cos(Math.PI * u)) / 2;
     // Bildschirmposition der Fernsehmitte linear führen, damit nichts seitlich wegrutscht
     const b = L.bezel, tx = b.x + b.w / 2, ty = b.y + b.h / 2;
@@ -731,7 +735,7 @@
 
   // ================= Bildschirm-Logik =================
   (function drawNoise() {
-    if (noiseImg) {
+    if (noiseImg && !camMoving) {
       const d = noiseImg.data;
       for (let i = 0; i < d.length; i += 4) { const v = Math.random() * 255 | 0; d[i] = v; d[i + 1] = v; d[i + 2] = v + 10; d[i + 3] = 255; }
       nctx.putImageData(noiseImg, 0, 0);
@@ -1078,7 +1082,7 @@
   const bars = document.getElementById('vhsBars');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   function bigGlitch() {
-    if (reduce || document.hidden) return;
+    if (reduce || document.hidden || camMoving) return;
     const s = .6 + Math.random() * .6;
     glitchFrame(s);
     scene.classList.add('fg'); screen.classList.add('fg2', 'flash');
