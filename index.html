@@ -38,6 +38,7 @@
     position: absolute; left: 0; top: 0;
     image-rendering: pixelated;
   }
+  #art { touch-action: none; }
   #art.hot { cursor: pointer; }
 
   /* Bildschirm (liegt passgenau auf dem gezeichneten Fernseher) */
@@ -62,9 +63,9 @@
     z-index: 5;
   }
   .glass {
-    background: radial-gradient(ellipse at 50% 50%, transparent 50%, rgba(0,0,0,.75) 100%),
+    background: radial-gradient(ellipse at 50% 50%, transparent 68%, rgba(0,0,0,.5) 100%),
                 linear-gradient(160deg, rgba(255,255,255,.09), transparent 35%);
-    box-shadow: inset 0 0 4px 1px #000, inset 0 0 12px 3px rgba(0,0,0,.55);
+    box-shadow: inset 0 0 3px 1px rgba(0,0,0,.85);
     z-index: 6;
   }
   /* zweite Störlinie, die das Bild seitlich verzieht */
@@ -90,25 +91,13 @@
   }
 
   /* Spiel-Vorschau auf dem Fernseher */
-  .p-img { position: absolute; inset: -4%; display: none; overflow: hidden; }
+  .p-img { position: absolute; inset: 0; display: none; }
   .p-img.has { display: block; }
-  .p-img img {
-    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-    filter: url(#vhs-rgb) saturate(1.35) contrast(1.15) brightness(.85) blur(.15px);
-    animation: pan 14s ease-in-out infinite alternate, shake 1.7s steps(1) infinite;
-  }
-  .p-img img.ghost { opacity: .28; mix-blend-mode: screen; transform: translateX(2.5%); filter: blur(.6px) saturate(2) hue-rotate(-20deg); animation: none; }
-  @keyframes pan { from { object-position: 0% 20%; scale: 1.06; } to { object-position: 100% 70%; scale: 1.16; } }
-  @keyframes shake {
-    0%, 86%, 100% { translate: 0 0; }
-    87% { translate: -1.2% 0; }
-    89% { translate: 1% .4%; }
-    91% { translate: -.4% 0; }
-  }
+  .p-img canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
   .p-img::after {
     content: ''; position: absolute; inset: 0;
     background:
-      linear-gradient(180deg, rgba(0,0,0,.4), transparent 22%, transparent 45%, rgba(0,0,0,.95) 72%),
+      linear-gradient(180deg, transparent 45%, rgba(0,0,0,.95) 74%),
       repeating-linear-gradient(0deg, rgba(255,255,255,.04) 0 1px, transparent 1px 3px);
   }
   .preview.img { inset: 0; justify-content: flex-end; padding-bottom: 11%; gap: .4cqw; }
@@ -168,6 +157,11 @@
   .osd.mode { top: 7%; left: 8%; }
   .osd.time { bottom: 7%; left: 8%; }
   .osd.date { bottom: 7%; right: 8%; }
+  .osd.vol { left: 0; right: 0; top: 17%; text-align: center; font-size: 6cqw; opacity: 0; transition: opacity .25s; z-index: 3; }
+  .osd.vol.show { opacity: 1; transition: none; }
+  .osd.vol span { display: inline-flex; gap: .8cqw; align-items: flex-end; vertical-align: .4cqw; margin: 0 1cqw; }
+  .osd.vol i { display: block; width: 2cqw; height: 4cqw; background: rgba(57,255,106,.18); }
+  .osd.vol i.on { background: var(--green); box-shadow: 0 0 1.5cqw rgba(57,255,106,.6); }
   .screen.ready .osd.mode, .screen.ready .osd.time, .screen.ready .osd.date { opacity: .9; }
 
   .title {
@@ -249,22 +243,13 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .press, .cur, .p-play, .screen.on .content, .screen.on .tracking, .screen.on .jitter, .p-img img, .vhs .roll { animation: none !important; }
+    .press, .cur, .p-play, .screen.on .content, .screen.on .tracking, .screen.on .jitter, .vhs .roll { animation: none !important; }
     .scene { transition: none; }
   }
 </style>
 </head>
 <body>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <filter id="vhs-rgb" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
-      <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r"/>
-      <feOffset in="r" dx="-1.6" result="r2"/>
-      <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g"/>
-      <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b"/>
-      <feOffset in="b" dx="1.6" result="b2"/>
-      <feBlend in="r2" in2="g" mode="screen" result="rg"/>
-      <feBlend in="rg" in2="b2" mode="screen"/>
-    </filter>
     <filter id="vhs-rgb-strong" x="-10%" y="-5%" width="120%" height="110%" color-interpolation-filters="sRGB">
       <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r"/>
       <feOffset in="r" dx="-2.5" result="r2"/>
@@ -285,6 +270,7 @@
         <div class="osd mode">PLAY ▶</div>
         <div class="osd time" id="time">SP 0:00:00</div>
         <div class="osd date" id="date"></div>
+        <div class="osd vol" id="volOsd">VOL <span><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span> <b>03</b></div>
 
         <section class="title">
           <div class="loader">
@@ -301,7 +287,7 @@
           <small id="insertSub"></small>
         </section>
 
-        <div class="p-img" id="pImgBox"><img id="pImg" alt=""><img id="pGhost" class="ghost" alt=""></div>
+        <div class="p-img" id="pImgBox"><canvas id="pCan"></canvas></div>
         <section class="preview" id="preview" aria-live="polite">
           <div class="p-num" id="pNum"></div>
           <div class="p-name" id="pName"></div>
@@ -370,7 +356,8 @@
         const off = [[0, 5, -3], [4, -2, 2], [-3, 3, -5]][c][r];
         tapes.push({ x: colX[c] + off, y: cab.y + cab.h - 4 - (3 - r) * 17, w: tw, h: 16, top: r === 0 });
       }
-      return { W, H, portrait, tv, bezel, screen, shelfY, cab, tapes, cols: 3, fs: 7 };
+      const remote = { x: 84, y: shelfY - 5, w: 56 };
+      return { W, H, portrait, tv, bezel, screen, shelfY, cab, tapes, remote, cols: 3, fs: 7 };
     } else {
       const W = 270, H = 480;
       const tv = { x: 22, y: 26, w: 226, h: 184 };
@@ -383,7 +370,8 @@
         const off = [0, 4, -3, 2, -4, 3, -2, 5, 0][i];
         tapes.push({ x: 34 + off, y: cab.y + 10 + i * 23, w: 196, h: 21, top: true });
       }
-      return { W, H, portrait, tv, bezel, screen, shelfY, cab, tapes, cols: 1, fs: 7 };
+      const remote = { x: (W - 56) / 2, y: cab.y + cab.h + 18, w: 56 };
+      return { W, H, portrait, tv, bezel, screen, shelfY, cab, tapes, remote, cols: 1, fs: 7 };
     }
   }
 
@@ -572,6 +560,31 @@
     if (ledOn) R(L.led.x + 1, L.led.y, 1, 1, '#ff9aa8');
   }
 
+  // Fernbedienung (liegt auf dem Regal): Stumm-Knopf, Minus, 10 Lautstärke-Balken, Plus
+  const SEG0 = 17, SEGW = 3;
+  function drawRemote() {
+    const { x, y, w } = L.remote;
+    R(x + 2, y + 11, w - 2, 1, 'rgba(0,0,0,.55)');
+    rrect(x, y + 3, w, 8, 2, C.tv0);
+    rrect(x, y, w, 9, 3, C.tv1);
+    R(x + 3, y, w - 6, 1, C.tv3);
+    R(x + 1, y + 8, w - 2, 1, C.bz2);
+    // Stumm-Knopf
+    R(x + 3, y + 3, 4, 3, muted ? C.pinkLo : C.pink); R(x + 3, y + 3, 4, 1, muted ? C.pink : '#ff8cbc');
+    // Minus / Plus
+    R(x + 9, y + 2, 6, 5, C.tv0); R(x + 10, y + 4, 4, 1, C.tv5);
+    const px = x + SEG0 + 10 * SEGW + 1;
+    R(px, y + 2, 6, 5, C.tv0); R(px + 1, y + 4, 4, 1, C.tv5); R(px + 2, y + 3, 1, 3, C.tv5);
+    // Lautstärke-Balken (wachsen nach rechts)
+    for (let i = 0; i < 10; i++) {
+      const on = !muted && i < level, h = 2 + (i * 4 / 9 | 0);
+      const c = on ? (i < 6 ? C.cyan : i < 8 ? '#b98cff' : C.pink) : C.tv0;
+      R(x + SEG0 + i * SEGW, y + 7 - h, 2, h, c);
+    }
+    // Infrarot-Fenster blinkt beim Drücken
+    R(x + w - 3, y + 2, 2, 5, irBlink ? '#ff5a6e' : '#3a1420');
+  }
+
   function drawTape(i) {
     const t = L.tapes[i], d = TAPES[i];
     const s = i === sel && (state === 'shelf' || state === 'playing');
@@ -623,6 +636,7 @@
     if (!bgCache) return;
     g.putImageData(bgCache, 0, 0);
     drawPower();
+    drawRemote();
     for (let i = 0; i < TAPES.length; i++) drawTape(i);
     aberrate(1, .45);
   }
@@ -647,6 +661,11 @@
   const noise = document.getElementById('noise');
   const nctx = noise.getContext('2d');
   let noiseImg = null, zoomed = false;
+  // Spiel-Vorschau: wird selbst auf ein Canvas gezeichnet (VHS-Farbversatz, Zeilen-Zittern, Bandstreifen)
+  const pCan = document.getElementById('pCan'), pctx = pCan.getContext('2d');
+  const pBuf = document.createElement('canvas'), bctx = pBuf.getContext('2d', { willReadFrequently: true });
+  const pPic = new Image();
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function setupLayout() {
     const portrait = innerHeight > innerWidth * 1.15;
@@ -661,13 +680,17 @@
     const r = 9, pts = [];
     for (let j = 0; j <= r; j++) pts.push([inset(j, s.h, r), j]);
     const poly = [];
-    pts.forEach(([k, j]) => poly.push(`${k}px ${j}px`));
-    pts.slice().reverse().forEach(([k, j]) => poly.push(`calc(100% - ${k}px) ${j}px`));
-    pts.forEach(([k, j]) => poly.push(`calc(100% - ${k}px) calc(100% - ${j}px)`));
-    pts.slice().reverse().forEach(([k, j]) => poly.push(`${k}px calc(100% - ${j}px)`));
+    // im Uhrzeigersinn, sonst überschneidet sich das Polygon und schneidet Streifen aus dem Bild
+    const rev = pts.slice().reverse();
+    rev.forEach(([k, j]) => poly.push(`${k}px ${j}px`));
+    pts.forEach(([k, j]) => poly.push(`calc(100% - ${k}px) ${j}px`));
+    rev.forEach(([k, j]) => poly.push(`calc(100% - ${k}px) calc(100% - ${j}px)`));
+    pts.forEach(([k, j]) => poly.push(`${k}px calc(100% - ${j}px)`));
     screen.style.clipPath = `polygon(${poly.join(',')})`;
     noise.width = s.w; noise.height = s.h;
     noiseImg = nctx.createImageData(s.w, s.h);
+    pCan.width = s.w * 2; pCan.height = s.h * 2;
+    pBuf.width = pCan.width; pBuf.height = pCan.height;
     drawBackground();
     render();
   }
@@ -699,6 +722,45 @@
     requestAnimationFrame(drawNoise);
   })();
 
+  let pLast = 0;
+  (function drawPreview(now) {
+    requestAnimationFrame(drawPreview);
+    if (now - pLast < 33) return;
+    pLast = now;
+    const box = pCan.parentElement;
+    if (!box.classList.contains('has') || !pPic.complete || !pPic.naturalWidth || state !== 'shelf') return;
+    const W = pCan.width, H = pCan.height, t = reducedMotion ? 0 : now / 1000;
+    // langsamer Kameraschwenk über das Bild
+    const k = Math.max(W / pPic.naturalWidth, H / pPic.naturalHeight) * (1.1 + .06 * Math.sin(t * .21));
+    const dw = pPic.naturalWidth * k, dh = pPic.naturalHeight * k;
+    const fx = (Math.sin(t * .17) + 1) / 2, fy = (Math.sin(t * .13 + 1) + 1) / 2;
+    bctx.fillStyle = '#000'; bctx.fillRect(0, 0, W, H);
+    bctx.drawImage(pPic, -(dw - W) * fx, -(dh - H) * fy, dw, dh);
+    const src = bctx.getImageData(0, 0, W, H), d = src.data;
+    const out = pctx.createImageData(W, H), o = out.data;
+    // Bandstreifen, der langsam nach unten wandert, plus gelegentliches Ruckeln
+    const band = ((t * 22) % (H + 60)) - 30;
+    const kick = !reducedMotion && Math.random() < .04 ? (Math.random() * 8 - 4) | 0 : 0;
+    const kickY = Math.random() * H | 0, kickH = 6 + Math.random() * 20 | 0;
+    for (let y = 0; y < H; y++) {
+      let sh = 0;
+      const db = y - band;
+      if (db > 0 && db < 14) sh += (Math.sin(y * .9 + t * 30) * 2.5) | 0;
+      if (kick && y >= kickY && y < kickY + kickH) sh += kick;
+      const bright = (db > 0 && db < 14) ? 1.25 : (y & 1 ? .86 : 1);
+      const row = y * W;
+      for (let x = 0; x < W; x++) {
+        const xr = Math.min(W - 1, Math.max(0, x + sh + 2)), xg = Math.min(W - 1, Math.max(0, x + sh)), xb = Math.min(W - 1, Math.max(0, x + sh - 2));
+        const i = (row + x) * 4;
+        o[i]     = Math.min(255, (d[(row + xr) * 4] - 128) * 1.15 + 120) * bright;
+        o[i + 1] = Math.min(255, (d[(row + xg) * 4 + 1] - 128) * 1.15 + 116) * bright;
+        o[i + 2] = Math.min(255, (d[(row + xb) * 4 + 2] - 128) * 1.15 + 124) * bright;
+        o[i + 3] = 255;
+      }
+    }
+    pctx.putImageData(out, 0, 0);
+  })(0);
+
   const av = document.getElementById('av');
   const timeEl = document.getElementById('time');
   const dateEl = document.getElementById('date');
@@ -712,11 +774,13 @@
     timeEl.textContent = `SP ${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
   };
 
-  let state = 'off', sel = -1, ledOn = false;
+  let state = 'off', sel = -1, ledOn = false, irBlink = false;
   const timers = [];
   const later = (fn, ms) => timers.push(setTimeout(fn, ms));
   const touch = matchMedia('(hover: none)').matches;
-  const seen = () => { try { return sessionStorage.getItem('vhs-seen') === '1'; } catch (e) { return false; } };
+  // Intro überspringen nur beim Zurückkommen aus einem Spiel (Zurück-Button), nicht beim Neuladen
+  const navType = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0] || {}).type;
+  const seen = () => { try { return navType === 'back_forward' && sessionStorage.getItem('vhs-seen') === '1'; } catch (e) { return false; } };
 
   function powerOn() {
     if (state !== 'off') return;
@@ -791,7 +855,7 @@
     const box = document.getElementById('pImgBox'), prev = document.getElementById('preview');
     if (t.url) {
       const src = 'previews/' + t.url.split('/').pop().replace('.html', '.jpg');
-      document.getElementById('pImg').src = src; document.getElementById('pGhost').src = src;
+      if (!pPic.src.endsWith(src)) pPic.src = src;
       box.classList.add('has'); prev.classList.add('img');
     } else { box.classList.remove('has'); prev.classList.remove('img'); }
     screen.classList.add('flash');
@@ -842,6 +906,15 @@
     const x = (ev.clientX - b.left) / b.width * L.W, y = (ev.clientY - b.top) / b.height * L.H;
     const p = L.power;
     if (x >= p.x - 2 && x <= p.x + p.w + 2 && y >= p.y - 2 && y <= p.y + p.h + 2) return 'power';
+    const rm = L.remote;
+    const pad = L.portrait ? 6 : 3;
+    if (y >= rm.y - pad && y <= rm.y + 10 + pad && x >= rm.x - pad && x <= rm.x + rm.w + pad) {
+      const rx = x - rm.x;
+      if (rx < 8) return 'mute';
+      if (rx < SEG0 - 1) return 'vdown';
+      if (rx >= SEG0 + 10 * SEGW) return 'vup';
+      return 'seg' + Math.min(10, Math.max(1, Math.floor((rx - SEG0) / SEGW) + 1));
+    }
     if (state === 'shelf') for (let i = 0; i < L.tapes.length; i++) {
       const t = L.tapes[i];
       if (x >= t.x - 8 && x <= t.x + t.w && y >= t.y && y <= t.y + t.h) return i;
@@ -856,16 +929,39 @@
   // ================= Musik =================
   const music = document.getElementById('music');
   const soundBtn = document.getElementById('sound');
-  let muted = false;
+  let muted = false, level = 3;
+  try { const v = parseInt(localStorage.getItem('vhs-vol'), 10); if (v >= 0 && v <= 10) level = v; } catch (e) {}
   try { muted = localStorage.getItem('vhs-muted') === '1'; } catch (e) {}
   try { const t = parseFloat(sessionStorage.getItem('vhs-music-t')); if (t > 0) music.currentTime = t; } catch (e) {}
   const showSound = () => { soundBtn.textContent = muted ? '♪ AUS' : '♪ AN'; soundBtn.classList.toggle('off', muted); };
   showSound();
   let fadeT = null;
-  const VOL = .3;
+  const vol = () => level / 10;
   function startFade() {
     clearInterval(fadeT);
-    fadeT = setInterval(() => { music.volume = Math.min(VOL, music.volume + .02); if (music.volume >= VOL) clearInterval(fadeT); }, 80);
+    fadeT = setInterval(() => { music.volume = Math.min(vol(), music.volume + .02); if (music.volume >= vol()) clearInterval(fadeT); }, 80);
+  }
+  // Lautstärke über die Fernbedienung (0–10), wird gespeichert
+  const volOsd = document.getElementById('volOsd');
+  let irT = null, osdT = null;
+  function remoteFeedback() {
+    irBlink = true; render();
+    clearTimeout(irT); irT = setTimeout(() => { irBlink = false; render(); }, 130);
+    volOsd.querySelector('b').textContent = muted ? 'STUMM' : String(level).padStart(2, '0');
+    volOsd.querySelectorAll('i').forEach((el, i) => el.classList.toggle('on', !muted && i < level));
+    volOsd.classList.add('show');
+    clearTimeout(osdT); osdT = setTimeout(() => volOsd.classList.remove('show'), 1600);
+  }
+  function setLevel(n) {
+    level = Math.max(0, Math.min(10, n));
+    try { localStorage.setItem('vhs-vol', String(level)); } catch (e) {}
+    if (level === 0) { if (!muted) toggleSound(); }
+    else {
+      if (muted) toggleSound();
+      clearInterval(fadeT);
+      if (!music.paused) music.volume = vol();
+    }
+    remoteFeedback();
   }
   function startMusic() {
     if (muted || !music.paused) return;
@@ -876,21 +972,49 @@
     muted = !muted;
     try { localStorage.setItem('vhs-muted', muted ? '1' : '0'); } catch (e) {}
     showSound();
-    if (muted) music.pause(); else startMusic();
+    if (muted) music.pause(); else { if (level === 0) level = 3; startMusic(); }
+    render();
   }
   soundBtn.addEventListener('click', e => { e.stopPropagation(); toggleSound(); });
   addEventListener('pagehide', () => { try { sessionStorage.setItem('vhs-music-t', String(music.currentTime)); } catch (e) {} });
   document.addEventListener('pointerdown', startMusic);
+  // Über die Balken ziehen wie bei einem Schieberegler
+  let volDrag = false;
+  art.addEventListener('pointerdown', ev => {
+    const h = hit(ev);
+    if (typeof h === 'string' && h.startsWith('seg')) { volDrag = true; try { art.setPointerCapture(ev.pointerId); } catch (e) {} }
+  });
+  art.addEventListener('pointermove', ev => {
+    if (!volDrag) return;
+    const bx = art.getBoundingClientRect();
+    const rx = (ev.clientX - bx.left) / bx.width * L.W - L.remote.x;
+    const n = Math.min(10, Math.max(0, Math.floor((rx - SEG0) / SEGW) + 1));
+    if (n !== level) setLevel(n);
+  });
+  const endDrag = () => { volDrag = false; };
+  art.addEventListener('pointerup', endDrag); art.addEventListener('pointercancel', endDrag);
+  art.addEventListener('wheel', ev => {
+    const h = hit(ev);
+    if (typeof h !== 'string' || h === 'power') return;
+    ev.preventDefault();
+    setLevel(level + (ev.deltaY < 0 ? 1 : -1));
+  }, { passive: false });
 
   document.addEventListener('click', ev => {
     const h = ev.target === art ? hit(ev) : null;
     if (h === 'power') return state === 'off' ? powerOn() : powerOff();
+    if (h === 'mute') { toggleSound(); return remoteFeedback(); }
+    if (h === 'vdown') return setLevel(level - 1);
+    if (h === 'vup') return setLevel(level + 1);
+    if (typeof h === 'string' && h.startsWith('seg')) return setLevel(+h.slice(3));
     if (state === 'off') return powerOn();
     if (state === 'title') return enterShelf(false);
     if (state === 'shelf' && typeof h === 'number') { if (h === sel) play(); else select(h); }
   });
   document.addEventListener('keydown', e => {
-    if (e.key === 'm' || e.key === 'M') return toggleSound();
+    if (e.key === 'm' || e.key === 'M') { toggleSound(); return remoteFeedback(); }
+    if (e.key === '+' || e.key === '=') return setLevel(level + 1);
+    if (e.key === '-') return setLevel(level - 1);
     startMusic();
     if (state === 'off') return powerOn();
     if (state === 'title') return enterShelf(false);
