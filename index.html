@@ -897,14 +897,6 @@
     applyView(false, 1900, () => setTimeout(() => { location.href = t.url; }, 250));
   }
 
-  // Drücken während Rauschen / Laden: sofort aus dem Fernseher herauszoomen
-  function skipIntro() {
-    timers.forEach(clearTimeout); timers.length = 0;
-    clearInterval(spinTimer);
-    screen.classList.remove('static'); av.classList.add('hide');
-    if (!screen.classList.contains('ready')) { screen.classList.add('ready'); t0 = performance.now(); clearInterval(timer); timer = setInterval(tick, 250); }
-    enterShelf(false);
-  }
   function enterShelf(fast) {
     state = 'shelf';
     try { sessionStorage.setItem('vhs-seen', '1'); } catch (e) {}
@@ -1038,7 +1030,6 @@
     if (typeof h === 'string' && h.startsWith('seg')) return setLevel(+h.slice(3));
     if (state === 'off') return powerOn();
     if (state === 'title') return enterShelf(false);
-    if (state === 'booting' || state === 'loading') return skipIntro();
     if (state === 'shelf' && typeof h === 'number') { if (h === sel) play(); else select(h); }
   });
   document.addEventListener('keydown', e => {
@@ -1048,7 +1039,6 @@
     startMusic();
     if (state === 'off') return powerOn();
     if (state === 'title') return enterShelf(false);
-    if (state === 'booting' || state === 'loading') return skipIntro();
     if (state !== 'shelf') return;
     const k = e.key;
     if (k === 'ArrowUp') { e.preventDefault(); move(0, -1); }
