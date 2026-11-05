@@ -7,6 +7,7 @@
   const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
   const CODE_CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const MAXP = 8, LEAD = 5, START_DELAY = 4000;
+  const MAX_SONG = 15 * 1024 * 1024, CHUNK = 256 * 1024;
   const MOD_KEYS = ['nofail', 'ghost', 'mirrorx', 'mirrory', 'hardrock', 'chaos', 'speed'];
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -203,7 +204,7 @@
     clearTimeout(N.startTimer); clearInterval(N.cdTimer); clearInterval(N.liveTimer); N.liveTimer = 0;
     if (ref) {
       ref.off();
-      if (wasHost) { ref.remove().catch(() => { }); ref.onDisconnect().cancel(); }
+      if (wasHost) { const md = N.db.ref('pg/media/' + code); md.remove().catch(() => { }); md.onDisconnect().cancel(); ref.remove().catch(() => { }); ref.onDisconnect().cancel(); }
       else { ref.child('players/' + N.uid).remove().catch(() => { }); ref.child('players/' + N.uid).onDisconnect().cancel(); }
     }
     N.ref = null; N.room = null; N.host = false; N.choosing = false;
@@ -221,7 +222,7 @@
 
   /* ---------- lobby ---------- */
   const keyOf = room => room.song + '|' + room.di;
-  function entryOf(room) { return LIB.find(e => e.id === room.song && e.kind === 'builtin'); }
+  function entryOf(room) { return LIB.find(e => e.id === room.song && (e.kind === 'builtin' || room.custom)); }
   function onRoom(room) {
     // get the track ready (rendered) so everyone can start at the same moment
     const key = keyOf(room);
@@ -240,7 +241,7 @@
   async function prepare(room, key) {
     const e = entryOf(room);
     const me = N.ref.child('players/' + N.uid);
-    if (!e) { me.update({ ready: '' }); return; }
+    if (!e) { me.update({ ready: '' }); if (room.custom) download(room, key); return; }
     if (!e.buffer) {
       me.update({ ready: '' });
       try { ensureAudio(); e.buffer = await renderTrack(e.track, () => { }); }
@@ -265,17 +266,75 @@
     el('netTrkMeta').textContent = e ? `${e.artist} · ${e.diffs[room.di].name} · ${modText(room.mods)}` : '';
     const key = keyOf(room), ps = playerList(room);
     el('netPlayers').innerHTML = ps.map(p => {
-      const st = p.where === 'playing' ? 'playing' : p.where === 'results' ? 'on results' : p.ready === key ? 'ready' : 'loading track…';
+      const st = p.where === 'playing' ? 'playing' : p.where === 'results' ? 'on results' : p.ready === key ? 'ready' : p.dl ? 'downloading ' + p.dl + '%' : 'loading track…';
       return `<li class="${p.uid === N.uid ? 'me' : ''}"><span>${p.uid === room.host ? '★ ' : ''}${esc(p.name)}${p.uid === N.uid ? ' (you)' : ''}</span><span class="st ${st === 'ready' ? 'ok' : ''}">${st}</span></li>`;
     }).join('');
     const allReady = ps.every(p => p.ready === key && p.where !== 'playing');
     const counting = room.state === 'playing' && room.startAt && serverNow() < room.startAt;
     el('netTrack').hidden = !N.host; el('netStart').hidden = !N.host;
-    el('netStart').disabled = !allReady || counting;
-    el('netTrack').disabled = counting;
-    el('netHint').textContent = counting ? '' : N.host
+    el('netStart').disabled = !allReady || counting || !!N.xfer;
+    el('netTrack').disabled = counting || !!N.xfer;
+    el('netHint').textContent = counting ? '' : N.xfer ? N.xfer : N.host
       ? (ps.length < 2 ? 'Share the code. You can also start alone.' : allReady ? 'Everyone is ready.' : 'Waiting until everyone has the track ready…')
       : room.state === 'playing' ? 'A round is running. You join the next one.' : 'Waiting for the host to start…';
+  }
+
+  /* ---------- sharing your own songs ---------- */
+  function b64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
+  function unb64(str) { const b = atob(str), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+  const packNotes = ns => ns.map(n => [Math.round(n.t * 10000) / 10000, Math.round(n.x * 1000) / 1000, Math.round(n.y * 1000) / 1000]);
+  function setXfer(t) { N.xfer = t; if (!screen.hidden) renderLobby(); }
+  async function upload(e) {
+    const code = N.code, md = N.db.ref('pg/media/' + code);
+    const u8 = e.raw instanceof ArrayBuffer ? new Uint8Array(e.raw) : new Uint8Array(e.raw.buffer, e.raw.byteOffset, e.raw.byteLength);
+    const n = Math.ceil(u8.length / CHUNK);
+    try {
+      setXfer('Uploading your song… 0%');
+      await md.remove(); md.onDisconnect().remove();
+      for (let i = 0; i < n; i++) {
+        if (N.code !== code) return false;
+        await md.child('data/' + i).set(b64(u8.subarray(i * CHUNK, (i + 1) * CHUNK)));
+        setXfer(`Uploading your song… ${Math.round((i + 1) / n * 100)}%`);
+      }
+      await md.child('meta').set({ key: e.id, n, size: u8.length, title: String(e.title).slice(0, 120), artist: String(e.artist || '').slice(0, 120), bpm: e.bpm || 0,
+        hue: e.hue || null, diffs: e.diffs.map(d => ({ name: d.name, c: d.c || '#3de1ff', notes: packNotes(d.notes) })) });
+      setXfer('');
+      return true;
+    } catch (err) { console.error(err); setXfer(''); toast('Upload failed: ' + errText(err)); return false; }
+  }
+  async function download(room, key) {
+    if (N.dlKey === key) return; N.dlKey = key;
+    const code = N.code, md = N.db.ref('pg/media/' + code), me = N.ref.child('players/' + N.uid);
+    try {
+      // the host writes meta last, so wait until it names this song
+      const meta = await new Promise((res, rej) => {
+        const cb = s => { const v = s.val(); if (v && v.key === room.song) { md.child('meta').off('value', cb); res(v); } else if (N.prepKey !== key || N.code !== code) { md.child('meta').off('value', cb); rej(new Error('cancelled')); } };
+        md.child('meta').on('value', cb, rej);
+      });
+      const parts = new Array(meta.n); let got = 0; N.lastDl = 0;
+      setXfer('Downloading the song… 0%');
+      await Promise.all(Array.from({ length: meta.n }, (_, i) => md.child('data/' + i).get().then(s => {
+        parts[i] = unb64(s.val() || ''); got++;
+        const pc = Math.round(got / meta.n * 100); setXfer(`Downloading the song… ${pc}%`);
+        if (pc - (N.lastDl || 0) >= 10 || pc === 100) { N.lastDl = pc; me.update({ dl: pc }); }
+      })));
+      if (N.prepKey !== key) return;
+      const raw = new Uint8Array(meta.size); let o = 0; for (const p of parts) { raw.set(p, o); o += p.length; }
+      setXfer('Decoding the song…');
+      ensureAudio();
+      const buf = await decode(raw.buffer.slice(0));
+      let e = LIB.find(x => x.id === meta.key);
+      if (!e) {
+        e = { id: meta.key, kind: 'net', title: meta.title, artist: (meta.artist ? meta.artist + ' · ' : '') + 'shared', bpm: meta.bpm || 0, dur: buf.duration, hue: meta.hue || undefined,
+          buffer: buf, raw: raw.buffer, diffs: meta.diffs.map(d => ({ name: d.name, c: d.c, notes: (d.notes || []).map(a => ({ t: a[0], x: a[1], y: a[2] })) })) };
+        LIB.push(e); renderList();
+      }
+      setXfer('');
+      if (N.prepKey === key && N.ref) me.update({ ready: key, dl: null });
+    } catch (err) {
+      if (err && err.message === 'cancelled') return;
+      console.error(err); setXfer(''); toast('Could not get the song: ' + errText(err));
+    } finally { if (N.dlKey === key) N.dlKey = null; }
   }
 
   /* ---------- match ---------- */
@@ -295,8 +354,8 @@
     M.auto = false;
     const notes = e.diffs[di].notes, firstT = notes.length ? notes[0].t : 0;
     const speed = M.speed || 1;
-    const late = Math.max(0, (serverNow() - room.startAt) / 1000);
-    const startT = Math.min(0, firstT - LEAD * speed) + late * speed;
+    // evaluated by startGame right before the music starts, so any await in between is accounted for
+    const startT = () => Math.min(0, firstT - LEAD * speed) + Math.max(0, (serverNow() - room.startAt) / 1000) * speed;
     screen.hidden = true; resBox.hidden = true;
     N.inMatch = true; N.lastLive = '';
     setResultButtons(true);
@@ -369,12 +428,16 @@
     onPlay(e, di) {
       if (!N.code) return false;
       if (N.host && N.choosing) {
-        if (e.kind !== 'builtin') { toast('Only the built-in tracks work online. Your own songs exist only on your device.'); return true; }
+        if (e.kind !== 'builtin') {
+          if (!e.raw) { toast('This song cannot be shared. Load it again and retry.'); return true; }
+          if (e.raw.byteLength > MAX_SONG) { toast('That song file is larger than 15 MB, too big to share online.'); return true; }
+        }
         N.choosing = false; playBtn.textContent = 'PLAY';
         const mods = {}; for (const k of MOD_KEYS) mods[k] = k === 'speed' ? +M.speed : !!M[k];
         N.modsBackup = Object.assign({}, M);
-        N.ref.update({ song: e.id, di, mods });
         showLobby();
+        if (e.kind === 'builtin') N.ref.update({ song: e.id, di, mods, custom: null });
+        else upload(e).then(ok => { if (ok && N.code) N.ref.update({ song: e.id, di, mods, custom: true }); });
       }
       return true;
     }
@@ -400,7 +463,7 @@
     const url = location.origin + location.pathname + '?room=' + N.code;
     try { await navigator.clipboard.writeText(url); toast('Invite link copied.'); } catch (e) { toast(url, 8000); }
   });
-  addEventListener('beforeunload', () => { if (N.code && N.ref) { if (N.host) N.ref.remove(); else N.ref.child('players/' + N.uid).remove(); } });
+  addEventListener('beforeunload', () => { if (N.code && N.ref) { if (N.host) { N.db.ref('pg/media/' + N.code).remove(); N.ref.remove(); } else N.ref.child('players/' + N.uid).remove(); } });
 
   // invite link: ?room=CODE opens the join screen with the code filled in
   const inv = new URLSearchParams(location.search).get('room');

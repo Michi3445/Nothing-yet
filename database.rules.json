@@ -16,6 +16,17 @@
             }
           }
         }
+      },
+      "media": {
+        "$code": {
+          ".read": "auth != null",
+          ".write": "auth != null && (root.child('pg/rooms/' + $code + '/host').val() === auth.uid || (!root.child('pg/rooms/' + $code).exists() && !newData.exists()))",
+          "data": {
+            "$i": {
+              ".validate": "newData.isString() && newData.val().length <= 400000"
+            }
+          }
+        }
       }
     }
   }
