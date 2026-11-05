@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MICHI-VISION</title>
-<meta name="description" content="Michis Projekte: Browser-Spiele, Tools und Mods im VHS-Look.">
+<title>VHS·VISION</title>
+<meta name="description" content="Projekte: Browser-Spiele, Tools und Mods im VHS-Look.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -153,29 +153,20 @@
     opacity: 0; transition: opacity .5s;
   }
   .screen.ready .title { opacity: 1; }
-  .logo {
-    font-family: ui-monospace, 'Cascadia Mono', 'DejaVu Sans Mono', Menlo, Consolas, monospace;
-    font-size: 2.6cqw;
-    line-height: 1.05;
-    white-space: pre;
-    color: #fff;
-    text-shadow: .35cqw 0 0 var(--pink), -.35cqw 0 0 var(--cyan), 0 0 2cqw rgba(255,46,136,.5);
-    animation: jitter 3.2s infinite steps(1);
+  .loader {
+    display: flex; flex-direction: column; align-items: center; gap: 2.4cqw;
+    font-size: 5.4cqw; letter-spacing: .12em;
+    color: var(--text);
+    text-shadow: .3cqw 0 var(--pink), -.3cqw 0 var(--cyan);
   }
-  @keyframes jitter {
-    0%, 88%, 100% { transform: translate(0); clip-path: none; }
-    89% { transform: translate(-1.2cqw, 0); clip-path: inset(10% 0 55% 0); }
-    90% { transform: translate(1cqw, 0); clip-path: inset(50% 0 20% 0); }
-    91% { transform: translate(0); clip-path: none; }
-  }
-  .sub {
-    font-size: 4.6cqw;
-    letter-spacing: .3em;
-    color: var(--cyan);
-    text-shadow: 0 0 10px rgba(46,242,255,.6);
-  }
+  .spin { font-size: 11cqw; line-height: 1; min-width: 1ch; white-space: pre; text-align: center; color: #fff; }
+  .lbar { font-size: 4.2cqw; letter-spacing: .05em; color: var(--cyan); text-shadow: 0 0 10px rgba(46,242,255,.5); white-space: pre; }
+  .cur { animation: blink .7s steps(1) infinite; }
+  .press { display: none; }
+  .screen.loaded .press { display: block; }
+  .screen.loaded .spin { color: var(--green); text-shadow: 0 0 12px rgba(57,255,106,.6); }
   .press {
-    margin-top: 2cqw;
+    margin-top: 4cqw;
     font-size: 5.2cqw;
     letter-spacing: .12em;
     color: var(--text);
@@ -251,7 +242,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .logo, .press, .screen.on .content, .screen.on .tracking { animation: none !important; }
+    .press, .cur, .screen.on .content, .screen.on .tracking { animation: none !important; }
   }
 </style>
 </head>
@@ -269,13 +260,11 @@
           <div class="osd date" id="date"></div>
 
           <section class="title">
-<pre class="logo" aria-label="MICHI">███╗   ███╗██╗ ██████╗██╗  ██╗██╗
-████╗ ████║██║██╔════╝██║  ██║██║
-██╔████╔██║██║██║     ███████║██║
-██║╚██╔╝██║██║██║     ██╔══██║██║
-██║ ╚═╝ ██║██║╚██████╗██║  ██║██║
-╚═╝     ╚═╝╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝</pre>
-            <div class="sub">SPIELE · TOOLS · MODS</div>
+<div class="loader" id="loader">
+              <div class="spin" id="spin">/</div>
+              <div class="ltxt"><span id="ltxt">LADE</span><span class="cur">_</span></div>
+              <div class="lbar" id="lbar">[--------------------]</div>
+            </div>
             <div class="press">▶ <b class="k">TASTE</b><b class="t">TIPPEN</b> <span class="k">DRÜCKEN</span></div>
           </section>
 
@@ -290,7 +279,7 @@
         <div class="glass"></div>
       </div>
     </div>
-    <div class="brand">MICHI·VISION</div>
+    <div class="brand">VHS·VISION</div>
     <div class="vcr"></div>
     <div class="led" id="led"></div>
     <button class="power" id="power" aria-label="Ein/Aus"></button>
@@ -350,14 +339,40 @@
     later(() => {
       screen.classList.add('ready');
       t0 = performance.now(); timer = setInterval(tick, 250);
-      state = 'title';
+      runLoader();
     }, 1500);
   }
 
+  // Minimaler ASCII-Lader
+  const spinEl = document.getElementById('spin');
+  const barEl = document.getElementById('lbar');
+  const frames = ['/', '-', '\\', '|'];
+  let spinTimer = null;
+  function runLoader() {
+    state = 'loading';
+    let f = 0, p = 0;
+    const W = 20;
+    spinTimer = setInterval(() => {
+      spinEl.textContent = frames[f++ % 4];
+      p = Math.min(100, p + 1 + (Math.random() * 5 | 0));
+      const n = Math.round(p / 100 * W);
+      barEl.textContent = '[' + '#'.repeat(n) + '-'.repeat(W - n) + '] ' + String(p).padStart(3, ' ') + '%';
+      if (p >= 100) {
+        clearInterval(spinTimer);
+        spinEl.textContent = '(/ _ )';
+        document.getElementById('ltxt').textContent = 'BEREIT';
+        screen.classList.add('loaded');
+        state = 'title';
+      }
+    }, 90);
+  }
+
   function powerOff() {
+    clearInterval(spinTimer);
     timers.forEach(clearTimeout); timers.length = 0;
     clearInterval(timer);
     screen.className = 'screen off-dot';
+    document.getElementById('ltxt').textContent = 'LADE'; spinEl.textContent = '/'; barEl.textContent = '[--------------------]';
     led.classList.remove('on');
     state = 'off';
     hint.textContent = 'POWER-KNOPF ODER TASTE ZUM EINSCHALTEN';
