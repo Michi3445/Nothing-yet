@@ -31,7 +31,6 @@
   .scene {
     position: absolute; left: 0; top: 0;
     transform-origin: 0 0;
-    transition: transform 1.3s cubic-bezier(.7,0,.2,1);
   }
   .scene.instant { transition: none; }
   #art {
@@ -695,20 +694,31 @@
     render();
   }
 
-  function fitTransform() {
-    const k = Math.min(innerWidth / L.W, innerHeight / L.H);
-    return `translate(${(innerWidth - L.W * k) / 2}px, ${(innerHeight - L.H * k) / 2}px) scale(${k})`;
+  // Kamera: Zoomfaktor k und Bildmitte (cx, cy) in Szenen-Pixeln
+  function fitView() {
+    return { k: Math.min(innerWidth / L.W, innerHeight / L.H), cx: L.W / 2, cy: L.H / 2 };
   }
-  function zoomTransform() {
+  function zoomView() {
     const b = L.bezel;
-    const k = Math.min(innerHeight * 1.08 / b.h, innerWidth / b.w);
-    const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
-    return `translate(${innerWidth / 2 - cx * k}px, ${innerHeight / 2 - cy * k}px) scale(${k})`;
+    return { k: Math.min(innerHeight * 1.08 / b.h, innerWidth / b.w), cx: b.x + b.w / 2, cy: b.y + b.h / 2 };
+  }
+  let cam = null, camAnim = 0;
+  function setCam(v) {
+    cam = v;
+    scene.style.transform = `translate(${innerWidth / 2 - v.cx * v.k}px, ${innerHeight / 2 - v.cy * v.k}px) scale(${v.k})`;
   }
   function applyView(instant) {
-    if (instant) scene.classList.add('instant');
-    scene.style.transform = zoomed ? zoomTransform() : fitTransform();
-    if (instant) { scene.offsetWidth; scene.classList.remove('instant'); }
+    cancelAnimationFrame(camAnim);
+    const to = zoomed ? zoomView() : fitView();
+    if (instant || !cam || reducedMotion) return setCam(to);
+    // weicher Kamerafahrt-Zoom: Faktor logarithmisch, sanft an- und auslaufend
+    const from = cam, t0 = performance.now(), dur = 2400;
+    const ease = u => (1 - Math.cos(Math.PI * u)) / 2;
+    (function step(now) {
+      const u = Math.min(1, (now - t0) / dur), e = ease(u);
+      setCam({ k: from.k * Math.pow(to.k / from.k, e), cx: from.cx + (to.cx - from.cx) * e, cy: from.cy + (to.cy - from.cy) * e });
+      if (u < 1) camAnim = requestAnimationFrame(step);
+    })(t0);
   }
   addEventListener('resize', () => { setupLayout(); applyView(true); });
 
