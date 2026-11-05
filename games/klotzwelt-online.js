@@ -17,7 +17,8 @@
   const N = { db: null, uid: null, offset: 0, wid: null, code: null, doc: null, name: '',
     edits: new Map(), byChunk: new Map(), mine: new Map(), out: new Map(), cap: 0,
     players: new Map(), avatars: new Map(), refs: [], joinedAt: 0, lastPos: '', posT: 0, flushT: 0,
-    be: new Map(), beByChunk: new Map(), beSent: new Map(), locks: new Map(), open: null, items: new Map(), remote: false, wxo: null };
+    be: new Map(), beByChunk: new Map(), beSent: new Map(), locks: new Map(), open: null, items: new Map(), remote: false, wxo: null,
+    tgts: new Map(), proxies: new Map(), claims: new Map(), mobSig: '', mobT: 0 };
   const serverNow = () => Date.now() + N.offset;
   const on = () => !!N.wid && !!G.meta && G.meta.net === N.wid;
   const store = {
@@ -302,6 +303,163 @@
     };
   }
 
+  /* ---------- animals & monsters ---------- */
+  // whoever spawns a mob runs its AI and sends its state (kw/mobs/WID/UID → { mid: "type,x,y,z,yaw,flags,fuse" });
+  // everybody else shows a copy that only follows those updates. Hits on a copy go to the owner (kw/mhits),
+  // hits by a monster on another player go to that player (kw/phits), explosions and skeleton arrows to all (kw/fx).
+  let midN = 0;
+  const r1 = v => Math.round(v * 100) / 100;
+  // remote players as targets for our own monsters
+  function targetOf(uid) {
+    let t = N.tgts.get(uid);
+    if (!t) {
+      t = { uid, hw: .3, h: 1.8, vx: 0, vy: 0, vz: 0, onGround: true, remote: true,
+        hurt(d, kind, sx, sz) { if (!on() || this.dead) return; kw('phits/' + N.wid + '/' + uid).push({ d: r1(d), k: String(kind || 'mob').slice(0, 12), x: r1(sx || 0), z: r1(sz || 0), ts: firebase.database.ServerValue.TIMESTAMP }).catch(() => { }); } };
+      N.tgts.set(uid, t);
+    }
+    return t;
+  }
+  function proxyUpdate(m, dt) {
+    m.age += dt; if (m.hurtT > 0) m.hurtT -= dt;
+    if (m.dead) { m.deathT += dt; return; }
+    const k = Math.min(1, dt * 9), ox = m.x, oz = m.z;
+    m.x += (m.tx - m.x) * k; m.y += (m.ty - m.y) * k; m.z += (m.tz - m.z) * k;
+    let df = m.tyaw - m.yaw; while (df > Math.PI) df -= TAU; while (df < -Math.PI) df += TAU; m.yaw += df * k;
+    m.onGround = Math.abs(m.ty - m.y) < .08;
+    const sp = Math.hypot(m.x - ox, m.z - oz) / Math.max(dt, 1e-3);
+    m.wa += (Math.min(1, sp / (m.D.spd * 1.3 + .001)) - m.wa) * Math.min(1, 8 * dt);
+    m.wp += sp * dt * (m.D.kind === 'spider' ? 2.2 : m.D.kind === 'bird' ? 3.2 : 2.6);
+    if (m.burn > 0 && Math.random() < dt * 14) G.part(m.x + (Math.random() - .5) * .5, m.y + Math.random() * m.h, m.z + (Math.random() - .5) * .5, 'flame');
+  }
+  const oMobUpd = Mob.prototype.update, oMobHurt = Mob.prototype.hurt, oMobHurt0 = Mob.prototype.hurt0, oMobDie = Mob.prototype.die;
+  Mob.prototype.update = function (dt, w, P) {
+    if (!on()) return oMobUpd.call(this, dt, w, P);
+    if (this.proxy) return proxyUpdate(this, dt);
+    if (!this.mid) this.mid = (++midN).toString(36);
+    // monsters go for the closest player, not only the one whose computer runs them
+    if (this.D.hostile && N.tgts.size && !this.dead) {
+      const ok = p => !p.dead && !p.creative;
+      let best = P, bd = ok(P) ? (P.x - this.x) ** 2 + (P.z - this.z) ** 2 : 1e12;
+      for (const t of N.tgts.values()) { if (!N.players.has(t.uid) || !ok(t)) continue; const d = (t.x - this.x) ** 2 + (t.z - this.z) ** 2; if (d < bd) { bd = d; best = t; } }
+      return oMobUpd.call(this, dt, w, best);
+    }
+    return oMobUpd.call(this, dt, w, P);
+  };
+  Mob.prototype.hurt = function (dmg, sx, sz, byPlayer) {
+    if (!this.proxy) return oMobHurt.apply(this, arguments);
+    if (this.dead || this.hurtT > 0) return false;
+    this.hurtT = .4; G.sfx('hurt_' + this.type, 1, this.x, this.y, this.z); G.part(this.x, this.y + this.h * .6, this.z, 'hit');
+    if (byPlayer && on()) kw('mhits/' + N.wid + '/' + this.owner).push({ m: this.mid, d: r1(dmg), x: r1(sx), z: r1(sz), ts: firebase.database.ServerValue.TIMESTAMP }).catch(() => { });
+    return true;
+  };
+  Mob.prototype.hurt0 = function () { if (!this.proxy) return oMobHurt0.apply(this, arguments); };
+  // a copy never dies on its own (its owner says when); loot of our own mobs is shared
+  Mob.prototype.die = function () {
+    if (this.proxy) return;
+    if (!on()) return oMobDie.apply(this, arguments);
+    N.cap++; try { return oMobDie.apply(this, arguments); } finally { N.cap--; }
+  };
+  // copies are not despawned by distance here, and animals of an area are spawned only once for everybody
+  const oDesp = Ents.despawn;
+  Ents.despawn = function () {
+    if (!on()) return oDesp.apply(this, arguments);
+    const all = this.mobs; this.mobs = all.filter(m => !m.proxy);
+    try { return oDesp.apply(this, arguments); } finally { this.mobs = all; }
+  };
+  const oAnimals = Ents.spawnAnimals;
+  Ents.spawnAnimals = function (ch) {
+    if (!on()) return oAnimals.apply(this, arguments);
+    const key = String(CKEY(ch.cx, ch.cz));
+    for (const [uid, set] of N.claims) if (uid !== N.uid && N.players.has(uid) && set[key]) { this.animalChunks.add(+key); return; }
+    if (!this.animalChunks.has(+key)) kw('achunks/' + N.wid + '/' + N.uid + '/' + key).set(1).catch(() => { });
+    return oAnimals.apply(this, arguments);
+  };
+  // skeleton arrows fly on every computer, so they can hit everybody
+  const oArrow = Ents.spawnArrow;
+  Ents.spawnArrow = function (x, y, z, vx, vy, vz, dmg, owner) {
+    const a = oArrow.apply(this, arguments);
+    if (on() && !N.remote && owner instanceof Mob && !owner.proxy) sendFx({ t: 'arrow', x: r1(x), y: r1(y), z: r1(z), vx: r1(vx), vy: r1(vy), vz: r1(vz), d: r1(dmg), m: owner.mid || '' });
+    return a;
+  };
+  // explosions (creeper, TNT) hurt and shake everybody nearby
+  const oExplode = World.prototype.explode;
+  World.prototype.explode = function (x, y, z, R0) {
+    if (this === G.world && on() && !N.remote) sendFx({ t: 'boom', x: r1(x), y: r1(y), z: r1(z), r: r1(R0) });
+    return oExplode.apply(this, arguments);
+  };
+  function sendFx(o) {
+    o.u = N.uid; o.ts = firebase.database.ServerValue.TIMESTAMP;
+    const ref = kw('fx/' + N.wid).push(); ref.set(o).catch(() => { });
+    setTimeout(() => ref.remove().catch(() => { }), 5000);
+  }
+  function onFx(v) {
+    if (!v || v.u === N.uid || !G.world || !on()) return;
+    if (v.ts && serverNow() - v.ts > 4000) return;
+    N.remote = true;
+    try {
+      if (v.t === 'boom') G.world.hooks.explosion(+v.x, +v.y, +v.z, +v.r || 3);
+      else if (v.t === 'arrow') {
+        const src = N.proxies.get(v.u + '/' + v.m) || {};
+        oArrow.call(Ents, +v.x, +v.y, +v.z, +v.vx, +v.vy, +v.vz, +v.d || 2, src);
+        G.sfx('bow', .8, +v.x, +v.y, +v.z);
+      }
+    } catch (e) { console.error(e); } finally { N.remote = false; }
+  }
+  // snapshots from other players
+  function onMobs(uid, val) {
+    if (uid === N.uid || !G.world || !on() || !G.player) return;
+    const seen = new Set(), P = G.player;
+    for (const mid in (val || {})) {
+      const q = String(val[mid]).split(','); const type = q[0];
+      if (!MOBDEF[type]) continue;
+      const x = +q[1], y = +q[2], z = +q[3], yaw = +q[4], fl = +q[5] | 0, fuse = +q[6] || 0;
+      const key = uid + '/' + mid; seen.add(key);
+      let m = N.proxies.get(key);
+      if (m && !m.dead && Ents.mobs.indexOf(m) < 0) { N.proxies.delete(key); m = null; }   // dropped for being far away
+      if (!m) {
+        if (fl & 1) continue;
+        if ((x - P.x) ** 2 + (z - P.z) ** 2 > 80 * 80) continue;
+        m = new Mob(type, x, y, z); m.proxy = true; m.owner = uid; m.mid = mid; m.yaw = yaw; m.tx = x; m.ty = y; m.tz = z; m.tyaw = yaw;
+        Ents.add(m); N.proxies.set(key, m);
+      }
+      if (m.dead && m.deathT > 5) { N.proxies.delete(key); continue; }
+      m.tx = x; m.ty = y; m.tz = z; m.tyaw = yaw; m.fuse = fuse;
+      m.aim = (fl & 4) ? .5 : 0; if ((fl & 8) && !m.swing) m.swing = 1; m.burn = (fl & 16) ? 1 : 0;
+      if ((fl & 2) && m.hurtT <= 0) m.hurtT = .4;
+      if ((fl & 1) && !m.dead) { m.dead = true; m.deathT = 0; G.sfx('death_' + m.type, 1, m.x, m.y, m.z); }
+    }
+    for (const [key, m] of N.proxies) if (m.owner === uid && !seen.has(key)) { if (!m.dead) { m.dead = true; m.deathT = 9; } N.proxies.delete(key); }
+  }
+  function dropProxies(uid) {
+    for (const [key, m] of N.proxies) if (!uid || m.owner === uid) { if (!m.dead) { m.dead = true; m.deathT = 9; } N.proxies.delete(key); }
+  }
+  function sendMobs() {
+    const out = {};
+    for (const m of Ents.mobs) {
+      if (m.proxy || !m.mid) continue;
+      if (m.dead && m.deathT > .5) continue;
+      const fl = (m.dead ? 1 : 0) | (m.hurtT > 0 ? 2 : 0) | (m.aim > 0 ? 4 : 0) | (m.swing > .5 ? 8 : 0) | (m.burn > 0 ? 16 : 0);
+      out[m.mid] = m.type + ',' + r1(m.x) + ',' + r1(m.y) + ',' + r1(m.z) + ',' + r1(m.yaw) + ',' + fl + ',' + r1(m.fuse || 0);
+    }
+    const s = JSON.stringify(out);
+    if (s === N.mobSig) return;
+    N.mobSig = s;
+    kw('mobs/' + N.wid + '/' + N.uid).set(Object.keys(out).length ? out : null).catch(() => { });
+  }
+  // hits that other players landed on our mobs, and hits our monsters landed on us
+  function onMobHit(s) {
+    const v = s.val(); s.ref.remove().catch(() => { });
+    if (!v || !on()) return;
+    const m = Ents.mobs.find(e => !e.proxy && e.mid === v.m);
+    if (m) m.hurt(+v.d || 1, +v.x, +v.z, false);
+  }
+  function onPlayerHit(s) {
+    const v = s.val(); s.ref.remove().catch(() => { });
+    if (!v || !on() || !G.player || G.player.dead) return;
+    if (v.ts && serverNow() - v.ts > 4000) return;
+    G.player.hurt(+v.d || 1, v.k || 'mob', +v.x, +v.z);
+  }
+
   /* ---------- other players ---------- */
   function hashCol(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return new THREE.Color().setHSL(((h >>> 0) % 360) / 360, .55, .5); }
   function nameSprite(name) {
@@ -341,6 +499,7 @@
     N.players.set(uid, p);
     let a = N.avatars.get(uid);
     if (!a || a.name !== p.name) { dropAvatar(uid); a = makeAvatar(uid, p.name || '?'); N.avatars.set(uid, a); }
+    const tg = targetOf(uid); tg.x = +p.x || 0; tg.y = +p.y || 0; tg.z = +p.z || 0; tg.eye = tg.y + 1.62; tg.dead = !!p.dd || tg.y < -50; tg.creative = !!p.cr;
     a.tx = +p.x || 0; a.ty = +p.y || 0; a.tz = +p.z || 0; a.tyaw = +p.yaw || 0; a.tpitch = +p.pitch || 0;
     if (a.fresh) { a.x = a.tx; a.y = a.ty; a.z = a.tz; a.yaw = a.tyaw; a.fresh = false; }
     if (isNew && !known) UI.msg((p.name || 'Jemand') + ' ist der Welt beigetreten.', '#ffe9a8');
@@ -371,10 +530,11 @@
     // send our own position ~8×/s while it changes
     N.posT -= dt; N.flushT -= dt;
     if (N.flushT <= 0) { N.flushT = .12; flush(); }
+    N.mobT -= dt; if (N.mobT <= 0) { N.mobT = .2; sendMobs(); }
     const P = G.player;
     if (P && N.posT <= 0) {
       N.posT = .125;
-      const pos = { x: Math.round(P.x * 100) / 100, y: Math.round(P.y * 100) / 100, z: Math.round(P.z * 100) / 100, yaw: Math.round(P.yaw * 100) / 100, pitch: Math.round(P.pitch * 100) / 100 };
+      const pos = { x: Math.round(P.x * 100) / 100, y: Math.round(P.y * 100) / 100, z: Math.round(P.z * 100) / 100, yaw: Math.round(P.yaw * 100) / 100, pitch: Math.round(P.pitch * 100) / 100, dd: P.dead ? 1 : 0, cr: P.creative ? 1 : 0 };
       const sig = JSON.stringify(pos);
       if (sig !== N.lastPos) { N.lastPos = sig; kw('players/' + N.wid + '/' + N.uid).update(Object.assign(pos, { t: firebase.database.ServerValue.TIMESTAMP })); }
     }
@@ -452,13 +612,25 @@
     listen(kw('items/' + wid), 'child_added', s => itemRemote(s.key, s.val()));
     listen(kw('items/' + wid), 'child_removed', s => itemGone(s.key));
     listen(kw('wx/' + wid), 'value', s => { N.wxo = s.val() || null; });
+    N.tgts.clear(); N.proxies.clear(); N.claims.clear(); N.mobSig = '';
+    kw('mobs/' + wid + '/' + N.uid).onDisconnect().remove();
+    kw('achunks/' + wid + '/' + N.uid).onDisconnect().remove();
+    listen(kw('mobs/' + wid), 'child_added', s => onMobs(s.key, s.val()));
+    listen(kw('mobs/' + wid), 'child_changed', s => onMobs(s.key, s.val()));
+    listen(kw('mobs/' + wid), 'child_removed', s => dropProxies(s.key));
+    listen(kw('achunks/' + wid), 'child_added', s => N.claims.set(s.key, s.val() || {}));
+    listen(kw('achunks/' + wid), 'child_changed', s => N.claims.set(s.key, s.val() || {}));
+    listen(kw('achunks/' + wid), 'child_removed', s => N.claims.delete(s.key));
+    listen(kw('mhits/' + wid + '/' + N.uid), 'child_added', onMobHit);
+    listen(kw('phits/' + wid + '/' + N.uid), 'child_added', onPlayerHit);
+    listen(kw('fx/' + wid).limitToLast(20), 'child_added', s => onFx(s.val()));
     const pl = kw('players/' + wid);
     // whoever is already here gets no "joined" message
     const here = (await pl.get()).val() || {};
     for (const uid in here) onPlayer(uid, here[uid], false);
     listen(pl, 'child_added', s => onPlayer(s.key, s.val(), true));
     listen(pl, 'child_changed', s => onPlayer(s.key, s.val(), false));
-    listen(pl, 'child_removed', s => { const p = N.players.get(s.key); N.players.delete(s.key); dropAvatar(s.key); if (p && s.key !== N.uid) UI.msg((p.name || 'Jemand') + ' hat die Welt verlassen.', '#ffe9a8'); });
+    listen(pl, 'child_removed', s => { const p = N.players.get(s.key); N.players.delete(s.key); N.tgts.delete(s.key); dropAvatar(s.key); if (p && s.key !== N.uid) UI.msg((p.name || 'Jemand') + ' hat die Welt verlassen.', '#ffe9a8'); });
     listen(kw('chat/' + wid).limitToLast(30), 'child_added', s => { const c = s.val(); if (!c || (c.ts && c.ts < N.joinedAt - 60000)) return; UI.msg('<' + (c.u === N.uid ? 'Du' : c.n) + '> ' + c.t, c.u === N.uid ? '#ffffff' : '#bfe6ff'); });
     UI.msg('Online-Welt · Code ' + N.code + ' · Lade Freunde über Pause → „Einladen“ ein.', '#ffe9a8');
     try { history.replaceState(null, '', location.pathname + '?welt=' + N.code); } catch (e) { }
@@ -466,7 +638,9 @@
   function disconnect() {
     for (const [ref, ev, fn] of N.refs) ref.off(ev, fn);
     N.refs = [];
-    if (N.wid && N.db) { const me = kw('players/' + N.wid + '/' + N.uid); me.remove().catch(() => { }); me.onDisconnect().cancel(); }
+    if (N.wid && N.db) { const me = kw('players/' + N.wid + '/' + N.uid); me.remove().catch(() => { }); me.onDisconnect().cancel();
+      for (const p of ['mobs/', 'achunks/']) { const r = kw(p + N.wid + '/' + N.uid); r.remove().catch(() => { }); r.onDisconnect().cancel(); } }
+    dropProxies(); N.tgts.clear(); N.claims.clear();
     for (const uid of [...N.avatars.keys()]) dropAvatar(uid);
     N.wid = null; N.doc = null; N.code = null; N.players.clear(); N.out.clear(); N.items.clear(); N.locks.clear(); N.open = null;
     try { history.replaceState(null, '', location.pathname); } catch (e) { }

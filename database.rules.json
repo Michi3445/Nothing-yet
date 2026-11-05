@@ -115,6 +115,53 @@
           ".write": "auth != null && root.child('kw/worlds/' + $wid + '/owner').exists()",
           ".validate": "newData.child('rain').isNumber() && newData.child('th').isNumber() && newData.child('until').isNumber()"
         }
+      },
+      "mobs": {
+        "$wid": {
+          ".read": "auth != null",
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('kw/worlds/' + $wid + '/owner').exists()"
+          }
+        }
+      },
+      "achunks": {
+        "$wid": {
+          ".read": "auth != null",
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('kw/worlds/' + $wid + '/owner').exists()"
+          }
+        }
+      },
+      "mhits": {
+        "$wid": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            "$k": {
+              ".write": "auth != null && root.child('kw/worlds/' + $wid + '/owner').exists()",
+              ".validate": "newData.child('d').isNumber() && newData.child('d').val() <= 40"
+            }
+          }
+        }
+      },
+      "phits": {
+        "$wid": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            "$k": {
+              ".write": "auth != null && root.child('kw/worlds/' + $wid + '/owner').exists()",
+              ".validate": "newData.child('d').isNumber() && newData.child('d').val() <= 40"
+            }
+          }
+        }
+      },
+      "fx": {
+        "$wid": {
+          ".read": "auth != null",
+          "$k": {
+            ".write": "auth != null && root.child('kw/worlds/' + $wid + '/owner').exists() && (!data.exists() || data.child('u').val() === auth.uid)",
+            ".validate": "newData.child('u').val() === auth.uid && newData.child('t').isString()"
+          }
+        }
       }
     }
   }
