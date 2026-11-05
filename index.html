@@ -707,18 +707,25 @@
     cam = v;
     scene.style.transform = `translate(${innerWidth / 2 - v.cx * v.k}px, ${innerHeight / 2 - v.cy * v.k}px) scale(${v.k})`;
   }
-  function applyView(instant) {
+  // Kamerafahrt: gleichmäßig (Zoomfaktor logarithmisch), sanft an- und auslaufend.
+  // Der Fernseher gleitet dabei ruhig an seinen Platz, statt zu springen.
+  function applyView(instant, dur = 3000, done) {
     cancelAnimationFrame(camAnim);
     const to = zoomed ? zoomView() : fitView();
-    if (instant || !cam || reducedMotion) return setCam(to);
-    // weicher Kamerafahrt-Zoom: Faktor logarithmisch, sanft an- und auslaufend
-    const from = cam, t0 = performance.now(), dur = 1800;
-    const ease = u => 1 - Math.pow(1 - u, 3);
+    if (instant || !cam || reducedMotion) { setCam(to); if (done) done(); return; }
+    const from = cam, start = performance.now();
+    const ease = u => (1 - Math.cos(Math.PI * u)) / 2;
+    // Bildschirmposition der Fernsehmitte linear führen, damit nichts seitlich wegrutscht
+    const b = L.bezel, tx = b.x + b.w / 2, ty = b.y + b.h / 2;
+    const sx0 = innerWidth / 2 + (tx - from.cx) * from.k, sy0 = innerHeight / 2 + (ty - from.cy) * from.k;
+    const sx1 = innerWidth / 2 + (tx - to.cx) * to.k, sy1 = innerHeight / 2 + (ty - to.cy) * to.k;
     (function step(now) {
-      const u = Math.min(1, (now - t0) / dur), e = ease(u);
-      setCam({ k: from.k * Math.pow(to.k / from.k, e), cx: from.cx + (to.cx - from.cx) * e, cy: from.cy + (to.cy - from.cy) * e });
-      if (u < 1) camAnim = requestAnimationFrame(step);
-    })(t0);
+      const u = Math.min(1, (now - start) / dur), e = ease(u);
+      const k = from.k * Math.pow(to.k / from.k, e);
+      const sx = sx0 + (sx1 - sx0) * e, sy = sy0 + (sy1 - sy0) * e;
+      setCam({ k, cx: tx - (sx - innerWidth / 2) / k, cy: ty - (sy - innerHeight / 2) / k });
+      if (u < 1) camAnim = requestAnimationFrame(step); else if (done) done();
+    })(start);
   }
   addEventListener('resize', () => { setupLayout(); applyView(true); });
 
@@ -884,7 +891,9 @@
     document.getElementById('insertSub').textContent = t.name;
     screen.classList.add('glitch', 'inserting');
     setTimeout(() => screen.classList.remove('glitch'), 350);
-    setTimeout(() => { location.href = t.url; }, 1300);
+    // in den Fernseher hineinfahren, dann startet das Spiel
+    zoomed = true;
+    applyView(false, 1900, () => setTimeout(() => { location.href = t.url; }, 250));
   }
 
   // Drücken während Rauschen / Laden: sofort aus dem Fernseher herauszoomen
@@ -899,14 +908,15 @@
     state = 'shelf';
     try { sessionStorage.setItem('vhs-seen', '1'); } catch (e) {}
     zoomed = false;
-    applyView(fast);
-    screen.classList.add('glitch', 'static');
-    setTimeout(() => {
+    const show = () => {
       screen.classList.remove('glitch', 'static', 'inserting');
       screen.classList.add('shelf-mode');
       hint.textContent = touch ? 'KASSETTE ANTIPPEN' : '↑ ↓ ← → WÄHLEN · ENTER ABSPIELEN';
       const keep = sel; sel = -1; select(keep < 0 ? 0 : keep);
-    }, fast ? 0 : 350);
+    };
+    // erst ganz herausfahren, dann schaltet der Fernseher auf die Spielvorschau um
+    applyView(fast, 3000, fast ? null : () => setTimeout(show, 150));
+    if (fast) show();
   }
 
   function move(dx, dy) {
@@ -1047,7 +1057,7 @@
     else if (k === 'Enter' || k === ' ') { e.preventDefault(); play(); }
   });
   addEventListener('pageshow', e => {
-    if (e.persisted && state === 'playing') { screen.classList.remove('inserting'); state = 'shelf'; render(); }
+    if (e.persisted && state === 'playing') { screen.classList.remove('inserting'); state = 'shelf'; zoomed = false; applyView(true); render(); }
   });
 
   // Linkliste für Screenreader und Suchmaschinen
