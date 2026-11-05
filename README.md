@@ -10,7 +10,7 @@ Die Seite ist eine einzelne `index.html` ohne Build-Schritt. Zum Testen einfach 
 
 - [x] TV-Intro (Einschalten, Bildrauschen, AV 1, ASCII-Ladebildschirm)
 - [x] VHS-Regal als Menü mit allen Spielen
-- [ ] Nauto-moD-Seite
+- [x] Nauto-moD-Seite
 - [ ] Deutsch/Englisch + Handy-Ansicht
 
 ## Spiele
