@@ -41,6 +41,7 @@ button{font-family:inherit}
 .rhp.low .ic:nth-child(2n){animation-delay:.3s}
 @keyframes hbeat{50%{transform:translateY(calc(var(--s)*-1px))}}
 #hotbar{position:relative;display:flex;width:calc(var(--s)*182px);height:calc(var(--s)*22px);padding:0;background:rgba(18,16,14,.62);border:calc(var(--s)*1px) solid rgba(0,0,0,.85);box-shadow:inset 0 0 0 calc(var(--s)*1px) rgba(255,255,255,.18);pointer-events:auto;touch-action:manipulation}
+.slot.dragmark{box-shadow:inset 0 0 0 calc(var(--s)*1px) #ffe9a8,inset 0 0 0 999px rgba(255,233,168,.22)}
 #hotbar .slot{width:calc(var(--s)*20px);height:calc(var(--s)*20px);flex:none;background:none;box-shadow:none;margin:calc(var(--s)*0px) 0}
 #hotbar .slot img{left:calc(var(--s)*2px);top:calc(var(--s)*2px)}
 #hotbar .slot:after{display:none}
@@ -2306,7 +2307,31 @@ function openWindow(el,spec){
  const slotOf=(t)=>{const s=t.closest&&t.closest('.slot');return s&&s.dataset.k?s:null};
  const setHover=(s)=>{const k=s&&s.dataset.k,i=s&&+s.dataset.i;ctx.hover=s?{k,i}:null;const t=UI.tip;let st=null;if(s){if(k==='_pal')st=ctx.palItem?ctx.palItem(i):null;else st=ctx.g[k].get(i)}
   if(st&&!ctx.cursor){const df=itemDef(st.id);t.innerHTML='';t.append(h('div',{class:'tn'},df.n));if(df.dur)t.append(h('div',{class:'td'},'Haltbarkeit: '+(df.dur-(st.d||0))+' / '+df.dur));if(df.armor)t.append(h('div',{class:'td'},'Rüstung +'+df.armor));if(df.food)t.append(h('div',{class:'td'},'Nahrung +'+df.food));if(df.tool&&df.tool!=='sword'&&df.spd)t.append(h('div',{class:'td'},'Abbau-Tempo '+df.spd));if(df.dmg&&df.cat==='tool')t.append(h('div',{class:'td'},'Schaden '+df.dmg.toFixed(1)));t.style.display='block'}else t.style.display='none'};
- el.addEventListener('pointermove',e=>{pos(e);const s=slotOf(e.target);const k=s?s.dataset.k+':'+s.dataset.i:'';if(k!==ctx._hk){ctx._hk=k;setHover(s)}});
+ // ---- comfort controls (mouse): drag with the right button = 1 item per slot, drag with the left button = split the stack evenly,
+ // shift + drag = move every slot you pass over, mouse wheel over a slot = move single items in or out
+ let drag=null;
+ const usable=(s)=>{const k=s.dataset.k;return k!=='_pal'&&ctx.g[k]&&ctx.g[k].type!=='out'&&!ctx.g[k].takeOnly};
+ const fits=(s,cur)=>{if(!usable(s))return false;const g=ctx.g[s.dataset.k],i=+s.dataset.i,st=g.get(i);if(g.accept&&!g.accept(cur,i))return false;return !st||(st.id===cur.id&&(st.d||0)===(cur.d||0)&&st.n<stMax(st.id))};
+ const after=()=>{if(spec.after)spec.after(ctx);ctx.refresh()};
+ const dragEnter=(s,e)=>{if(!drag||drag.slots.includes(s))return;drag.slots.push(s);const k=s.dataset.k,i=+s.dataset.i;
+  if(drag.mode==='shift'){if(k==='_pal')return;slotClick(ctx,k,i,false,true,e);G.sfx('click_slot',.3);after()}
+  else if(drag.mode==='one'){if(ctx.cursor&&fits(s,ctx.cursor)){slotClick(ctx,k,i,true,false,e);G.sfx('click_slot',.3);after()}}
+  else if(drag.mode==='spread'){if(ctx.cursor&&fits(s,ctx.cursor))s.classList.add('dragmark')}};
+ const dragEnd=()=>{if(!drag)return;const d=drag;drag=null;for(const s of d.slots)s.classList.remove('dragmark');
+  if(d.mode!=='spread')return;const cur=ctx.cursor;
+  if(d.slots.length===1||!cur){doClick(d.slots[0],{shiftKey:false},false);return}
+  const ok=d.slots.filter(s=>fits(s,cur));if(!ok.length)return;
+  const per=Math.max(1,Math.floor(cur.n/ok.length));
+  for(const s of ok){if(!ctx.cursor)break;const g=ctx.g[s.dataset.k],i=+s.dataset.i,st=g.get(i);const room=st?stMax(st.id)-st.n:stMax(cur.id);const t=Math.min(per,room,cur.n);if(t<=0)continue;
+   if(st){st.n+=t;g.set(i,st)}else g.set(i,{id:cur.id,n:t,d:cur.d||0});cur.n-=t;if(cur.n<=0)ctx.cursor=null}
+  G.sfx('click_slot',.4);after()};
+ addEventListener('pointerup',dragEnd);addEventListener('blur',()=>{if(drag){for(const s of drag.slots)s.classList.remove('dragmark');drag=null}});
+ el.addEventListener('wheel',e=>{const s=slotOf(e.target);if(!s||!usable(s)||ctx.cursor)return;e.preventDefault();const k=s.dataset.k,i=+s.dataset.i,g=ctx.g[k],st=g.get(i);
+  if(e.deltaY>0){// down: push one item to the other part of the window
+   if(!st)return;const q=ctx.spec.quick&&ctx.spec.quick(k,st);if(!q)return;const one={id:st.id,n:1,d:st.d||0};for(const tk of q){addToCont(ctx.g[tk],one);if(one.n<=0)break}if(one.n<=0){st.n--;g.set(i,st.n>0?st:null);G.sfx('click_slot',.3);after()}}
+  else{// up: pull one of the same item into this slot from elsewhere
+   if(!st||st.n>=stMax(st.id))return;for(const kk in ctx.g){if(kk===k)continue;const og=ctx.g[kk];if(og.type==='out'||og.takeOnly)continue;for(let j=0;j<og.n;j++){const o=og.get(j);if(o&&o.id===st.id&&(o.d||0)===(st.d||0)){o.n--;og.set(j,o.n>0?o:null);st.n++;g.set(i,st);G.sfx('click_slot',.3);after();return}}}}},{passive:false});
+ el.addEventListener('pointermove',e=>{pos(e);const s=slotOf(e.target);const k=s?s.dataset.k+':'+s.dataset.i:'';if(k!==ctx._hk){ctx._hk=k;setHover(s);if(s&&drag&&e.buttons)dragEnter(s,e)}});
  el.addEventListener('pointerleave',()=>{ctx._hk='';setHover(null)});
  el.addEventListener('contextmenu',e=>e.preventDefault());
  let lpT=0,lpFired=false;
@@ -2316,7 +2341,9 @@ function openWindow(el,spec){
    if(ctx.cursor&&!e.target.closest('.win')){const right=e.button===2;if(right&&ctx.cursor.n>1){dropStack({id:ctx.cursor.id,n:1,d:ctx.cursor.d});ctx.cursor.n--}else{dropStack(ctx.cursor);ctx.cursor=null}ctx.refresh()}return}
   e.preventDefault();
   if(e.pointerType==='touch'){lpFired=false;clearTimeout(lpT);lpT=setTimeout(()=>{lpFired=true;doClick(s,e,true)},380);const up=()=>{clearTimeout(lpT);if(!lpFired)doClick(s,e,false);removeEventListener('pointerup',up);removeEventListener('pointercancel',up)};addEventListener('pointerup',up);addEventListener('pointercancel',()=>clearTimeout(lpT),{once:true})}
-  else doClick(s,e,e.button===2)});
+  else{const right=e.button===2;if(e.button!==0&&!right)return;
+   if(!right&&!e.shiftKey&&ctx.cursor&&usable(s)){drag={mode:'spread',slots:[s]};if(fits(s,ctx.cursor))s.classList.add('dragmark');return}
+   doClick(s,e,right);drag={mode:e.shiftKey&&!right?'shift':right&&ctx.cursor?'one':'none',slots:[s]}}});
  el.addEventListener('dblclick',e=>{const s=slotOf(e.target);if(!s||!ctx.cursor)return;const k=s.dataset.k;if(k==='_pal'||ctx.g[k].type==='out')return;// gather same items to cursor
   const mx=stMax(ctx.cursor.id);for(const kk in ctx.g){const g=ctx.g[kk];if(g.type==='out')continue;for(let i=0;i<g.n&&ctx.cursor.n<mx;i++){const st=g.get(i);if(st&&st.id===ctx.cursor.id&&(st.d||0)===(ctx.cursor.d||0)){const t=Math.min(mx-ctx.cursor.n,st.n);ctx.cursor.n+=t;st.n-=t;g.set(i,st.n>0?st:null)}}}if(spec.after)spec.after(ctx);ctx.refresh()});
  ctx.key=(e)=>{const hv=ctx.hover;
