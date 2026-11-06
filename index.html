@@ -379,6 +379,13 @@
   // (gerade keine Boxen in Benutzung, alle Kassetten liegen direkt im Regal oder herum)
   const BOXES = [
   ];
+  // Platzhalter: leere Kassetten ohne Etikett füllen die freien Plätze im Regal, dazu eine auf dem Boden. Kommt eine echte Kassette dazu, verschwindet automatisch eine leere.
+  {
+    const used = TAPES.filter(t => !t.secret && !t.lose && !t.box).length;
+    const LEER = ['', '', '', '', '', '', '', '', ''].slice(0, Math.max(0, 9 - used)).map(() => null);
+    LEER.push('boden');
+    LEER.forEach((lose, k) => TAPES.push({ name: '', key: 'LEER ' + k, leer: true, tag: 'PLATZ FREI', desc: 'Noch leer. Hier kommt bald etwas Neues drauf.', ...(lose ? { lose } : {}) }));
+  }
   const NT = TAPES.length, SECRET = TAPES.findIndex(t => t.secret);
   // Auswahl-Nummern: 0..NT-1 = Kassette, BOX0+b = geschlossene Box, LID = Deckel einer offenen Box (zurück)
   const BOX0 = 1000, LID = 999;
@@ -391,8 +398,8 @@
     if (b >= 0 && BOXN[b].length < 8) { BOXN[b].push(i); BOX_OF[i] = b; }
   });
   // Kanalnummern: alle normalen Kassetten der Reihe nach, die Geheimkassette ist CH 00
-  const CHANS = TAPES.map((t, i) => i).filter(i => !TAPES[i].secret);
-  const chNum = i => TAPES[i].secret ? 0 : CHANS.indexOf(i) + 1;
+  const CHANS = TAPES.map((t, i) => i).filter(i => !TAPES[i].secret && !TAPES[i].leer);
+  const chNum = i => TAPES[i].leer ? '' : TAPES[i].secret ? 0 : CHANS.indexOf(i) + 1;
 
   // ================= Kassetten-Zustand (Zählerstand + Abnutzung, bleibt gespeichert) =================
   // gespeichert nach Name, damit man die Liste umsortieren kann (früher nach Platznummer, das wird umgerechnet)
@@ -404,7 +411,7 @@
   } catch (e) {}
   const td = i => tapeData[TAPES[i].name] || (tapeData[TAPES[i].name] = { c: 0, p: 0 });
   const saveTapes = () => { try { localStorage.setItem('vhs-tapes', JSON.stringify(tapeData)); } catch (e) {} };
-  const wear = i => !isTape(i) || TAPES[i].secret ? 0 : Math.min(10, td(i).p);
+  const wear = i => !isTape(i) || TAPES[i].secret || TAPES[i].leer ? 0 : Math.min(10, td(i).p);
   const fmtCount = s => `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(Math.floor(s) % 60).padStart(2, '0')}`;
   let secretOn = false;
   try { secretOn = localStorage.getItem('vhs-secret') === '1'; } catch (e) {}
@@ -451,9 +458,9 @@
       const colX = [50, 180, 310], JIT = [[-3, 5, 0], [2, -2, 4], [-5, 3, -3]];
       const slot = (c, r) => ({ x: colX[c] + JIT[c][Math.min(2, r)], y: cab.y + cab.h - 4 - (r + 1) * 17, w: 120, h: 16 });
       // Boden vor dem Regal: Stapel, auf die lose Kassetten fallen (x/y = Mitte)
-      const floor = { piles: [{ x: 56, y: 289 }, { x: 424, y: 291 }, { x: 196, y: 293 }, { x: 318, y: 287 }], w: 120, h: 16, step: 12, max: 2 };
+      const floor = { piles: [{ x: 74, y: 286 }, { x: 410, y: 288 }, { x: 196, y: 290 }, { x: 318, y: 285 }], w: 120, h: 16, step: 12, max: 2 };
       const secretSpot = { x: tv.x + tv.w - 84, y: tv.y - 16, w: 66, h: 14 };
-      const tvTop = { x: tv.x + 14, y: tv.y - 16, w: 80, h: 14, max: 3 };
+      const tvTop = { x: tv.x + 14, y: tv.y - 16, w: 80, h: 14, max: 1 };
       const remote = { x: 52, y: shelfY - 5, w: 88 };
       return { W, H, portrait, tv, bezel, screen, shelfY, cab, slot, cols: 3, rows: 3, floor, secretSpot, tvTop, remote, fs: 7 };
     } else {
@@ -468,7 +475,7 @@
       const remote = { x: (W - 88) / 2, y: cab.y + cab.h + 18, w: 88 };
       const floor = { piles: [{ x: 76, y: 498 }, { x: 196, y: 503 }], w: 140, h: 21, step: 16, max: 1 };
       const secretSpot = { x: tv.x + tv.w - 88, y: tv.y - 16, w: 66, h: 14 };
-      const tvTop = { x: tv.x + 16, y: tv.y - 16, w: 100, h: 14, max: 3 };
+      const tvTop = { x: tv.x + 16, y: tv.y - 16, w: 100, h: 14, max: 1 };
       return { W, H, portrait, tv, bezel, screen, shelfY, cab, slot, cols: 1, rows: 9, floor, secretSpot, tvTop, remote, fs: 7 };
     }
   }
@@ -513,13 +520,16 @@
     piles.push({ kind: 'fernseher', lvl: 0, max: L.tvTop.max });
     const shelfL = [], floorL = [], tvL = [];
     for (const e of loose) {
-      const key = isBox(e.id) ? 'BOX ' + BOXES[e.id - BOX0].id : TAPES[e.id].name, hs = hashS(key);
+      const key = isBox(e.id) ? 'BOX ' + BOXES[e.id - BOX0].id : TAPES[e.id].key || TAPES[e.id].name, hs = hashS(key);
       const rnd = k => ((hs >>> k) & 255) / 255;
       const want = ['regal', 'boden', 'fernseher'].includes(e.lose) ? e.lose : null, s = isBox(e.id) ? 2 : 1;
       const fits = p => (!want || p.kind === want) && !(s > 1 && p.kind === 'fernseher') && p.lvl + (p.kind === 'regal' ? s : 1) <= p.max;
       let cand = piles.filter(fits);
       if (!cand.length) cand = piles.filter(p => p.kind === 'boden' && p.lvl + 1 <= p.max);
       if (!cand.length) { const m = Math.min(...piles.filter(p => p.kind === 'boden').map(p => p.lvl)); cand = piles.filter(p => p.kind === 'boden' && p.lvl === m); }
+      // erst freie Stellen nehmen, gestapelt wird nur, wenn es nicht anders geht
+      const ml = Math.min(...cand.map(p => p.lvl));
+      cand = cand.filter(p => p.lvl === ml);
       const p = cand[hs % cand.length];
       if (p.kind === 'fernseher') {
         const t = L.tvTop;
@@ -533,7 +543,7 @@
         p.lvl += s;
       } else {
         const w = L.floor.w, h = L.floor.h * s;
-        const ang = (rnd(9) * 2 - 1) * (p.lvl ? 4 : 7) * DEG;
+        const ang = (rnd(9) * 2 - 1) * (p.lvl ? 3 : 5) * DEG;
         floorL.push({ id: e.id, x: p.x - w / 2 + (rnd(3) * 16 - 8), y: p.y - h / 2 - p.lvl * L.floor.step + (rnd(17) * 4 - 2), w, h, ang, where: 'boden', top: true });
         p.lvl++;
       }
@@ -823,7 +833,7 @@
       R(sx, sy, rnd() < .3 ? 2 : 1, 1, rnd() < .5 ? C.labLo : '#8c7a66');
     }
     if (wv >= 6 && !d.secret) { R(lx + lw - 3, y + th + 2, 3, 1, C.tp2); R(lx + lw - 1, y + th + 3, 1, 1, C.tp2); }
-    R(lx + 3, y + th + 4, 1, fh - 8, C.ink); R(lx + 5, y + th + 4, 1, fh - 8, C.ink);
+    if (!d.leer) { R(lx + 3, y + th + 4, 1, fh - 8, C.ink); R(lx + 5, y + th + 4, 1, fh - 8, C.ink); }
     // zu lange Namen werden gekürzt, damit nichts übers Etikett hinausläuft
     let nm = d.name; while (nm.length > 3 && textWidth(nm) > lw - 10) nm = nm.slice(0, -1);
     text(nm, lx + lw / 2 + 3, y + th + 1 + (fh - 2 - L.fs) / 2, L.fs, d.secret ? C.red : C.ink, 'center', 1);
@@ -1281,11 +1291,11 @@
       updateWear(); tick(); applyTracking();
     } else {
       const t = TAPES[i];
-      $('pNum').textContent = `TAPE ${String(chNum(i)).padStart(2, '0')}` + (BOX_OF[i] >= 0 ? ' · ' + BOXES[BOX_OF[i]].name : '');
-      $('pName').textContent = t.name;
+      $('pNum').textContent = t.leer ? 'TAPE --' : `TAPE ${String(chNum(i)).padStart(2, '0')}` + (BOX_OF[i] >= 0 ? ' · ' + BOXES[BOX_OF[i]].name : '');
+      $('pName').textContent = t.leer ? 'LEER' : t.name;
       $('pTag').textContent = t.tag;
       $('pDesc').textContent = t.desc;
-      $('pPlay').textContent = t.secret ? (touch ? '▶ WIRKLICH? NOCHMAL TIPPEN' : '▶ WIRKLICH? ENTER') : t.url ? (touch ? '▶ NOCHMAL TIPPEN' : '▶ ENTER / KLICK') : '■ BALD VERFÜGBAR';
+      $('pPlay').textContent = t.secret ? (touch ? '▶ WIRKLICH? NOCHMAL TIPPEN' : '▶ WIRKLICH? ENTER') : t.url ? (touch ? '▶ NOCHMAL TIPPEN' : '▶ ENTER / KLICK') : (t.leer ? '■ NOCH NICHTS DRAUF' : '■ BALD VERFÜGBAR');
       screen.classList.toggle('evil', !!t.secret);
       updateWear(); tick(); applyTracking();
       if (t.secret) setGlow([255, 40, 70]);
@@ -1833,6 +1843,7 @@
   const modeEl = document.querySelector('.osd.mode');
   const pWear = document.getElementById('pWear');
   function updateWear() {
+    if (isTape(sel) && TAPES[sel].leer) { pWear.textContent = ''; return; }
     if (!isTape(sel) || TAPES[sel].secret) { pWear.textContent = isTape(sel) ? '■■■■■ ??? · NICHT ZURÜCKGESPULT' : ''; return; }
     const w = wear(sel), n = 5 - Math.ceil(w / 2);
     const lab = w === 0 ? 'NEU' : w <= 3 ? 'GUT' : w <= 6 ? 'ABGENUTZT' : w <= 9 ? 'MITGENOMMEN' : 'HINÜBER';
@@ -1854,7 +1865,7 @@
     saveTapes();
   }
   function rewind() {
-    if (state !== 'shelf' || !isTape(sel) || rewinding) return;
+    if (state !== 'shelf' || !isTape(sel) || TAPES[sel].leer || rewinding) return;
     const d = td(sel);
     if (TAPES[sel].secret) { sfxPlay('zap'); return osdMsg('KLEMMT'); }
     if (d.c <= 0) return osdMsg('■ SCHON AM ANFANG');
