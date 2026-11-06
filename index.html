@@ -371,6 +371,45 @@
   .stk-t small { display: block; font-size: 22px; color: var(--cyan); text-shadow: none; }
   .stk-t.show { opacity: 1; }
 
+
+  /* ===== Reset: Fortschritt löschen (Videorekorder-Menü) ===== */
+  .sound.rst-btn { color: #c9a3b6; }
+  .sound.rst-btn:hover { color: #fff; border-color: #ff3048; }
+  .rst { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 12px; background: rgba(4,2,8,.72); }
+  .rst[hidden] { display: none; }
+  .rst-win {
+    position: relative; overflow: hidden;
+    width: min(560px, 100%); max-height: calc(100vh - 24px); overflow-y: auto;
+    padding: 0 0 12px; background: #0a1a6e; color: #fff;
+    border: 2px solid #fff; box-shadow: 0 0 0 3px #000, 0 0 0 5px var(--pink), 0 0 28px rgba(255,46,136,.4);
+    font-size: 21px; line-height: 1.15; letter-spacing: .06em;
+    animation: rstIn .22s steps(4) both;
+  }
+  .rst-win::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px); }
+  @keyframes rstIn { 0% { transform: scaleY(.04); filter: brightness(3); } 60% { transform: scaleY(1.04); } 100% { transform: none; filter: none; } }
+  .rst-h { display: flex; justify-content: space-between; gap: 10px; padding: 4px 12px 2px; background: #fff; color: #0a1a6e; letter-spacing: .14em; }
+  .rst-h b { font-weight: normal; animation: blink 1s steps(1) infinite; }
+  .rst-t { padding: 10px 14px 4px; }
+  .rst-l { margin: 4px 14px 0; padding: 0; list-style: none; font-size: 18px; color: #c9d3ff; }
+  .rst-l li::before { content: '▸ '; color: var(--cyan); }
+  .rst-l li.all { color: #ffb3c0; }
+  .rst-l li.all::before { content: '▸ '; color: #ff5a6e; }
+  .rst-k { margin: 6px 14px 0; font-size: 16px; color: #8fa0e8; }
+  .rst-b { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin: 12px 14px 0; }
+  .rst-b button { font: 21px 'VT323', monospace; letter-spacing: .1em; color: #fff; background: transparent; border: 2px solid #6d7cc9; padding: 2px 12px 0; cursor: pointer; }
+  .rst-b button:hover, .rst-b button.on { background: #fff; color: #0a1a6e; border-color: #fff; }
+  .rst-b button.on::before { content: '▶ '; }
+  .rst-b button.red { border-color: #ff5a6e; color: #ffb3c0; }
+  .rst-b button.red:hover, .rst-b button.red.on { background: #ff3048; color: #fff; border-color: #ff3048; }
+  .rst-f { margin: 10px 14px 0; font-size: 15px; color: #8fa0e8; text-align: right; letter-spacing: .12em; }
+  @media (hover: none) { .rst-f { display: none; } }
+  /* Zurückspulen nach dem Bestätigen */
+  .rst-spool { position: fixed; inset: 0; z-index: 41; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: #05030a; color: #fff; font-size: 30px; letter-spacing: .14em; text-shadow: 2px 0 var(--pink), -2px 0 var(--cyan); }
+  .rst-spool.on { display: flex; }
+  .rst-spool::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 2px, transparent 2px 4px); animation: rstRoll .35s linear infinite; }
+  .rst-spool .c { font-size: 46px; color: var(--cyan); }
+  .rst-spool .s { font-size: 18px; color: #8a7fa3; letter-spacing: .2em; }
+  @keyframes rstRoll { from { transform: translateY(0); } to { transform: translateY(16px); } }
 </style>
 </head>
 <body>
@@ -449,6 +488,7 @@
   <div class="btns">
     <button class="sound" id="amb" aria-label="Raumgeräusche (Regen, Röhrenbrummen) an oder aus">☂ RAUM</button>
     <button class="sound" id="sound" aria-label="Ton an oder aus">♪ AN</button>
+    <button class="sound rst-btn" id="rst" aria-label="Fortschritt zurücksetzen" title="Fortschritt zurücksetzen">◄◄<span class="lbl"> RESET</span></button>
   </div>
   <button class="panb" id="panL" aria-label="Nach links umsehen">◄</button>
   <button class="panb" id="panR" aria-label="Nach rechts umsehen">►</button>
@@ -463,6 +503,22 @@
   <div class="stk" id="stk"><canvas width="13" height="11"></canvas></div>
   <div class="stk-t" id="stkT"></div>
   <audio id="music" src="audio/intro.m4a" preload="auto" loop></audio>
+  <div class="rst" id="rstBox" hidden role="dialog" aria-modal="true" aria-labelledby="rstH">
+    <div class="rst-win">
+      <div class="rst-h" id="rstH"><span>MENÜ ▸ FORTSCHRITT</span><b>● RESET</b></div>
+      <div class="rst-t">Alles auf Anfang spulen? Danach ist es, als wärst du zum ersten Mal hier.</div>
+      <ul class="rst-l">
+        <li>Zählerstände und Abnutzung der Kassetten</li>
+        <li>Sticker, gefundene Details im Zimmer, Telefon</li>
+        <li>Geheimkassette (und was sie über dich weiß)</li>
+        <li class="all">Nur bei ALLES: Spielstände und Einstellungen der Spiele, auch Klotzwelt-Welten</li>
+      </ul>
+      <div class="rst-k">Bleibt: Lautstärke, dein Gästebuch-Name, Gästebuch-Einträge und Online-Welten.</div>
+      <div class="rst-b" id="rstB"><button data-m="0">ABBRECHEN</button><button data-m="1">NUR VHS</button><button data-m="2" class="red">ALLES</button></div>
+      <div class="rst-f">◄ ► WÄHLEN · ENTER OK · ESC ZURÜCK</div>
+    </div>
+  </div>
+  <div class="rst-spool" id="rstSpool" aria-live="polite"><div>◄◄ ZURÜCKSPULEN</div><div class="c" id="rstC">0:00:00</div><div class="s">BITTE WARTEN</div></div>
   <div class="hint" id="hint"></div>
   <div class="vhs" aria-hidden="true"><canvas id="vhsNoise" width="160" height="90"></canvas><div class="lines"></div><div class="vig"></div><div class="roll"></div><div class="bars" id="vhsBars"></div></div>
 
@@ -3571,6 +3627,72 @@
     step(t) { const f = nz(t, .5, 'lowpass', 300, .7, .12); f.frequency.exponentialRampToValueAtTime(700, t + .45); },
     meow(t) { const o = tone(t, .45, 520, 760, 'triangle', .1); o.frequency.setValueAtTime(520, t); o.frequency.linearRampToValueAtTime(820, t + .15); o.frequency.linearRampToValueAtTime(480, t + .45); },
   });
+
+  // ================= Reset: allen Fortschritt löschen (nur hier im Browser, Firebase bleibt) =================
+  // NUR VHS: alles von dieser Seite (vhs-*), außer Lautstärke/Raumton/Gästebuch-Name.
+  // ALLES: zusätzlich alle Spielstände der Spiele (localStorage + Klotzwelt-Welten in IndexedDB).
+  // Firebase (Anmeldung, Gästebuch, Online-Welten) wird nie angefasst.
+  const rstBtn = document.getElementById('rst'), rstBox = document.getElementById('rstBox');
+  const rstBs = [...document.querySelectorAll('#rstB button')], rstSpool = document.getElementById('rstSpool');
+  const KEEP = ['vhs-vol', 'vhs-muted', 'vhs-amb', 'vhs-gb-name', 'vhs-gb-last'];
+  let rstSel = 0, rstBusy = false;
+  const rstFocus = k => { rstSel = (k + rstBs.length) % rstBs.length; rstBs.forEach((b, j) => b.classList.toggle('on', j === rstSel)); rstBs[rstSel].focus({ preventScroll: true }); };
+  function rstOpen() {
+    if (rstBusy) return;
+    if (holo) closeHolo(true);
+    rstBox.hidden = false; rstFocus(0); sfxPlay('tick');
+  }
+  function rstClose() { rstBox.hidden = true; sfxPlay('tick'); rstBtn.focus({ preventScroll: true }); }
+  function rstWipe(all) {
+    try {
+      const ks = [];
+      for (let k = 0; k < localStorage.length; k++) ks.push(localStorage.key(k));
+      for (const k of ks) {
+        if (!k || KEEP.includes(k) || /^firebase/i.test(k)) continue;
+        if (k.startsWith('vhs-') || all) localStorage.removeItem(k);
+      }
+    } catch (e) {}
+    try { sessionStorage.clear(); } catch (e) {}
+    if (!all || !window.indexedDB) return Promise.resolve();
+    return new Promise(res => {
+      try { const q = indexedDB.deleteDatabase('klotzwelt'); q.onsuccess = q.onerror = q.onblocked = () => res(); } catch (e) { res(); }
+      setTimeout(res, 1500);
+    });
+  }
+  function rstGo(m) {
+    if (m === 0) return rstClose();
+    if (rstBusy) return;
+    rstBusy = true;
+    const from = Object.values(tapeData).reduce((a, d) => a + (d.c || 0), 0);
+    const dur = 1800, start = performance.now(), done = rstWipe(m === 2);
+    rstBox.hidden = true; rstSpool.classList.add('on');
+    const cEl = document.getElementById('rstC');
+    sfxPlay('rewind', dur / 1000);
+    (function st(now) {
+      const u = Math.min(1, (now - start) / dur);
+      cEl.textContent = fmtCount(Math.round(from * (1 - u)));
+      if (u < 1) return requestAnimationFrame(st);
+      cEl.textContent = '0:00:00';
+      done.then(() => setTimeout(() => location.replace(location.pathname), 350));
+    })(start);
+  }
+  rstBtn.addEventListener('click', e => { e.stopPropagation(); audioInit(); rstOpen(); });
+  rstBox.addEventListener('click', e => {
+    e.stopPropagation();
+    const b = e.target.closest('button');
+    if (b) return rstGo(+b.dataset.m);
+    if (e.target === rstBox) rstClose();
+  });
+  // Solange das Menü offen ist, gehen Tasten nur ans Menü
+  addEventListener('keydown', e => {
+    if (rstBusy) { e.stopImmediatePropagation(); e.preventDefault(); return; }
+    if (rstBox.hidden) return;
+    e.stopImmediatePropagation();
+    if (e.key === 'Escape' || e.key === 'Backspace') { e.preventDefault(); return rstClose(); }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || (e.key === 'Tab' && e.shiftKey)) { e.preventDefault(); return rstFocus(rstSel - 1); }
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'Tab') { e.preventDefault(); return rstFocus(rstSel + 1); }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); return rstGo(rstSel); }
+  }, true);
 
   // ================= Start =================
   (async () => {
