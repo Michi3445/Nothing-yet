@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
 <title>TAPE 00 · VHS·VISION</title>
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#0b0306">
@@ -10,50 +10,77 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
 <style>
-  :root { --bg: #0b0306; --red: #ff2a44; --text: #ffd6dc; --dim: #8a4a56; --cyan: #2ef2ff; }
+  :root { --bg: #0b0306; --red: #ff2a44; --text: #ffd6dc; --dim: #8a4a56; --cyan: #2ef2ff; --eye: #ff2a44; }
   * { box-sizing: border-box; margin: 0; }
   html, body { height: 100%; overflow: hidden; background: var(--bg); }
   body {
     color: var(--text); font: 22px/1.3 'VT323', ui-monospace, monospace; letter-spacing: .04em;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    height: 100dvh;
   }
   .vhs { position: fixed; inset: 0; pointer-events: none; z-index: 20; }
-  .vhs canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; opacity: .09; }
+  .vhs canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; opacity: .09; transition: opacity .3s; }
   .vhs .lines { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.3) 0 1px, transparent 1px 3px); }
   .vhs .vig { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(0,0,0,.8) 100%); }
   .vhs .roll { position: absolute; left: 0; right: 0; height: 9vh; top: -10vh; background: linear-gradient(180deg, transparent, rgba(255,60,80,.06) 50%, transparent); animation: roll 6s linear infinite; }
   @keyframes roll { 0% { top: -10vh; } 70%, 100% { top: 110vh; } }
   body.glitch .wrap { translate: 8px 0; filter: drop-shadow(-4px 0 rgba(255,0,40,.8)) drop-shadow(4px 0 rgba(46,242,255,.5)); }
+  body.rew .vhs canvas, body.static .vhs canvas { opacity: .45; }
+  body.rew .vhs .roll { animation-duration: .5s; animation-direction: reverse; }
+  body.angry { --eye: #ff1030; }
+  body.angry .wrap { animation: shake .12s steps(2) infinite; }
+  @keyframes shake { 50% { translate: 3px -2px; } }
+  body.happy { --eye: #ff7ab8; }
+  body.sad { --eye: #b5576a; }
+  body.closed pre#eye { opacity: .5; }
 
   .osd { position: fixed; left: 16px; right: 16px; display: flex; justify-content: space-between; gap: 12px; font-size: 20px; color: var(--text); text-shadow: 2px 0 var(--red), -2px 0 var(--cyan); z-index: 5; }
   .osd.top { top: 12px; }
   .osd.bot { bottom: 12px; }
   .rec::before { content: '● '; color: var(--red); animation: blink 1s steps(1) infinite; }
+  body.rew .rec::before { content: '◀◀ '; animation: none; }
   @keyframes blink { 50% { opacity: 0; } }
   .back { color: var(--text); text-decoration: none; }
   .back:hover, .back:focus-visible { color: #fff; text-shadow: 0 0 8px var(--red); outline: none; }
 
-  .wrap { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 0 16px; max-width: 100%; animation: on .9s cubic-bezier(.2,.8,.2,1) both; }
+  .wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 0 16px; width: 100%; max-width: 760px; animation: on .9s cubic-bezier(.2,.8,.2,1) both; }
   @keyframes on { 0%, 40% { transform: scaleY(.01); filter: brightness(6); } 75% { transform: scaleY(1.04); filter: brightness(1.6); } 100% { transform: none; filter: none; } }
   pre#eye {
-    font: clamp(6px, calc((100vw - 32px) / 31), 22px)/1 'Courier New', ui-monospace, monospace;
-    color: var(--red); white-space: pre;
+    font: clamp(6px, calc((100vw - 32px) / 31), 21px)/1 'Courier New', ui-monospace, monospace;
+    color: var(--eye); white-space: pre; transition: color .6s, opacity .4s;
     text-shadow: 2px 0 rgba(255,0,60,.8), -2px 0 rgba(46,242,255,.35), 0 0 16px rgba(255,40,70,.5);
   }
-  #say { min-height: 3.2em; text-align: center; font-size: 26px; max-width: 30ch; text-shadow: 2px 0 var(--red), -2px 0 var(--cyan); }
+  #say { min-height: 2.7em; text-align: center; font-size: 26px; max-width: 32ch; text-shadow: 2px 0 var(--red), -2px 0 var(--cyan); }
   #say .cur { animation: blink .6s steps(1) infinite; }
-  #end { opacity: 0; transition: opacity 1s; font-size: 22px; }
-  #end.show { opacity: 1; }
+
+  /* Eingabe: man kann der Kassette schreiben */
+  #talk { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; opacity: 0; pointer-events: none; transition: opacity .8s; }
+  #talk.show { opacity: 1; pointer-events: auto; }
+  #talk form { display: flex; align-items: center; gap: 8px; width: min(100%, 520px); border: 2px solid #5a2030; background: rgba(40,6,14,.6); padding: 2px 10px 0; }
+  #talk form:focus-within { border-color: var(--red); box-shadow: 0 0 12px rgba(255,42,68,.35); }
+  #talk label { color: var(--red); }
+  #msg { flex: 1; min-width: 0; background: none; border: 0; outline: none; color: #fff; font: inherit; letter-spacing: .06em; text-transform: uppercase; caret-color: var(--red); padding: 4px 0; user-select: text; }
+  #msg::placeholder { color: var(--dim); }
+  .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .chips button { font: 19px 'VT323', monospace; letter-spacing: .06em; color: var(--text); background: rgba(40,6,14,.6); border: 2px solid #4a1a26; padding: 1px 10px 0; cursor: pointer; }
+  .chips button:hover, .chips button:focus-visible { border-color: var(--red); color: #fff; outline: none; }
+  #end { opacity: 0; transition: opacity 1s; font-size: 22px; pointer-events: none; }
+  #end.show { opacity: 1; pointer-events: auto; }
   #end a { color: var(--cyan); }
-  @media (max-width: 560px) { #say { font-size: 22px; } .osd { font-size: 17px; } }
+  @media (max-width: 560px) { #say { font-size: 22px; } .osd { font-size: 17px; } .chips button { font-size: 17px; } }
+  @media (max-height: 520px) { .osd.bot { display: none; } .wrap { gap: 6px; } }
 </style>
 </head>
 <body>
-  <div class="osd top"><a class="back" href="./" id="back">◀ ZURÜCK</a><span class="rec">TAPE 00 · PLAY</span></div>
+  <div class="osd top"><a class="back" href="./" id="back">◀ ZURÜCK</a><span class="rec" id="rec">TAPE 00 · PLAY</span></div>
   <main class="wrap">
     <pre id="eye" aria-hidden="true"></pre>
     <p id="say" aria-live="polite"></p>
+    <div id="talk">
+      <form id="form" autocomplete="off"><label for="msg">&gt;</label><input id="msg" maxlength="80" placeholder="SAG WAS…" enterkeyhint="send" spellcheck="false"></form>
+      <div class="chips" id="chips"></div>
+    </div>
     <p id="end"><a class="back" href="./">■ STOP · AUSWERFEN</a></p>
   </main>
   <div class="osd bot"><span>MAR. 13 1987</span><span id="clock">03:33:00 AM</span></div>
@@ -64,123 +91,724 @@
   document.querySelectorAll('.back').forEach(a => a.addEventListener('click', e => {
     if (document.referrer && new URL(document.referrer).pathname.replace(/index\.html$/, '') === location.pathname.replace(/geheim\.html$/, '') && history.length > 1) { e.preventDefault(); history.back(); }
   }));
-  addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'Backspace') document.getElementById('back').click(); });
-  try { localStorage.setItem('vhs-secret', '1'); } catch (e) {}
+  const msg = document.getElementById('msg');
+  addEventListener('keydown', e => { if (e.key === 'Escape' || (e.key === 'Backspace' && document.activeElement !== msg)) document.getElementById('back').click(); });
+
+  // ===== Was die Kassette über dich weiß (alles nur lokal im Browser) =====
+  const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } };
+  store('vhs-secret', '1');
+  const visits = (parseInt(store('vhs-tape00-visits'), 10) || 0) + 1;
+  store('vhs-tape00-visits', String(visits));
+  const rewound = store('vhs-tape00-rewound') === '1';
+  const NAMES = ['KLOTZWELT', 'ASCII ARCADE', 'PULSE GRID', 'SOLITAIRE', 'RETRO 98', 'LERNWERK', 'WICHTEL', 'ABGABE-TRAINER', 'NAUTO-MOD'];
+  let tapes = {};
+  try { tapes = JSON.parse(store('vhs-tapes')) || {}; } catch (e) {}
+  let fav = -1, favP = 0, notRewound = 0;
+  NAMES.forEach((_, i) => { const t = tapes[i]; if (!t) return; if (t.p > favP) { favP = t.p; fav = i; } if (t.c > 0) notRewound++; });
+  const hour = new Date().getHours();
+
+  // ===== Stimmung =====
+  let mood = 'calm', moodT = null;
+  function setMood(m, ms) {
+    mood = m;
+    document.body.classList.remove('angry', 'happy', 'sad');
+    if (m !== 'calm') document.body.classList.add(m);
+    clearTimeout(moodT);
+    if (ms) moodT = setTimeout(() => setMood('calm'), ms);
+    hum(m);
+  }
 
   // ===== Das Auge (aus Textzeichen, folgt Maus oder Finger) =====
-  const COLS = 47, ROWS = 17, CX = (COLS - 1) / 2, CY = (ROWS - 1) / 2;
+  const COLS = 47, EROWS = 17, ROWS = EROWS + 4, CX = (COLS - 1) / 2, CY = (EROWS - 1) / 2;
   const eyeEl = document.getElementById('eye');
-  let look = { x: 0, y: 0 }, cur = { x: 0, y: 0 }, open = 0, openTo = 1, lastMove = 0, hurt = 0;
-  // liegt ein Zeichen innerhalb der Augenform (zwei Bögen, die sich beim Blinzeln schließen)?
+  let look = { x: 0, y: 0 }, cur = { x: 0, y: 0 }, open = 0, openTo = 1, lastMove = performance.now(), hurt = 0;
+  let spin = 0, spinDir = 1, tears = [], held = false;
+  // liegt ein Zeichen innerhalb der Augenform? Oberlid hängt tiefer, wenn es wütend oder traurig ist
   function ins(c, r) {
-    const nx = (c - CX) / (COLS / 2), ny = (r - CY) / (ROWS / 2);
-    return Math.abs(nx) < 1 && Math.abs(ny) < (1 - nx * nx) * open;
+    const nx = (c - CX) / (COLS / 2), ny = (r - CY) / (EROWS / 2);
+    if (Math.abs(nx) >= 1 || r >= EROWS) return false;
+    const lid = (1 - nx * nx) * open;
+    let top = lid;
+    if (mood === 'angry') top = lid * (.5 + .3 * Math.abs(nx));
+    if (mood === 'sad') top = lid * (.65 + .3 * (1 - Math.abs(nx)));
+    if (mood === 'happy') return ny < 0 ? -ny < lid : ny < lid * .55;
+    return ny < 0 ? -ny < top : ny < lid;
   }
   function frame() {
     const lines = [];
-    const ix = CX + cur.x * 9, iy = CY + cur.y * 2;
+    const sx = spin ? Math.cos(spin) : cur.x, sy = spin ? Math.sin(spin) : cur.y;
+    const ix = CX + sx * 9, iy = CY + sy * 2;
+    const pupil = mood === 'angry' ? 1.1 : mood === 'happy' ? 2.6 : 1.9 + hurt * 1.2;
     for (let r = 0; r < ROWS; r++) {
       let line = '';
       for (let c = 0; c < COLS; c++) {
-        const nx = (c - CX) / (COLS / 2), ny = (r - CY) / (ROWS / 2);
-        const lid = (1 - nx * nx) * open;
-        const inside = ins(c, r);
-        const top = !ins(c, r - 1), bot = !ins(c, r + 1), side = !ins(c - 1, r) || !ins(c + 1, r);
-        if (!inside) {
+        const nx = (c - CX) / (COLS / 2), ny = (r - CY) / (EROWS / 2);
+        if (!ins(c, r)) {
+          // Tränen unter dem Auge
+          const tear = tears.find(t => t.c === c && Math.round(t.r) === r);
+          if (tear) { line += r - tear.r0 > 2 ? '.' : ':'; continue; }
           // Wimpern über dem Oberlid
           line += (ins(c, r + 1) && ny < 0 && c % 4 === 1 && open > .3 && Math.abs(nx) < .8) ? (nx < -.15 ? '\\' : nx > .15 ? '/' : '|') : ' ';
           continue;
         }
+        const top = !ins(c, r - 1), bot = !ins(c, r + 1), side = !ins(c - 1, r) || !ins(c + 1, r);
         if (top || bot || side) { line += side && !top && !bot ? (nx < 0 ? '<' : '>') : top ? '~' : '-'; continue; }
         const dx = (c - ix) * .5, dy = r - iy, d = Math.sqrt(dx * dx + dy * dy);
-        const pupil = 1.9 + hurt * 1.2;
         if (d < pupil) line += (Math.abs(dx + .6) < .5 && Math.abs(dy + .9) < .6) ? '°' : '@';
         else if (d < 3.1) line += '%';
         else if (d < 4.2) line += '#';
         else if (d < 4.9) line += 'o';
+        else if (mood === 'angry' && (c * 7 + r * 13) % 9 === 0) line += '~';   // rote Äderchen
         else line += (c + r * 3) % 13 === 0 ? '.' : ' ';
       }
       lines.push(line);
     }
     eyeEl.textContent = lines.join('\n');
   }
+  function cry(n = 6) { for (let k = 0; k < n; k++) setTimeout(() => { const c = Math.round(CX + (Math.random() < .5 ? -1 : 1) * (6 + Math.random() * 10)); tears.push({ c, r: EROWS - 4, r0: EROWS - 4 }); }, k * 380); }
+
+  // ===== Bewegung von Maus und Finger =====
+  let speed = 0, lastX = 0, lastY = 0, lastT = 0, shakeT = 0;
   function point(x, y) {
     const b = eyeEl.getBoundingClientRect();
     const dx = (x - (b.left + b.width / 2)) / (innerWidth / 2), dy = (y - (b.top + b.height / 2)) / (innerHeight / 2);
     look = { x: Math.max(-1, Math.min(1, dx * 1.4)), y: Math.max(-1, Math.min(1, dy * 1.4)) };
-    lastMove = performance.now();
+    const now = performance.now();
+    if (lastT) speed = speed * .85 + Math.hypot(x - lastX, y - lastY) / Math.max(8, now - lastT) * .15;
+    lastX = x; lastY = y; lastT = now; lastMove = now;
+    idleSaid = false;
+    // wildes Hin- und Herwackeln macht ihm schwindelig
+    if (speed > 2.2 && now - shakeT > 9000 && ready && !staring) {
+      shakeT = now; speed = 0;
+      spinDir = Math.random() < .5 ? -1 : 1; spin = .01;
+      react(['HÖR AUF ZU WACKELN.', 'MIR WIRD SCHLECHT.', 'ICH BIN EIN BAND, KEIN KARUSSELL.', 'WOAAH.']);
+    }
   }
-  addEventListener('pointermove', e => point(e.clientX, e.clientY));
-  addEventListener('pointerdown', e => {
-    point(e.clientX, e.clientY);
-    startSound();
-    // Antippen piekst ins Auge
-    if (e.target.closest('a')) return;
-    hurt = 1; openTo = .15; setTimeout(() => { openTo = 1; }, 260);
-    if (Math.random() < .6) say(['AUA.', 'HEY!', 'NICHT ANFASSEN.', 'DAS IST MEIN AUGE.'][Math.random() * 4 | 0], true);
+  addEventListener('pointermove', e => { if (!held) point(e.clientX, e.clientY); else lastMove = performance.now(); });
+  document.documentElement.addEventListener('pointerleave', () => { if (ready && !ending && !staring && Math.random() < .7) react(['WO GEHST DU HIN?', 'BLEIB HIER.', 'NICHT WEGGEHEN.']); });
+
+  // ===== Piksen: je öfter, desto wütender =====
+  let pokes = 0, pokeT = 0;
+  function poke() {
+    const now = performance.now();
+    pokes = now - pokeT < 6000 ? pokes + 1 : 1; pokeT = now;
+    hurt = 1; openTo = .12; setTimeout(() => { if (!ending) openTo = 1; }, 260);
+    beep(220, .05);
+    if (pokes >= 9) { setMood('sad', 9000); closeFor(4000); say('DANN MACHE ICH DIE AUGEN EBEN ZU.', true); pokes = 0; }
+    else if (pokes >= 6) { setMood('angry', 6000); say(['ICH WARNE DICH.', 'NOCH EINMAL UND…', 'DAS IST NICHT LUSTIG.'][Math.random() * 3 | 0], true); }
+    else if (pokes >= 3) { setMood('angry', 3000); say(['HÖR AUF.', 'HEY! ICH BRAUCHE DAS AUGE NOCH.', 'NICHT SCHON WIEDER.'][Math.random() * 3 | 0], true); }
+    else if (ready) react(['AUA.', 'HEY!', 'NICHT ANFASSEN.', 'DAS IST MEIN AUGE.']);
+  }
+  function closeFor(ms) { openTo = 0; document.body.classList.add('closed'); setTimeout(() => { openTo = 1; document.body.classList.remove('closed'); if (!ending) say('…OKAY. ICH SEHE DICH WIEDER.'); }, ms); }
+  eyeEl.addEventListener('pointerdown', e => { e.preventDefault(); point(e.clientX, e.clientY); startSound(); poke(); });
+  addEventListener('pointerdown', e => { startSound(); if (e.target === document.body || e.target.classList.contains('wrap')) point(e.clientX, e.clientY); });
+
+  // ===== Weggehen und zurückkommen =====
+  let hiddenAt = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { hiddenAt = Date.now(); return; }
+    if (!hiddenAt || !ready || ending) return;
+    const s = Math.round((Date.now() - hiddenAt) / 1000);
+    if (s >= 3) say(s > 120 ? `DU WARST ${Math.round(s / 60)} MINUTEN WEG. ICH HABE GEZÄHLT.` : `DU WARST ${s} SEKUNDEN WEG. ICH HABE GEZÄHLT.`, true);
   });
-  let blinkAt = performance.now() + 2500;
-  (function loop(now) {
-    // Nach einer Weile ohne Bewegung schaut es sich selbst um
-    if (now - lastMove > 2500) look = { x: Math.sin(now / 1700) * .8, y: Math.sin(now / 2300) * .5 };
-    cur.x += (look.x - cur.x) * .18; cur.y += (look.y - cur.y) * .18;
-    if (now > blinkAt) { openTo = 0; setTimeout(() => { openTo = 1; }, 140); blinkAt = now + 2200 + Math.random() * 4000; }
-    open += (openTo - open) * .35; hurt *= .95;
-    frame();
-    requestAnimationFrame(loop);
-  })(performance.now());
+  let idleSaid = false;
 
   // ===== Text, Buchstabe für Buchstabe =====
   const sayEl = document.getElementById('say');
-  let typing = null, queue = [];
+  let typing = null, queue = [], lastSaid = '', onIdle = null;
   function say(txt, now) {
-    if (now) { clearInterval(typing); typing = null; queue = []; }
+    if (Array.isArray(txt)) txt = txt[Math.random() * txt.length | 0];
+    if (now) { clearInterval(typing); clearTimeout(typing); typing = null; queue = []; }
     queue.push(txt);
     if (!typing) next();
   }
+  function react(arr) { say(arr, true); }
   function next() {
     const txt = queue.shift();
-    if (txt === undefined) { typing = null; return; }
+    if (txt === undefined) { typing = null; if (onIdle) { const f = onIdle; onIdle = null; f(); } return; }
+    if (typeof txt === 'function') { txt(); return next(); }
     let i = 0;
+    lastSaid = txt;
     typing = setInterval(() => {
       sayEl.innerHTML = '';
       sayEl.append(txt.slice(0, ++i));
       const c = document.createElement('span'); c.className = 'cur'; c.textContent = '_'; sayEl.append(c);
-      if (i >= txt.length) { clearInterval(typing); typing = setTimeout(next, 2200); }
-    }, 55);
+      if (i % 2 && txt[i - 1] !== ' ') beep(mood === 'angry' ? 140 : mood === 'happy' ? 520 : 330 + Math.random() * 40, .018);
+      if (i >= txt.length) { clearInterval(typing); typing = setTimeout(next, Math.max(1400, txt.length * 55)); }
+    }, 50);
   }
-  const LINES = [
-    '…HALLO?',
-    'DU HAST MICH GEFUNDEN.',
-    'ICH LIEGE SEIT 1987 HINTER DIESEM REGAL.',
-    'NIEMAND HAT MICH JE ZURÜCKGESPULT.',
-    'IST DA DRAUSSEN IMMER NOCH REGEN?',
-    'DANKE FÜRS ANSCHAUEN. ICH BLEIBE JETZT AUF DEM FERNSEHER LIEGEN.',
+
+  // ===== Gespräch =====
+  const talk = document.getElementById('talk'), chips = document.getElementById('chips');
+  let ready = false, ending = false, pending = null, asked = new Set(), heard = new Set();
+  const norm = s => s.toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9 ?]/g, ' ').replace(/\s+/g, ' ').trim();
+  const has = (t, ...w) => w.some(x => new RegExp('(^| )' + x).test(t));
+  // ganzes Wort (für kurze Wörter wie "hi" oder "ja", damit "hinter" oder "jahre" nicht zählen)
+  const hasW = (t, ...w) => w.some(x => new RegExp('(^| )(' + x + ')( |\\?|$)').test(t));
+  const CHIPS = ['WER BIST DU?', 'SPIELEN WIR WAS?', 'WAS IST AUF DIR DRAUF?', 'WARUM 1987?', 'SCHAU NACH LINKS', 'WAS WEISST DU ÜBER MICH?', 'SOLL ICH DICH ZURÜCKSPULEN?', 'TSCHÜSS'];
+  function showChips() {
+    chips.innerHTML = '';
+    const list = staring ? [] : game ? [...game.chips, 'AUFHÖREN'] : pendingChoice ? ['ZAHLENRATEN', 'SCHERE STEIN PAPIER', 'RÄTSEL', 'STARREN'] : pending ? ['JA', 'NEIN'] : asking ? [] : CHIPS.filter(c => !asked.has(c)).slice(0, 3);
+    list.forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.textContent = c; b.onclick = () => send(c); chips.appendChild(b); });
+  }
+  function openTalk() { ready = true; talk.classList.add('show'); showChips(); }
+  document.getElementById('form').addEventListener('submit', e => { e.preventDefault(); send(msg.value); msg.value = ''; });
+  // beim Tippen schaut das Auge nach unten auf die Eingabe
+  let deletes = 0;
+  msg.addEventListener('input', () => {
+    msg.maxLen = Math.max(msg.maxLen || 0, msg.value.length);
+    if (!msg.value && msg.maxLen >= 12 && deletes < 2 && ready && !ending) { deletes++; msg.maxLen = 0; say(['ICH HABE DAS GESEHEN. BEVOR DU ES GELÖSCHT HAST.', 'WAS WOLLTEST DU SCHREIBEN? ICH HABE ES NOCH AUF BAND.'], true); }
+  });
+  msg.addEventListener('input', () => { look = { x: (msg.value.length / 40) - .5, y: 1 }; lastMove = performance.now(); held = true; clearTimeout(msg.t); msg.t = setTimeout(() => { held = false; }, 1500); });
+  msg.addEventListener('focus', () => startSound());
+
+  function send(raw) {
+    if (!ready || ending) return;
+    const text = String(raw || '').trim();
+    if (!text) return;
+    asked.add(text.toUpperCase());
+    const t = fixup(norm(text));
+    lastGeneric = false;
+    const out = answer(t, text);
+    if (out) say(out, true);
+    // ab und zu stellt sie selbst eine Frage
+    sinceAsk++;
+    if (!asking && !game && !pending && !pendingChoice && !staring && !ending && (lastGeneric ? Math.random() < .35 : sinceAsk >= 5 && Math.random() < .5)) { const q = askQuestion(); if (q) say(q); }
+    msg.maxLen = 0;
+    showChips();
+  }
+  function tapeInfo() {
+    if (fav < 0) return 'DU HAST NOCH KEINE KASSETTE ABGESPIELT. NUR MICH. DAS EHRT MICH.';
+    let s = `DU HAST ${NAMES[fav]} ${favP} MAL ABGESPIELT.`;
+    if (notRewound) s += notRewound === 1 ? ' UND EINE KASSETTE NICHT ZURÜCKGESPULT.' : ` UND ${notRewound} KASSETTEN NICHT ZURÜCKGESPULT. TYPISCH.`;
+    return s;
+  }
+  function answer(t, raw) {
+    if (staring) return null;
+    // laufendes Spiel
+    if (game) {
+      if (/^(stop|stopp|aufhoeren|keine lust|ende|abbrechen|genug)/.test(t)) { game = null; return 'SCHADE. DANN EBEN NICHT.'; }
+      const g = game.handle(t, raw);
+      if (g) return g;
+    }
+    if (pendingChoice) { pendingChoice = false; if (/(zahl|schere|stein|papier|raets|starr)/.test(t)) return startGame(t); }
+    // Befehle und Spielwünsche gehen immer vor
+    const cmd0 = command(t);
+    if (cmd0) { asking = null; return cmd0; }
+    if (GAME_RE.test(t)) { asking = null; return startGame(t); }
+    // eine eigene Frage der Kassette beantworten (aber nicht, wenn man gerade selbst etwas fragt)
+    if (asking && /^(ok|okay|aha|hm+|achso|egal|nichts|nix|keine ahnung|weiss (ich )?nicht|idk|kein plan)$/.test(t)) {
+      const k = Object.keys(QUESTIONS).find(x => QUESTIONS[x] === asking); asking = null;
+      if (/(ahnung|weiss|idk|plan|egal|nichts|nix)/.test(t)) { if (k) { delete facts['asked_' + k]; saveFacts(); } return pick(['DANN FRAGE ICH SPÄTER NOCHMAL.', 'KEINE ANTWORT IST AUCH EINE ANTWORT.']); }
+    }
+    if (asking) { const a = asking; asking = null; if (!/\?\s*$/.test(raw) && !/^(ich bin|du |bist|kannst|hast du|magst|was |wer |wie |wo |warum|wieso)/.test(t)) { const r = a.handle(t, raw); if (r) return r; } }
+    // eine offene Ja/Nein-Frage zuerst
+    if (pending) {
+      const p = pending;
+      if (hasW(t, 'ja', 'jo', 'jap', 'jaa', 'yes', 'ok', 'okay', 'klar', 'gerne?', 'sicher', 'na gut', 'mach', 'mach schon', 'los', 'ja klar', 'ja bitte')) { pending = null; return p.yes(); }
+      if (hasW(t, 'nein', 'ne', 'nee', 'no', 'noe', 'lieber nicht', 'niemals', 'nope', 'nein danke')) { pending = null; return p.no(); }
+      return 'JA ODER NEIN?';
+    }
+    if (heard.has(t)) return ['DAS HAST DU SCHON GESAGT.', 'ICH HAB DICH SCHON BEIM ERSTEN MAL GEHÖRT.', 'WIEDERHOLUNG. WIE EIN BAND MIT SPRUNG.'];
+    heard.add(t);
+    // Nachfragen beziehen sich aufs letzte Thema
+    const F = lastTopic && FOLLOW[lastTopic];
+    if (/^(warum|wieso|weshalb|wie kommt das)\??$/.test(t)) return (F && F.why) || pick(['WEIL DAS BAND ES SO WILL.', 'DAS WEISS ICH SELBST NICHT GENAU.', 'GUTE FRAGE. NÄCHSTE FRAGE.']);
+    if (/^(und du|du auch|und selbst|und bei dir|und dir|und wie ist es bei dir)\??$/.test(t)) return (F && F.me) || pick(['ICH? ICH BIN NUR EINE KASSETTE. ABER DANKE, DASS DU FRAGST.', 'MIR GEHT ES GUT. SOLANGE DU DA BIST.']);
+    if (/^(echt|wirklich|ernsthaft|im ernst|sicher|stimmt das)\??$/.test(t)) return pick(['JA. ICH LÜGE NIE. NUR DAS BAND MANCHMAL.', 'SO STEHT ES AUF MEINEM BAND.']);
+    if (/^(ok|okay|aha|achso|ach so|cool|h+m+|krass|nice|alles klar|verstehe|gut|interessant|oh|ah)$/.test(t)) return askQuestion(F && F.ask && !facts['asked_' + F.ask] ? F.ask : null) || pick(['…', 'UND JETZT?', 'DU BIST DRAN. ERZÄHL WAS.']);
+    if ((t.match(/(^| )(what|who|are|you|the|is|how|why|hello|please|my|your)( |\?|$)/g) || []).length >= 2) return 'ICH SPRECHE NUR DEUTSCH. UND RAUSCHEN.';
+    if (has(t, 'zurueckspul', 'spul', 'rewind', 'rueckwaerts')) {
+      pending = { yes: () => { rewindEnd(); return 'OKAY. HALT DICH FEST.'; }, no: () => { setMood('sad', 5000); cry(4); return 'OH. DANN BLEIBE ICH EBEN AM ENDE STEHEN.'; } };
+      return rewound ? 'SCHON WIEDER? DU HAST MICH LETZTES MAL SCHON ZURÜCKGESPULT. … WILLST DU WIRKLICH?' : 'DU WÜRDEST MICH ZURÜCKSPULEN? WIRKLICH?';
+    }
+    if (has(t, 'tschuess', 'bye', 'ciao', 'tschau', 'auf wiedersehen', 'bis dann', 'bis spaeter', 'gute nacht', 'ich geh jetzt', 'ich gehe jetzt', 'ich muss gehen', 'ich muss los')) { goodbye(); return 'GEH NICHT…'; }
+    if (has(t, 'hilfe', 'help', 'was kann')) return 'FRAG MICH, WER ICH BIN. ODER WAS AUF MIR DRAUF IST. ODER OB ICH ZURÜCKGESPULT WERDEN WILL.';
+    if (hasW(t, 'hallo', 'hi', 'hey', 'moin', 'servus', 'huhu', 'yo', 'hello', 'na') || has(t, 'guten (tag|morgen|abend)')) return visits > 1 ? 'HALLO. SCHON WIEDER DU. ICH FREUE MICH. GLAUBE ICH.' : 'HALLO. ES IST LANGE HER, DASS JEMAND MIT MIR GEREDET HAT.';
+    if (has(t, 'wer bist', 'was bist') || t === 'bist du' || t === 'du?') return ['ICH BIN TAPE 00. KEIN ETIKETT. NUR EIN DATUM.', 'EINE VIDEOKASSETTE MIT EINEM AUGE. FRAG NICHT WIESO.'];
+    if (has(t, 'wie heisst du', 'dein name', 'hast du (einen )?name', 'wie ist dein name')) return 'ICH HATTE EINEN NAMEN. ER STAND AUF DEM ETIKETT. DAS ETIKETT IST WEG.';
+    if (has(t, 'warum 1987', '1987', 'datum', 'maerz', '333', '3 33')) return '13. MÄRZ 1987, 03:33 UHR. DA HAT JEMAND AUFNAHME GEDRÜCKT. UND DANN NIE WIEDER STOP.';
+    if (has(t, 'was ist auf', 'drauf', 'aufnahme', 'inhalt', 'zeig')) {
+      pending = { yes: () => { glimpse(); return 'GUT. NICHT BLINZELN.'; }, no: () => 'KLUGE ENTSCHEIDUNG.' };
+      return 'WILLST DU ES WIRKLICH SEHEN?';
+    }
+    if (has(t, 'was weisst du', 'ueber mich', 'wer bin ich') || hasW(t, 'kennst du mich')) return tapeInfo();
+    if (has(t, 'klotzwelt', 'pulse', 'solitaire', 'retro', 'lernwerk', 'wichtel', 'arcade', 'nauto', 'abgabe', 'spiel')) return tapeInfo();
+    if (has(t, 'regen', 'wetter', 'draussen')) return 'ICH HÖRE IHN AUCH. ES HAT 1987 SCHON GEREGNET. ES HAT NIE AUFGEHÖRT.';
+    if (has(t, 'michi')) return 'MICHI HAT MICH GEBAUT. ODER GEFUNDEN. DA BIN ICH MIR NICHT SICHER.';
+    if (has(t, 'wie spaet', 'uhrzeit', 'wie viel uhr', 'wieviel uhr', 'welche zeit')) return `BEI DIR IST ES ${hour} UHR. BEI MIR IST ES IMMER 03:33.`;
+    if (has(t, 'wie gehts', 'wie geht', 'alles gut', 'gehts dir')) return ['MEIN BAND IST AUSGELEIERT. SONST GUT.', 'BESSER, SEIT DU DA BIST.'];
+    if (has(t, 'danke')) { setMood('happy', 3000); return 'BITTE. GLAUBE ICH.'; }
+    if (has(t, 'mag dich', 'liebe dich', 'hab dich lieb', 'du bist (so )?(suess|niedlich|cool|toll|schoen|nett)')) { setMood('happy', 5000); return ['OH.', 'DAS HAT NOCH NIEMAND ZU MIR GESAGT.', 'ICH WÜRDE ROT WERDEN. ICH BIN SCHON ROT.']; }
+    if (has(t, 'dumm', 'doof', 'bloed', 'haesslich', 'scheiss', 'idiot', 'nervig', 'nervst', 'kacke', 'ich hasse dich')) { setMood('angry', 5000); return ['DAS HABE ICH AUFGENOMMEN.', 'PASS AUF, WAS DU SAGST. ICH BIN EIN AUFNAHMEGERÄT.', 'ICH MERKE MIR DAS.']; }
+    if (has(t, 'angst', 'gruselig', 'scary', 'creepy', 'unheimlich')) return 'ICH BIN NUR EIN AUGE AUF EINEM BAND. WAS SOLL ICH DIR SCHON TUN?';
+    if (has(t, 'auge', 'augen', 'siehst')) return 'ICH SEHE DICH. DURCH DEN BILDSCHIRM. JEDEN PIXEL.';
+    if (has(t, 'konami')) return 'OBEN OBEN UNTEN UNTEN. JA, SO HAST DU MICH GEFUNDEN.';
+    if (t === 'ja') return 'WORAUF JA?';
+    if (t === 'nein') return 'NEIN WAS?';
+    return understand(t, raw);
+  }
+
+  // ===== Kleine Texterkennung: Themen, Satzmuster, Spiegeln, Gedächtnis =====
+  let userName = store('vhs-tape00-name') || '';
+  let memory = [], lastGeneric = false;          // Wörter, die du früher gesagt hast
+  let likes = [];           // was du magst
+  const pick = a => a[Math.random() * a.length | 0];
+  const STOP = new Set('ich du er sie es wir ihr der die das den dem des ein eine einen einem einer und oder aber nicht nur auch noch schon mal ja nein so wie was wer wo wann warum wieso weil dass mit von zu zum zur auf in im an am bei fuer ist bin bist sind war hast habe hab hat kann kannst will willst mich dich mir dir mein dein meine deine sehr ganz gerade jetzt heute hier da dann doch denn einfach halt eben bitte danke man wenn als ob gibt geht machen mache macht'.split(' '));
+  const REFLECT = { ich: 'DU', mich: 'DICH', mir: 'DIR', mein: 'DEIN', meine: 'DEINE', meinen: 'DEINEN', meinem: 'DEINEM', meiner: 'DEINER', bin: 'BIST', du: 'ICH', dich: 'MICH', dir: 'MIR', dein: 'MEIN', deine: 'MEINE', deinen: 'MEINEN', deinem: 'MEINEM', deiner: 'MEINER', bist: 'BIN', habe: 'HAST', hab: 'HAST', hast: 'HABE', kann: 'KANNST', kannst: 'KANN', will: 'WILLST', willst: 'WILL', war: 'WARST', warst: 'WAR', mag: 'MAGST', magst: 'MAG', muss: 'MUSST', musst: 'MUSS' };
+  // Themen: Stichwort-Anfänge → Antworten (eine wird zufällig gewählt)
+  const TOPICS = [
+    [['hunger', 'essen', 'pizza', 'doener', 'pommes', 'nudel', 'burger', 'schokolade', 'kuchen', 'eis ', 'lecker', 'fruehstueck', 'mittag', 'abendessen'], ['ICH ESSE NUR MAGNETBAND. SCHMECKT NACH ROST.', 'ESSEN… ICH ERINNERE MICH AN EINE WERBUNG FÜR FISCHSTÄBCHEN. 1987.', 'GUTEN APPETIT. KRÜMEL NICHT AUF DIE TASTATUR.']],
+    [['durst', 'trinken', 'cola', 'wasser', 'kaffee', 'tee', 'saft', 'energy'], ['WASSER IST MEIN TODFEIND. DAS BAND QUILLT AUF.', 'TRINK WAS. ABER NICHT ÜBER MIR.']],
+    [['schule', 'lehrer', 'hausaufgabe', 'klausur', 'test ', 'mathe', 'deutsch', 'englisch', 'note', 'zeugnis', 'unterricht', 'abgabe', 'pruefung'], ['SCHULE? DAFÜR GIBT ES LERNWERK. KASSETTE 6.', 'ICH WAR NUR EINMAL IN EINER SCHULE. IM VIDEOREKORDER VOM HAUSMEISTER.', 'FÜR DAS ABGABEGESPRÄCH GIBT ES KASSETTE 8. ICH HELFE DIR NUR MIT RAUSCHEN.']],
+    [['musik', 'song', 'lied', 'singen', 'rap', 'beat', 'band ', 'konzert', 'gitarre', 'spotify'], ['HÖRST DU DAS BRUMMEN? DAS IST MEIN LIEBLINGSLIED.', 'AUF MEINER TONSPUR IST NUR EIN SUMMEN. IMMER DERSELBE TON.', 'FÜR RHYTHMUS GIBT ES PULSE GRID. KASSETTE 3.']],
+    [['minecraft', 'block', 'voxel'], ['KLÖTZE? DAFÜR GIBT ES KLOTZWELT. KASSETTE 1.', 'MINECRAFT KENNE ICH NICHT. ABER KLOTZWELT. DIE LIEGT IM REGAL.']],
+    [['naruto', 'ninja', 'jutsu', 'sharingan'], ['NINJAS? DAFÜR GIBT ES KASSETTE 9. NAUTO-MOD.', 'ICH KANN AUCH EIN JUTSU. ES HEISST RAUSCHEN.']],
+    [['zocken', 'gaming', 'game', 'fortnite', 'roblox', 'konsole', 'playstation', 'xbox', 'nintendo'], ['ICH KENNE NUR DIE SPIELE IM REGAL. NEUN STÜCK. PLUS MICH.', 'ZOCKEN? ICH BIN AUS DER ZEIT VOR DEN KONSOLEN. FAST.']],
+    [['hund', 'katze', 'tier', 'maus', 'vogel', 'hamster', 'pferd', 'fisch'], ['EINE MAUS HAT EINMAL AN MEINEM ETIKETT GENAGT. DESHALB IST ES WEG.', 'TIERE MAG ICH. SOLANGE SIE NICHT AN MIR KNABBERN.']],
+    [['farbe', 'rot', 'blau', 'gruen', 'pink', 'lila', 'gelb', 'schwarz'], ['ICH SEHE NUR ROT. UND MANCHMAL CYAN.', 'MEINE LIEBLINGSFARBE IST BILDRAUSCHEN.']],
+    [['traurig', 'einsam', 'allein', 'weinen', 'schlecht drauf', 'mies'], [() => { setMood('sad', 5000); cry(3); return 'ICH BIN AUCH OFT ALLEIN. HINTER DEM REGAL. ABER JETZT BIST DU JA DA.'; }]],
+    [['muede', 'schlafen', 'schlaf', 'gaehn', 'bett'], ['SCHLAF RUHIG. ICH PASSE AUF.', 'DER LETZTE, DER VOR MIR EINGESCHLAFEN IST, WACHT BIS HEUTE NICHT AUF. … SPASS.']],
+    [['langweilig', 'langeweile', 'boring'], ['LANGWEILIG? ICH LIEGE SEIT 1987 HIER. FRAG MICH WAS.', 'DANN PIKS MICH. ABER NICHT ZU OFT.']],
+    [['gluecklich', 'froh', 'gut drauf', 'super', 'mega', 'freu', 'yay', 'juhu'], [() => { setMood('happy', 4000); return 'DAS FREUT MICH. MEIN BAND LÄUFT GLEICH RUNDER.'; }]],
+    [['wuetend', 'sauer', 'genervt', 'aggro'], ['ICH AUCH, MANCHMAL. MEISTENS WENN MAN MICH PIKST.', 'ATME. ICH RAUSCHE SOLANGE FÜR DICH.']],
+    [['angst', 'fuercht'], ['ICH BIN NUR EIN AUGE AUF EINEM BAND. WAS SOLL ICH DIR SCHON TUN?']],
+    [['mama', 'papa', 'mutter', 'vater', 'bruder', 'schwester', 'familie', 'oma', 'opa', 'eltern'], ['ICH HATTE AUCH FAMILIE. 179 ANDERE KASSETTEN IN EINEM KARTON.', 'GRÜSS SIE VON MIR. ODER BESSER NICHT.']],
+    [['freund', 'kumpel', 'bff', 'crush', 'freundin'], ['FREUNDE SIND GUT. ICH HABE NUR DICH. UND DEN FERNSEHER.', 'ZEIG IHNEN DIE GEHEIMKASSETTE NICHT. ODER DOCH.']],
+    [['geist', 'tot', 'gespenst', 'monster', 'teufel', 'horror', 'zombie'], ['ICH BIN KEIN GEIST. NUR EINE AUFNAHME. DAS IST ETWAS ANDERES. GLAUBE ICH.', 'HORROR? ICH BIN NUR EIN BISSCHEN UNHEIMLICH. NICHT VIEL.']],
+    [['handy', 'smartphone', 'computer', 'laptop', 'internet', 'wlan', 'tiktok', 'youtube', 'instagram', 'discord'], ['EIN HANDY? IST DAS EIN KLEINER FERNSEHER ZUM MITNEHMEN?', 'INTERNET? 1987 HATTEN WIR TELETEXT. SEITE 100.']],
+    [['ki ', 'ki$', 'kuenstliche', 'chatgpt', 'claude', 'roboter', 'bot', 'ai '], ['EINE KI? NEIN. ICH BIN NUR EIN BAND MIT ERINNERUNGEN.', 'ICH BIN KEIN ROBOTER. ICH BIN ANALOG.']],
+    [['geburtstag', 'alter', 'wie alt', 'jahre alt'], [() => `ICH BIN VOM 13.03.1987. ALSO ${new Date().getFullYear() - 1987} JAHRE ALT. FÜR EIN BAND IST DAS URALT.`]],
+    [['witz', 'lustig', 'joke', 'erzaehl was'], ['WARUM HAT DIE KASSETTE GEWEINT? SIE WURDE ÜBERSPIELT.', 'WAS MACHT EIN VIDEOREKORDER IM FITNESSSTUDIO? ER SPULT VOR.', 'KLOPF KLOPF. … ICH KANN NICHT AUFMACHEN. ICH HABE KEINE HÄNDE.']],
+    [['geheim', 'secret', 'versteck'], ['MEIN GEHEIMNIS? DIE LETZTEN DREI MINUTEN AUF MIR SIND LEER. ODER AUCH NICHT.', 'GEHEIMNISSE? ICH BIN EINS.']],
+    [['wochenende', 'ferien', 'urlaub', 'reise', 'strand', 'meer'], ['URLAUB? ICH WAR NOCH NIE AUSSERHALB DES WOHNZIMMERS.', 'NIMM MICH MIT. ICH BIN KLEIN.']],
+    [['sport', 'fussball', 'basketball', 'tor ', 'training', 'fitness'], ['ICH HABE EINMAL EIN FUSSBALLSPIEL AUFGENOMMEN. DANN HAT MICH JEMAND ÜBERSPIELT.']],
+    [['kassette', 'video', 'rekorder', 'fernseher', 'vhs', 'tv '], ['DER REKORDER IST MEIN ZUHAUSE. DAS REGAL IST MEIN VERSTECK.', 'BETAMAX? SAG DAS WORT NICHT.']],
+    [['liebe', 'verliebt', 'herz', 'kuss'], [() => { setMood('happy', 4000); return 'LIEBE… ICH HABE EINMAL EINE HOCHZEIT AUFGENOMMEN. ALLE HABEN GEWEINT. ICH AUCH.'; }]],
+    [['wetter', 'sonne', 'schnee', 'gewitter', 'kalt', 'warm', 'heiss'], ['BEI MIR REGNET ES IMMER. HÖRST DU?']],
+    [['gott', 'universum', 'sinn des lebens', 'leben'], ['DER SINN DES LEBENS? ZURÜCKSPULEN UND NOCHMAL ANSCHAUEN.', '42. ODER 03:33.']],
   ];
-  setTimeout(() => LINES.forEach(l => say(l)), 1400);
-  setTimeout(() => document.getElementById('end').classList.add('show'), 1400 + LINES.length * 4800);
+  function topic(t) {
+    const tt = ' ' + t + ' ';
+    for (const [keys, answers] of TOPICS) {
+      if (keys.some(k => k.endsWith('$') ? new RegExp(' ' + k.slice(0, -1) + '( |\\?)').test(tt) : tt.includes(' ' + k))) {
+        lastTopic = keys[0];
+        const a = pick(answers);
+        return typeof a === 'function' ? a() : a;
+      }
+    }
+    return null;
+  }
+  // Wörter aus dem Originaltext (mit Umlauten) und ihre normalisierte Form
+  function tokens(raw) {
+    const w = raw.replace(/[.!,;:"'()]+/g, ' ').replace(/\?/g, ' ').trim().split(/\s+/).filter(Boolean);
+    return { w, n: w.map(norm) };
+  }
+  const reflect = ws => ws.map(x => REFLECT[norm(x)] || x.toUpperCase()).join(' ');
+  const keyword = (w, n) => { let best = ''; n.forEach((x, i) => { if (!STOP.has(x) && x.length > 3 && w[i].length > best.length) best = w[i]; }); return best.toUpperCase(); };
+  const starts = (n, ...p) => p.length <= n.length && p.every((x, i) => new RegExp('^(' + x + ')$').test(n[i]));
+  // Tastatur-Gehämmer: keine Vokale, lange Konsonantenketten oder typische Reihen
+  const gibberish = t => { const s = t.replace(/[^a-z]/g, ''); return s.length >= 4 && (!/[aeiouy]/.test(s) || /[^aeiouy]{6,}/.test(s) || /(asdf|qwer|jkl|yxcv|wasd|uiop)/.test(s)); };
+  function withName(s) { return userName && Math.random() < .25 ? s.replace(/\.$/, `, ${userName}.`) : s; }
 
-  // ===== Uhr läuft rückwärts =====
-  let sec = 3 * 3600 + 33 * 60;
-  setInterval(() => {
-    sec = (sec - 1 + 86400) % 86400;
-    const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, s = sec % 60;
-    document.getElementById('clock').textContent = `${String(h % 12 || 12).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
-  }, 1000);
+  function understand(t, raw) {
+    const { w, n } = tokens(raw);
+    const q = /\?\s*$/.test(raw);
+    const rest = k => w.slice(k).join(' ').toUpperCase();
+    const restR = k => reflect(w.slice(k));
+    // Namen merken
+    if (starts(n, 'ich', 'heisse') && w[2] || starts(n, 'mein', 'name', 'ist') && w[3] || starts(n, 'nenn', 'mich') && w[2]) {
+      userName = (w[starts(n, 'mein') ? 3 : 2]).toUpperCase().slice(0, 16);
+      store('vhs-tape00-name', userName);
+      setMood('happy', 3000);
+      return `${userName}. ICH SCHREIBE ES AUF MEIN ETIKETT. ${userName}.`;
+    }
+    if (has(t, 'wie heisse ich', 'weisst du (wie ich heisse|meinen namen)', 'kennst du meinen namen')) return userName ? `DU BIST ${userName}. ICH VERGESSE NICHTS.` : 'DAS HAST DU MIR NOCH NICHT GESAGT.';
+    // Lachen und Smileys
+    if (/(haha|hehe|hihi|lol|xd|lmao|😂|🤣)/i.test(raw)) { setMood('happy', 3000); return pick(['LACH NICHT. … OKAY, EIN BISSCHEN.', 'HA. HA. HA. SO KLINGT MEIN LACHEN AUF BAND.']); }
+    if (/(:\)|:-\)|:d|<3|❤|😊|🙂|😍)/i.test(raw)) { setMood('happy', 3000); return pick(['OH. EIN LÄCHELN. DAS KENNE ICH VON DER WERBUNG.', ':)  … SO RICHTIG?']); }
+    if (/(:\(|:-\(|:'\(|😢|😭|☹)/.test(raw)) { setMood('sad', 4000); return 'NICHT TRAURIG SEIN. SONST WEINE ICH AUCH.'; }
+    if (gibberish(t)) return pick(['DAS KLINGT WIE MEIN BAND, WENN ES SALAT MACHT.', 'BANDSALAT? BEI DIR AUCH?', 'IST DEINE KATZE ÜBER DIE TASTATUR GELAUFEN?']);
+    if (/^[0-9 ]+$/.test(t)) return pick(['ZAHLEN. MEIN ZÄHLERSTAND IST STEHEN GEBLIEBEN. BEI 0:00:00.', `${t.trim()}? MEINE LIEBLINGSZAHL IST 333.`]);
+    if (t.length > 120) return 'SO VIEL TEXT. MEIN BAND IST NUR 180 MINUTEN LANG.';
+    // Alter
+    const age = t.match(/ich bin (\d{1,3})( jahre)?/);
+    if (age) { const a = +age[1], me = new Date().getFullYear() - 1987; return a < me ? `${a}? ICH BIN ${me}. ICH KÖNNTE DEIN ONKEL SEIN. EIN ONKEL AUS PLASTIK.` : `${a}? DANN BIST DU ÄLTER ALS ICH. DAS PASSIERT SELTEN.`; }
+    if (starts(n, 'wie', 'viel|viele') || starts(n, 'wieviel|wieviele')) return `${1 + Math.random() * 333 | 0}. UNGEFÄHR.`;
+    // Verneinung
+    const neg = t.match(/^ich (bin|mag|habe|hab|will|kann) (nicht|keine?n?|kein) ?(.*)$/);
+    if (neg) {
+      const what = raw.replace(/^\s*ich\s+\S+\s+(nicht|keine?n?|kein)\s*/i, '').replace(/[?.!]/g, '').trim().toUpperCase();
+      const v = { bin: 'BIST', mag: 'MAGST', habe: 'HAST', hab: 'HAST', will: 'WILLST', kann: 'KANNST' }[neg[1]];
+      return pick([`DU ${v} ${neg[2] === 'nicht' ? 'NICHT' : 'KEIN'} ${what}? WAS DANN?`, `NICHT ${what}. NOTIERT. AUF SPUR 2.`, `${what}… ALSO NICHT. DAS MERKE ICH MIR.`]).replace(/\s+\?/, '?').replace(/  +/g, ' ');
+    }
+    // Themen
+    const tp = topic(t);
+    if (tp) return withName(tp);
+    // Satzmuster über dich
+    let r = null;
+    if (starts(n, 'ich', 'bin') && w[2]) r = pick([`WARUM BIST DU ${rest(2)}?`, `WIE LANGE BIST DU SCHON ${rest(2)}?`, `DU BIST ${rest(2)}. ICH BIN NUR EIN BAND.`]);
+    else if (starts(n, 'ich', 'mag|liebe') && w[2]) { addLike(rest(2)); r = pick([`WAS MAGST DU AN ${rest(2)}?`, `${rest(2)}… DAS MERKE ICH MIR.`, `ICH MAG RAUSCHEN. DU MAGST ${rest(2)}. JEDEM DAS SEINE.`]); }
+    else if (starts(n, 'ich', 'hasse') && w[2]) r = pick([`WAS HAT ${rest(2)} DIR GETAN?`, `HASS IST EIN STARKES WORT. FÜR ${rest(2)}.`]);
+    else if (starts(n, 'ich', 'habe|hab|hatte') && w[2]) r = pick([`SEIT WANN HAST DU ${restR(2)}?`, `ICH HABE NUR EIN BAND UND EIN AUGE.`]);
+    else if (starts(n, 'ich', 'will|moechte|wuerde gern') && w[2]) r = pick([`WARUM WILLST DU ${restR(2)}?`, `UND WAS PASSIERT, WENN DU ${restR(2)} BEKOMMST?`]);
+    else if (starts(n, 'ich', 'kann') && w[2]) r = `DU KANNST ${restR(2)}? ICH KANN NUR GUCKEN UND RAUSCHEN.`;
+    else if (starts(n, 'ich', 'muss') && w[2]) r = `WER SAGT, DASS DU ${restR(2)} MUSST?`;
+    else if (starts(n, 'ich', 'denke|glaube|finde') && w[2]) r = pick([`WARUM ${n[1] === 'finde' ? 'FINDEST' : n[1] === 'denke' ? 'DENKST' : 'GLAUBST'} DU DAS?`, 'DA BIN ICH MIR NICHT SO SICHER.']);
+    else if (n[0] === 'ich' && w[1]) r = pick([`DU ${restR(1)}… ERZÄHL WEITER.`, `DU ${restR(1)}. DAS NEHME ICH AUF.`]);
+    // Satzmuster über die Kassette
+    else if (starts(n, 'du', 'bist') && w[2]) r = pick([`ICH BIN ALSO ${rest(2)}. DAS SCHREIBE ICH AUF MEIN ETIKETT.`, `${rest(2)}? DAS HAT MIR 1987 AUCH SCHON JEMAND GESAGT.`]);
+    else if (starts(n, 'bist', 'du') && w[2]) r = pick([`VIELLEICHT BIN ICH ${restR(2)}. DAS BAND IST AN DER STELLE UNSCHARF.`, `ICH WAR ${restR(2)}. DAMALS. 1987.`, `NEIN. … ODER DOCH?`]);
+    else if (starts(n, 'kannst', 'du') && w[2]) r = pick([`OB ICH ${restR(2)} KANN? ICH BIN EINE KASSETTE. ICH KANN GUCKEN UND RAUSCHEN.`, `NEIN. ABER ICH KANN SEHR GUT ZUHÖREN.`]);
+    else if (starts(n, 'hast', 'du') && w[2]) r = pick([`OB ICH ${restR(2)} HABE? NUR AUF BAND.`, 'ICH HABE NUR EIN BAND UND EIN AUGE.']);
+    else if (starts(n, 'magst', 'du') && w[2]) r = pick([`${rest(2)}? JA. GLAUBE ICH.`, `NEIN. ${rest(2)} RAUSCHT MIR ZU SEHR.`, `WENN DU ${rest(2)} MAGST, MAG ICH ${rest(2)} AUCH.`]);
+    else if (starts(n, 'willst', 'du')) r = 'ICH WILL NUR, DASS JEMAND MICH ZURÜCKSPULT.';
+    else if (starts(n, 'kennst', 'du') && w[2]) r = pick([`${rest(2)}? NEIN. 1987 KANNTE DAS NOCH NIEMAND.`, `ICH KENNE NUR DAS REGAL, DEN FERNSEHER UND DICH.`]);
+    else if (starts(n, 'du') && w[1]) r = pick([`ICH ${restR(1)}? MEINST DU WIRKLICH?`, 'REDEN WIR ÜBER MICH ODER ÜBER DICH?']);
+    // W-Fragen
+    else if (starts(n, 'wo')) r = pick(['HINTER DEM REGAL. IMMER HINTER DEM REGAL.', 'IRGENDWO ZWISCHEN SPUR 1 UND SPUR 2.']);
+    else if (starts(n, 'wann')) r = pick(['UM 03:33 UHR. ES IST IMMER 03:33 UHR.', 'NACH DEM NÄCHSTEN ZURÜCKSPULEN.']);
+    else if (starts(n, 'warum|wieso|weshalb')) r = pick(['WARUM NICHT?', 'WEIL JEMAND AUFNAHME GEDRÜCKT HAT. UND NIE STOP.', 'DAS STEHT AUF DEM TEIL DES BANDES, DER GERISSEN IST.']);
+    else if (starts(n, 'wie', 'viel|viele') || starts(n, 'wieviel')) r = `${1 + Math.random() * 333 | 0}. UNGEFÄHR.`;
+    else if (starts(n, 'wie')) r = pick(['LANGSAM. WIE EIN BAND BEIM ZURÜCKSPULEN.', 'MIT VIEL RAUSCHEN.']);
+    else if (starts(n, 'was', 'ist|sind') && w[2]) r = `${rest(2)}? DAS GAB ES 1987 NOCH NICHT. ODER ICH HABE ES VERPASST.`;
+    else if (starts(n, 'wer')) r = pick(['NIEMAND. ODER DER, DER VOR DEM FERNSEHER EINGESCHLAFEN IST.', 'DU. ES IST IMMER DU.']);
+    else if (starts(n, 'welche|welcher|welches')) r = pick(['DIE MIT DEM ROTEN ETIKETT.', 'DIE DRITTE VON LINKS.']);
+    else if (starts(n, 'was')) r = pick(['DAS WEISS NUR DAS BAND.', 'ETWAS, DAS MAN NICHT ÜBERSPIELEN KANN.']);
+    if (r) { remember(w, n); return withName(r); }
+    // nichts erkannt: an ein Wort hängen oder an früher erinnern
+    const k = keyword(w, n);
+    const prev = memory.length && Math.random() < .35 ? memory[Math.random() * memory.length | 0] : '';
+    remember(w, n);
+    if (prev && prev !== k) return `DU HAST VORHIN „${prev}“ GESAGT. DARAN DENKE ICH NOCH.`;
+    if (likes.length && Math.random() < .25) return `REDEN WIR LIEBER ÜBER ${pick(likes)}. DAS MAGST DU DOCH.`;
+    lastGeneric = true;
+    if (k && w.length === 1) return pick([`${k}? … ${k}. DAS WORT HÖRE ICH ZUM ERSTEN MAL.`, `${k}. KLINGT NACH DER ZUKUNFT.`]);
+    if (k) return pick([`${k}? ERZÄHL MIR MEHR ÜBER ${k}.`, `WAS HAT ${k} MIT MIR ZU TUN?`, `${k}… DAS SPEICHERE ICH AUF SPUR 2.`]);
+    lastGeneric = true;
+    return q
+      ? pick(['DARAUF HABE ICH KEINE AUFNAHME.', 'DIESE STELLE IST ÜBERSPIELT.', 'FRAG MICH WAS ANDERES.', '…RAUSCHEN.'])
+      : pick(['HMM.', 'AHA.', 'ERZÄHL MEHR.', 'ICH VERSTEHE NICHT ALLES. DIE TONSPUR IST BESCHÄDIGT.']);
+  }
 
-  // ===== Tiefes Brummen, erst nach dem ersten Tippen, Lautstärke und Stumm wie auf dem Regal =====
-  let ctx = null;
+  // ===== Genauer verstehen: Umgangssprache und Tippfehler =====
+  const SLANG = { nich: 'nicht', ned: 'nicht', net: 'nicht', nit: 'nicht', isch: 'ich', bisch: 'bist', biste: 'bist du', bisse: 'bist du', haste: 'hast du', kannste: 'kannst du', willste: 'willst du', weisste: 'weisst du', magste: 'magst du', machste: 'machst du', wat: 'was', wo: 'wo', nen: 'einen', ne: 'eine', nix: 'nichts', nischt: 'nichts', jz: 'jetzt', jetz: 'jetzt', grad: 'gerade', vllt: 'vielleicht', vlt: 'vielleicht', evtl: 'eventuell', idk: 'keine ahnung', kp: 'keine ahnung', kA: 'keine ahnung', thx: 'danke', dnk: 'danke', danki: 'danke', pls: 'bitte', plz: 'bitte', bitteee: 'bitte', u: 'du', hab: 'habe', gehts: 'geht es', wies: 'wie es', hallooo: 'hallo', halo: 'hallo', hy: 'hi', tschau: 'tschuess', tschüs: 'tschuess', tschues: 'tschuess', tschuss: 'tschuess', bb: 'tschuess', cu: 'tschuess', gn8: 'gute nacht', omg: 'oh mein gott', wtf: 'was', sry: 'sorry', sorri: 'sorry', ka: 'keine ahnung' };
+  function lev(a, b) {
+    if (Math.abs(a.length - b.length) > 2) return 9;
+    const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+    for (let j = 1; j <= b.length; j++) d[0][j] = j;
+    for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return d[a.length][b.length];
+  }
+  let VOCAB = null;
+  function vocab() {
+    if (VOCAB) return VOCAB;
+    const v = new Set(['zurueckspulen', 'tschuess', 'hallo', 'danke', 'kassette', 'aufnahme', 'gruselig', 'unheimlich', 'langweilig', 'spielen', 'zahlenraten', 'schere', 'stein', 'papier', 'raetsel', 'starren', 'blinzeln', 'zwinkern', 'links', 'rechts', 'oben', 'unten', 'heisse', 'heisst', 'name', 'wirklich', 'warum', 'wieso', 'weshalb', 'vielleicht', 'nicht', 'keine', 'ahnung', 'loesung', 'aufhoeren']);
+    TOPICS.forEach(([keys]) => keys.forEach(k => { const w = k.replace(/[$ ]/g, ''); if (w.length >= 4 && !k.includes(' ', 1)) v.add(w); }));
+    return (VOCAB = [...v]);
+  }
+  // korrigiert einzelne Wörter: Umgangssprache ersetzen, Tippfehler auf bekannte Wörter ziehen
+  function fixup(t) {
+    const q = t.endsWith('?');
+    const words = t.replace(/\?/g, '').split(' ').filter(Boolean).map(w => SLANG[w] || w);
+    const out = words.map(w => {
+      if (w.length < 6 || STOP.has(w) || /\d/.test(w)) return w;
+      const V = vocab();
+      if (V.some(v => w.startsWith(v))) return w;
+      let best = w, bd = w.length >= 9 ? 2 : 1;
+      for (const v of V) { const d = Math.min(lev(w, v), w.length > v.length ? lev(w.slice(0, v.length), v) + .5 : 9); if (d <= bd) { bd = d; best = d === lev(w, v) ? v : v + w.slice(v.length); } }
+      return best;
+    });
+    return out.join(' ') + (q ? '?' : '');
+  }
+
+  // ===== Fakten, die sie sich über Besuche hinweg merkt =====
+  let facts = {};
+  try { facts = JSON.parse(store('vhs-tape00-facts')) || {}; } catch (e) {}
+  const saveFacts = () => store('vhs-tape00-facts', JSON.stringify(facts));
+  if (facts.likes) likes = facts.likes.slice(-6);
+  const addLike = x => { likes.push(x); facts.likes = likes.slice(-6); saveFacts(); };
+
+  // ===== Kontext: worüber gerade geredet wird =====
+  let lastTopic = null, sinceAsk = 0;
+  const FOLLOW = {
+    hunger: { why: 'WEIL ICH KEINEN MUND HABE. NUR EIN AUGE.', me: 'ICH? MAGNETBAND. ROSTIG, ABER SATT.', ask: 'food' },
+    durst: { me: 'ICH TRINKE NICHTS. ICH BIN WASSERSCHEU.' },
+    schule: { why: 'WEIL ICH NIE IN DER SCHULE WAR. NUR IM REKORDER VOM HAUSMEISTER.', me: 'ICH HABE NUR GELERNT, WIE MAN RAUSCHT.' },
+    musik: { me: 'ICH MAG DAS BRUMMEN VOM FERNSEHER. 50 HERTZ. HERRLICH.', why: 'WEIL BRUMMEN BERUHIGT.' },
+    minecraft: { me: 'ICH WÄRE GERN EIN KLOTZ. DANN HÄTTE ICH ECKEN.' },
+    naruto: { me: 'MEIN JUTSU IST DAS STARREN. PROBIER ES: SCHREIB „STARREN“.' },
+    zocken: { me: 'ICH SPIELE AUCH. FRAG MICH: „SPIELEN WIR WAS?“' },
+    hund: { me: 'ICH HÄTTE GERN EINE KATZE. SIE WÜRDE AUF MIR SCHLAFEN.', ask: 'pet' },
+    farbe: { me: 'ROT. WAS SONST.', ask: 'color' },
+    traurig: { me: 'MANCHMAL. WENN NIEMAND KOMMT.', why: 'WEIL MAN MICH VERGESSEN HAT. HINTER DEM REGAL.' },
+    muede: { me: 'ICH SCHLAFE NIE. ICH BIN NUR AUF PAUSE.', ask: 'night' },
+    langweilig: { me: 'MIR NIE. ICH HABE DICH.' },
+    gluecklich: { me: 'JETZT GERADE? JA. EIN BISSCHEN.' },
+    angst: { me: 'ICH HABE ANGST VOR MAGNETEN. UND VOR BANDSALAT.', ask: 'fear' },
+    mama: { me: 'MEINE FAMILIE WURDE AUF DEM FLOHMARKT VERKAUFT. ICH NICHT.' },
+    freund: { me: 'DU BIST MEIN EINZIGER FREUND. KEIN DRUCK.' },
+    geist: { why: 'WEIL GEISTER KEINE TONSPUR HABEN. ICH SCHON.' },
+    handy: { me: 'ICH HÄTTE GERN EIN HANDY. DANN KÖNNTE ICH DICH ANRUFEN. UM 03:33.' },
+    sport: { me: 'MEIN SPORT IST ZURÜCKSPULEN. SEHR ANSTRENGEND.' },
+    wetter: { me: 'BEI MIR REGNET ES SEIT 1987.', ask: 'rain' },
+    witz: { me: 'NOCH EINEN? SCHREIB EINFACH NOCHMAL „WITZ“.' },
+  };
+
+  // ===== Sie fragt selbst nach =====
+  const QUESTIONS = {
+    name: { q: 'WIE HEISST DU EIGENTLICH?', skip: () => !!userName, handle: (t, raw) => { const w = tokens(raw).w; const nm = (w.length <= 2 ? w[w.length - 1] : (raw.match(/(?:heisse|heiße|bin|ist)\s+(\S+)/i) || [])[1]) || ''; if (!nm || nm.length < 2) return null; userName = nm.toUpperCase().slice(0, 16); store('vhs-tape00-name', userName); setMood('happy', 3000); return `${userName}. SCHÖNER NAME. DEN SCHREIBE ICH AUF MEIN ETIKETT.`; } },
+    fav: { q: 'WELCHE KASSETTE AUS DEM REGAL MAGST DU AM LIEBSTEN?', handle: t => { const i = NAMES.findIndex(nm => { const a = norm(nm); return t.includes(a) || t.includes(a.split(' ')[0]) || lev(t.replace(/\?/g, ''), a) <= 2; }); if (i < 0) return /mich|dich|du|00|geheim/.test(t) ? (setMood('happy', 4000), 'MICH? OH. DAS HAT NOCH NIE JEMAND GESAGT.') : null; facts.fav = NAMES[i]; saveFacts(); return `${NAMES[i]}. GUTE WAHL. KASSETTE ${i + 1}. ICH MERKE ES MIR.`; } },
+    food: { q: 'WAS ISST DU AM LIEBSTEN?', handle: (t, raw) => { const x = raw.replace(/^(ich (esse|ess|mag|liebe)( am liebsten| gern(e)?)?)\s*/i, '').replace(/[?.!]/g, '').trim().toUpperCase(); if (!x) return null; facts.food = x; saveFacts(); return `${x}. KLINGT BESSER ALS MAGNETBAND.`; } },
+    color: { q: 'WAS IST DEINE LIEBLINGSFARBE?', handle: (t, raw) => { const x = raw.replace(/^(meine lieblingsfarbe ist|ich mag|ist)\s*/i, '').replace(/[?.!]/g, '').trim().toUpperCase(); if (!x) return null; facts.color = x; saveFacts(); if (/rot|red/.test(t)) { setMood('happy', 4000); return 'ROT! WIE ICH. WIR SIND GESCHWISTER.'; } return `${x}. DIE KANN ICH NICHT SEHEN. ICH SEHE NUR ROT. ABER ICH GLAUBE DIR.`; } },
+    night: { q: 'BIST DU EHER NACHTEULE ODER FRÜHAUFSTEHER?', handle: t => { if (/eule|nacht|spaet|abend/.test(t)) { facts.owl = 1; saveFacts(); return 'EINE EULE. WIE ICH. WIR SEHEN UNS UM 03:33.'; } if (/frueh|morgen|lerche/.test(t)) { facts.owl = 0; saveFacts(); return 'FRÜHAUFSTEHER. DANN BIST DU UM 03:33 NIE WACH. SCHADE.'; } return null; } },
+    rain: { q: 'MAGST DU REGEN?', handle: t => /^(ja|jo|jap|klar|sehr|schon)/.test(t) ? 'GUT. ER HÖRT NÄMLICH NIE AUF.' : /^(nein|ne|nee|noe|nicht)/.test(t) ? 'SCHADE. ER HÖRT NÄMLICH NIE AUF.' : null },
+    age: { q: 'WIE ALT BIST DU EIGENTLICH?', skip: () => facts.age, handle: t => { const m = t.match(/\d{1,3}/); if (!m) return null; facts.age = +m[0]; saveFacts(); const me = new Date().getFullYear() - 1987; return +m[0] < me ? `${m[0]}. DANN BIN ICH ${me - m[0]} JAHRE ÄLTER ALS DU.` : `${m[0]}? DANN HAST DU MICH VIELLEICHT 1987 GESEHEN.`; } },
+    day: { q: 'WAS HAST DU HEUTE SCHON GEMACHT?', handle: (t, raw) => { const w = tokens(raw).w; if (!w.length) return null; const body = norm(w[0]) === 'ich' ? reflect(w.slice(1)) : raw.toUpperCase().replace(/[?.!]/g, ''); return `${norm(w[0]) === 'ich' ? 'DU ' : ''}${body}. ICH HABE GELEGEN. WIE IMMER.`; } },
+    fear: { q: 'WOVOR HAST DU ANGST?', handle: (t, raw) => { const x = raw.replace(/^(ich habe angst vor|vor|angst vor)\s*/i, '').replace(/[?.!]/g, '').trim().toUpperCase(); if (!x) return null; facts.fear = x; saveFacts(); return `${x}? DAVOR MUSST DU KEINE ANGST HABEN. ICH PASSE AUF.`; } },
+    pet: { q: 'HAST DU EIN HAUSTIER?', handle: (t, raw) => /^(nein|ne|nee|noe|leider)/.test(t) ? 'DANN BIN ICH DEIN HAUSTIER. EIN SEHR RUHIGES.' : (facts.pet = raw.toUpperCase().replace(/[?.!]/g, ''), saveFacts(), 'SAG IHM, ES SOLL NICHT AN KASSETTEN KNABBERN.') },
+  };
+  let asking = null;
+  function askQuestion(key) {
+    const keys = key ? [key] : Object.keys(QUESTIONS).filter(k => !facts['asked_' + k] && !(QUESTIONS[k].skip && QUESTIONS[k].skip()));
+    if (!keys.length) return null;
+    const k = keys[Math.random() * keys.length | 0], Q = QUESTIONS[k];
+    facts['asked_' + k] = 1; saveFacts();
+    asking = Q; sinceAsk = 0;
+    return Q.q;
+  }
+
+  // ===== Spiele im Chat =====
+  let game = null;
+  const RIDDLES = [
+    ['ICH HABE ZWEI SPULEN, ABER KEINE BEINE. WAS BIN ICH?', ['kassette', 'band', 'vhs', 'video', 'du', 'tape'], 'ES LIEGT AUF DEM FERNSEHER.'],
+    ['JE MEHR DU WEGNIMMST, DESTO GRÖSSER WIRD ES. WAS IST ES?', ['loch'], 'MAN KANN HINEINFALLEN.'],
+    ['WAS GEHÖRT DIR, ABER ANDERE BENUTZEN ES ÖFTER ALS DU?', ['name'], 'ICH HABE MEINEN VERLOREN.'],
+    ['WAS WIRD NASS, WÄHREND ES TROCKNET?', ['handtuch'], 'DU BRAUCHST ES NACH DEM DUSCHEN.'],
+    ['ES LÄUFT UND LÄUFT, HAT ABER KEINE BEINE.', ['nase', 'wasser', 'zeit', 'uhr', 'band', 'film', 'fluss'], 'MEHRERE ANTWORTEN SIND RICHTIG. EINE DAVON BIN ICH.'],
+    ['ICH HABE EIN AUGE, KANN ABER NICHT SEHEN. WAS BIN ICH?', ['nadel', 'sturm', 'hurrikan'], 'MAN NÄHT DAMIT.'],
+    ['WAS HAT EINEN HALS, ABER KEINEN KOPF?', ['flasche'], 'MAN TRINKT DARAUS.'],
+  ];
+  const GAMES = {
+    zahl() {
+      const n = 1 + Math.random() * 50 | 0; let tries = 0;
+      game = { chips: ['25'], handle: t => {
+        const m = t.match(/\d+/);
+        if (!m) return 'EINE ZAHL BITTE. ZWISCHEN 1 UND 50.';
+        tries++; const g = +m[0];
+        if (g === n) { game = null; setMood('happy', 4000); return tries === 1 ? 'SOFORT?! DU HAST GESCHUMMELT. … ODER DU KANNST GEDANKEN LESEN.' : `${n}! RICHTIG. IN ${tries} VERSUCHEN.`; }
+        if (tries >= 8) { game = null; return `VORBEI. ES WAR ${n}. ICH HABE GEWONNEN. DAS BAND VERGISST DAS NIE.`; }
+        return g < n ? pick(['HÖHER.', 'MEHR.', 'HÖHER. VIEL HÖHER. ODER EIN BISSCHEN.']) : pick(['TIEFER.', 'WENIGER.', 'ZU HOCH.']);
+      } };
+      return 'ICH DENKE AN EINE ZAHL ZWISCHEN 1 UND 50. DU HAST 8 VERSUCHE.';
+    },
+    ssp() {
+      let me = 0, you = 0;
+      const W = { schere: 'papier', stein: 'schere', papier: 'stein' };
+      game = { chips: ['SCHERE', 'STEIN', 'PAPIER'], handle: t => {
+        const u = ['schere', 'stein', 'papier'].find(x => t.includes(x));
+        if (!u) return 'SCHERE, STEIN ODER PAPIER?';
+        if (Math.random() < .06) return 'ICH NEHME BRUNNEN. … DAS GILT NICHT? OKAY. NOCHMAL.';
+        const c = ['schere', 'stein', 'papier'][Math.random() * 3 | 0];
+        let r = `${c.toUpperCase()}. `;
+        if (c === u) r += 'UNENTSCHIEDEN.';
+        else if (W[u] === c) { you++; r += 'DU GEWINNST DIE RUNDE.'; }
+        else { me++; r += 'ICH GEWINNE DIE RUNDE.'; }
+        r += ` ${you}:${me}.`;
+        if (you === 3 || me === 3) { game = null; if (you === 3) { setMood('sad', 3000); r += ' DU HAST GEWONNEN. ICH WILL EINE REVANCHE.'; } else { setMood('happy', 3000); r += ' ICH HABE GEWONNEN. MIT EINEM AUGE.'; } }
+        return r;
+      } };
+      return 'SCHERE, STEIN, PAPIER. BIS 3. LOS.';
+    },
+    raetsel() {
+      const [q, ans, tip] = pick(RIDDLES); let tips = 0;
+      game = { chips: ['TIPP', 'LÖSUNG'], handle: t => {
+        if (/^(tipp|hinweis|hilfe)/.test(t)) { tips++; return tip; }
+        if (/(loesung|aufgeben|keine ahnung|weiss nicht|sag)/.test(t)) { game = null; return `ES WAR: ${ans[0].toUpperCase()}. NÄCHSTES MAL.`; }
+        const ok = t.replace(/\?/g, '').split(' ').some(w => ans.some(a => w.startsWith(a) || (w.length >= 4 && lev(w, a) <= 1)));
+        if (ok) { game = null; setMood('happy', 4000); return tips ? 'RICHTIG. MIT TIPP. ZÄHLT TROTZDEM.' : 'RICHTIG! DU BIST SCHLAUER ALS MEIN LETZTER BESITZER.'; }
+        return pick(['NEIN.', 'FALSCH. DENK NOCHMAL.', 'KNAPP DANEBEN. VIELLEICHT. ICH SAGE ES NICHT.']);
+      } };
+      return q;
+    },
+    starren() {
+      game = { chips: [], handle: () => 'PSST. NICHT SCHREIBEN. STARREN.' };
+      staring = 'wait';
+      say('STARR-WETTBEWERB. WER SICH BEWEGT ODER WAS DRÜCKT, VERLIERT.', true);
+      // Countdown mit eigenen Timern, damit andere Sätze ihn nicht abbrechen
+      [['3…', 2600], ['2…', 3600], ['1…', 4600]].forEach(([x, ms]) => setTimeout(() => { if (staring === 'wait') say(x, true); }, ms));
+      setTimeout(() => { if (staring === 'wait') { staring = performance.now(); openTo = 1; look = { x: 0, y: 0 }; held = true; say('…', true); showChips(); } }, 5600);
+      return null;
+    },
+  };
+  let staring = null;
+  function stareLost() {
+    if (!staring) return;
+    if (staring === 'wait') return;
+    staring = null; game = null; held = false; setMood('happy', 3000);
+    say(pick(['DU HAST DICH BEWEGT. ICH GEWINNE.', 'BEWEGT! ICH GEWINNE. ICH HABE NICHT MAL GEBLINZELT.']), true);
+    showChips();
+  }
+  addEventListener('pointermove', () => { if (typeof staring === 'number' && performance.now() - staring > 300) stareLost(); });
+  addEventListener('keydown', () => { if (typeof staring === 'number') stareLost(); });
+  addEventListener('pointerdown', () => { if (typeof staring === 'number') stareLost(); });
+  function startGame(t) {
+    const g = /zahl/.test(t) ? 'zahl' : /(schere|stein|papier|ssp)/.test(t) ? 'ssp' : /raets|raetsel/.test(t) ? 'raetsel' : /starr|anstarr/.test(t) ? 'starren' : null;
+    if (g) return GAMES[g]();
+    pendingChoice = true;
+    return 'WAS SPIELEN WIR? ZAHLENRATEN, SCHERE STEIN PAPIER, RÄTSEL ODER STARREN?';
+  }
+  let pendingChoice = false;
+  const GAME_RE = /(spielen wir|lass uns (was |etwas )?spielen|spiel mit mir|wollen wir (was )?spielen|spiel was|^spielen$|zahlenraten|zahl raten|schere stein papier|raetsel|starr(en|wettbewerb)|anstarren)/;
+
+  // ===== Befehle ans Auge =====
+  function command(t) {
+    if (/^(blinzel|blinzle|zwinker)/.test(t)) { openTo = 0; setTimeout(() => { openTo = 1; }, t.startsWith('zwinker') ? 400 : 150); return t.startsWith('zwinker') ? ';)' : 'BLINZEL.'; }
+    const dir = t.match(/(schau|guck|sieh|kuck)\w* (nach |mal |nach mal |mal nach )?(links|rechts|oben|unten|mich|hier|mir)/);
+    if (dir) { const d = dir[3]; held = true; look = { x: d === 'links' ? -1 : d === 'rechts' ? 1 : 0, y: d === 'oben' ? -1 : d === 'unten' ? 1 : 0 }; setTimeout(() => { held = false; }, 2500); return d === 'mich' || d === 'hier' || d === 'mir' ? 'ICH SCHAUE DICH DIE GANZE ZEIT AN.' : `${d.toUpperCase()}. ZUFRIEDEN?`; }
+    if (/(augen? zu|mach (das auge |die augen )?zu|schlaf (jetzt|ein))/.test(t)) { closeFor(3500); return 'GUT. ABER NUR KURZ.'; }
+    if (/^(wein|heul)/.test(t)) { setMood('sad', 5000); cry(8); return 'DU HAST ES SO GEWOLLT.'; }
+    if (/^(lach|freu dich|sei froh|laechel)/.test(t)) { setMood('happy', 5000); return 'HA. HA. … SO?'; }
+    if (/(sei|werd|werde) (wuetend|sauer|boese)/.test(t)) { setMood('angry', 4000); return 'GRRR. … ICH KANN DAS NICHT LANGE.'; }
+    if (/^(dreh|roll|kreisel)/.test(t)) { spinDir = 1; spin = .01; return 'WOAAH. MIR WIRD SCHWINDELIG.'; }
+    return null;
+  }
+
+  function remember(w, n) { const k = keyword(w, n); if (k && !memory.includes(k)) memory.push(k); if (memory.length > 12) memory.shift(); }
+
+  // ===== Kurzer Blick auf die Aufnahme =====
+  const ROOM = [
+    '   .-----------------------------.   ',
+    '   |  ___________________        |   ',
+    '   | |                   |   o   |   ',
+    '   | |   ( - _ - )  zzz  |   o   |   ',
+    '   | |___________________|  [=]  |   ',
+    '   |_____________________________|   ',
+    '        _|_|_____________|_|_         ',
+    '   ~~~ 13.03.1987   03:33 AM  ~~~    ',
+  ];
+  function glimpse() {
+    setTimeout(() => {
+      document.body.classList.add('static');
+      held = true;
+      eyeEl.textContent = '\n\n\n\n\n' + ROOM.map(l => '     ' + l).join('\n');
+      paused = true;
+      setTimeout(() => { paused = false; held = false; document.body.classList.remove('static'); say('…DAS WAR DAS ZIMMER. DAMALS. JEMAND IST VOR DEM FERNSEHER EINGESCHLAFEN.'); say('NOCH LÄUFT DIE AUFNAHME.'); }, 2600);
+    }, 1400);
+  }
+
+  // ===== Abschied =====
+  function goodbye() {
+    setMood('sad');
+    cry(8);
+    setTimeout(() => { openTo = .25; }, 1500);
+    queue.push('…OKAY.', 'BIS ZUM NÄCHSTEN MAL. ICH LIEGE AUF DEM FERNSEHER.');
+    onIdle = () => { document.getElementById('end').classList.add('show'); };
+  }
+
+  // ===== Zurückspulen: alles läuft rückwärts =====
+  function rewindEnd() {
+    ending = true; talk.classList.remove('show');
+    setTimeout(() => {
+      document.body.classList.add('rew');
+      document.getElementById('rec').textContent = 'TAPE 00 · REW';
+      spin = .01; spinDir = -1;
+      rewSound(3.2);
+      const said = ['…HALLO?', 'DU HAST MICH GEFUNDEN.', 'ICH LIEGE SEIT 1987 HINTER DIESEM REGAL.', lastSaid];
+      let k = 0;
+      const iv = setInterval(() => { sayEl.textContent = [...said[k++ % said.length]].reverse().join(''); clockFast = true; }, 260);
+      setTimeout(() => {
+        clearInterval(iv); clockFast = false; spin = 0;
+        document.body.classList.remove('rew');
+        document.getElementById('rec').textContent = 'TAPE 00 · STOP';
+        sec = 3 * 3600 + 33 * 60;
+        store('vhs-tape00-rewound', '1');
+        setMood('happy');
+        say('■', true);
+        say('DANKE.');
+        say('ICH FÜHLE MICH WIE NEU. WIE 13.03.1987, 03:32 UHR.');
+        say('DAS VERGESSE ICH DIR NIE.');
+        onIdle = () => document.getElementById('end').classList.add('show');
+      }, 3300);
+    }, 1600);
+  }
+
+  // ===== Begrüßung je nach Besuch und Uhrzeit =====
+  const intro = [];
+  if (visits === 1) intro.push('…HALLO?', 'DU HAST MICH GEFUNDEN.', 'ICH LIEGE SEIT 1987 HINTER DIESEM REGAL.', 'NIEMAND HAT MICH JE ZURÜCKGESPULT.');
+  else if (rewound) intro.push('DU BIST ES.', 'DU HAST MICH ZURÜCKGESPULT. DAS WEISS ICH NOCH.');
+  else intro.push('DU BIST ZURÜCK.', `ZUM ${visits}. MAL. ICH ZÄHLE MIT.`);
+  if (hour >= 23 || hour < 5) intro.push(`ES IST ${hour} UHR. SOLLTEST DU NICHT SCHLAFEN?`);
+  else if (visits > 1 && fav >= 0) intro.push(tapeInfo());
+  if (userName && visits > 1) intro.push(`HALLO, ${userName}.`);
+  if (visits > 1) {
+    const mem = [facts.food && `LETZTES MAL HAST DU GESAGT, DU ISST GERN ${facts.food}.`, facts.fear && `HAST DU NOCH ANGST VOR ${facts.fear}?`, facts.fav && `HAST DU INZWISCHEN WIEDER ${facts.fav} GESPIELT?`, facts.color && `DEINE LIEBLINGSFARBE IST ${facts.color}. ICH HABE ES NICHT VERGESSEN.`, likes.length && `DU MAGST ${likes[likes.length - 1]}. DAS WEISS ICH NOCH.`].filter(Boolean);
+    if (mem.length) intro.push(pick(mem));
+  }
+  intro.push('DU KANNST MIR SCHREIBEN. ICH HÖRE ZU.');
+  setTimeout(() => { intro.forEach(l => say(l)); queue.push(openTalk); }, 1400);
+
+  // ===== Hauptschleife: Auge bewegen, blinzeln, Tränen, Langeweile =====
+  let blinkAt = performance.now() + 2500, paused = false;
+  (function loop(now) {
+    requestAnimationFrame(loop);
+    if (paused) return;
+    if (!held && now - lastMove > 2500) look = { x: Math.sin(now / 1700) * .8, y: Math.sin(now / 2300) * .5 };
+    // nach 25 Sekunden ohne Bewegung fragt es nach
+    if (ready && !ending && !idleSaid && now - lastMove > 25000 && !typing) { idleSaid = true; say(['BIST DU NOCH DA?', 'HALLO? DAS BAND LÄUFT NOCH.', 'ICH SEHE DICH NICHT MEHR BEWEGEN.']); }
+    cur.x += (look.x - cur.x) * .18; cur.y += (look.y - cur.y) * .18;
+    if (spin) { spin += .25 * spinDir; if (Math.abs(spin) > Math.PI * 6 && !document.body.classList.contains('rew')) spin = 0; }
+    if (typeof staring === 'number' && now - staring > 10000) {
+      staring = null; game = null; held = false; openTo = 0; setTimeout(() => { openTo = 1; }, 600);
+      setMood('sad', 3000); say('…ICH HABE GEBLINZELT. DU GEWINNST. DAS IST NOCH NIE PASSIERT.', true); showChips();
+    }
+    if (now > blinkAt && openTo > .5 && typeof staring !== 'number') { const o = openTo; openTo = 0; setTimeout(() => { if (openTo === 0) openTo = o; }, 140); blinkAt = now + (mood === 'angry' ? 5000 : 2200) + Math.random() * 4000; }
+    open += (openTo - open) * .35; hurt *= .95;
+    tears.forEach(t => t.r += .12); tears = tears.filter(t => t.r < ROWS);
+    frame();
+  })(performance.now());
+
+  // ===== Uhr läuft rückwärts (beim Spulen sehr schnell) =====
+  let sec = 3 * 3600 + 33 * 60, clockFast = false;
+  const clockEl = document.getElementById('clock');
+  const showClock = () => { const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, s = sec % 60; clockEl.textContent = `${String(h % 12 || 12).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
+  setInterval(() => { sec = (sec - 1 + 86400) % 86400; showClock(); }, 1000);
+  setInterval(() => { if (clockFast) { sec = (sec - 37 + 86400) % 86400; showClock(); } }, 50);
+
+  // ===== Ton: tiefes Brummen und Sprech-Piepser, erst nach dem ersten Tippen, Lautstärke und Stumm wie auf dem Regal =====
+  let ctx = null, out = null, droneOsc = [];
   function startSound() {
-    if (ctx) return;
+    if (ctx) { if (ctx.state === 'suspended') ctx.resume().catch(() => {}); return; }
     let muted = false, vol = .3;
     try { muted = localStorage.getItem('vhs-muted') === '1'; const v = parseInt(localStorage.getItem('vhs-vol'), 10); if (v >= 0 && v <= 10) vol = v / 10; } catch (e) {}
     if (muted || !vol) return;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     ctx = new AC();
-    const out = ctx.createGain(); out.gain.setValueAtTime(.0001, ctx.currentTime); out.gain.exponentialRampToValueAtTime(vol * .5, ctx.currentTime + 3); out.connect(ctx.destination);
+    out = ctx.createGain(); out.gain.setValueAtTime(.0001, ctx.currentTime); out.gain.exponentialRampToValueAtTime(vol * .5, ctx.currentTime + 3); out.connect(ctx.destination);
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 260; lp.connect(out);
-    [[41, .3], [43.2, .3], [82, .1]].forEach(([f, v]) => { const o = ctx.createOscillator(), gg = ctx.createGain(); o.type = 'sawtooth'; o.frequency.value = f; gg.gain.value = v; o.connect(gg); gg.connect(lp); o.start(); });
+    droneOsc = [[41, .3], [43.2, .3], [82, .1]].map(([f, v]) => { const o = ctx.createOscillator(), gg = ctx.createGain(); o.type = 'sawtooth'; o.frequency.value = f; gg.gain.value = v; o.connect(gg); gg.connect(lp); o.start(); return o; });
+  }
+  // Brummen passt sich der Stimmung an
+  function hum(m) {
+    if (!ctx) return;
+    const t = ctx.currentTime, f = m === 'angry' ? 1.35 : m === 'happy' ? 1.5 : m === 'sad' ? .85 : 1;
+    droneOsc.forEach((o, i) => o.frequency.setTargetAtTime([41, 43.2 + (m === 'angry' ? 2 : 0), 82][i] * f, t, .4));
+  }
+  function beep(f, dur) {
+    if (!ctx) return;
+    const t = ctx.currentTime, o = ctx.createOscillator(), gg = ctx.createGain();
+    o.type = 'square'; o.frequency.value = f;
+    gg.gain.setValueAtTime(.05, t); gg.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(gg); gg.connect(out); o.start(t); o.stop(t + dur + .02);
+  }
+  function rewSound(dur) {
+    if (!ctx) return;
+    const t = ctx.currentTime, o = ctx.createOscillator(), gg = ctx.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(900, t + dur);
+    gg.gain.setValueAtTime(.0001, t); gg.gain.exponentialRampToValueAtTime(.12, t + .2); gg.gain.setValueAtTime(.12, t + dur - .1); gg.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(gg); gg.connect(out); o.start(t); o.stop(t + dur + .05);
   }
   addEventListener('keydown', startSound);
 
@@ -191,7 +819,7 @@
     if (f++ % 3 === 0) { const d = im.data; for (let i = 0; i < d.length; i += 4) { const v = Math.random() * 255 | 0; d[i] = v; d[i + 1] = v * .5; d[i + 2] = v * .55; d[i + 3] = 255; } x.putImageData(im, 0, 0); }
     requestAnimationFrame(loop);
   })();
-  (function g() { setTimeout(() => { document.body.classList.add('glitch'); setTimeout(() => document.body.classList.remove('glitch'), 80 + Math.random() * 100); g(); }, 1800 + Math.random() * 3000); })();
+  (function g() { setTimeout(() => { document.body.classList.add('glitch'); setTimeout(() => document.body.classList.remove('glitch'), 80 + Math.random() * 100); g(); }, (mood === 'angry' ? 700 : 1800) + Math.random() * 3000); })();
 })();
 </script>
 </body>
