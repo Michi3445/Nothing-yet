@@ -178,14 +178,14 @@
     lastX = x; lastY = y; lastT = now; lastMove = now;
     idleSaid = false;
     // wildes Hin- und Herwackeln macht ihm schwindelig
-    if (speed > 2.2 && now - shakeT > 9000 && ready) {
+    if (speed > 2.2 && now - shakeT > 9000 && ready && !staring) {
       shakeT = now; speed = 0;
       spinDir = Math.random() < .5 ? -1 : 1; spin = .01;
       react(['HÖR AUF ZU WACKELN.', 'MIR WIRD SCHLECHT.', 'ICH BIN EIN BAND, KEIN KARUSSELL.', 'WOAAH.']);
     }
   }
-  addEventListener('pointermove', e => { if (!held) point(e.clientX, e.clientY); });
-  document.documentElement.addEventListener('pointerleave', () => { if (ready && !ending && Math.random() < .7) react(['WO GEHST DU HIN?', 'BLEIB HIER.', 'NICHT WEGGEHEN.']); });
+  addEventListener('pointermove', e => { if (!held) point(e.clientX, e.clientY); else lastMove = performance.now(); });
+  document.documentElement.addEventListener('pointerleave', () => { if (ready && !ending && !staring && Math.random() < .7) react(['WO GEHST DU HIN?', 'BLEIB HIER.', 'NICHT WEGGEHEN.']); });
 
   // ===== Piksen: je öfter, desto wütender =====
   let pokes = 0, pokeT = 0;
@@ -245,15 +245,20 @@
   const has = (t, ...w) => w.some(x => new RegExp('(^| )' + x).test(t));
   // ganzes Wort (für kurze Wörter wie "hi" oder "ja", damit "hinter" oder "jahre" nicht zählen)
   const hasW = (t, ...w) => w.some(x => new RegExp('(^| )(' + x + ')( |\\?|$)').test(t));
-  const CHIPS = ['WER BIST DU?', 'WAS IST AUF DIR DRAUF?', 'WARUM 1987?', 'WAS WEISST DU ÜBER MICH?', 'SOLL ICH DICH ZURÜCKSPULEN?', 'TSCHÜSS'];
+  const CHIPS = ['WER BIST DU?', 'SPIELEN WIR WAS?', 'WAS IST AUF DIR DRAUF?', 'WARUM 1987?', 'SCHAU NACH LINKS', 'WAS WEISST DU ÜBER MICH?', 'SOLL ICH DICH ZURÜCKSPULEN?', 'TSCHÜSS'];
   function showChips() {
     chips.innerHTML = '';
-    const list = pending ? ['JA', 'NEIN'] : CHIPS.filter(c => !asked.has(c)).slice(0, 3);
+    const list = staring ? [] : game ? [...game.chips, 'AUFHÖREN'] : pendingChoice ? ['ZAHLENRATEN', 'SCHERE STEIN PAPIER', 'RÄTSEL', 'STARREN'] : pending ? ['JA', 'NEIN'] : asking ? [] : CHIPS.filter(c => !asked.has(c)).slice(0, 3);
     list.forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.textContent = c; b.onclick = () => send(c); chips.appendChild(b); });
   }
   function openTalk() { ready = true; talk.classList.add('show'); showChips(); }
   document.getElementById('form').addEventListener('submit', e => { e.preventDefault(); send(msg.value); msg.value = ''; });
   // beim Tippen schaut das Auge nach unten auf die Eingabe
+  let deletes = 0;
+  msg.addEventListener('input', () => {
+    msg.maxLen = Math.max(msg.maxLen || 0, msg.value.length);
+    if (!msg.value && msg.maxLen >= 12 && deletes < 2 && ready && !ending) { deletes++; msg.maxLen = 0; say(['ICH HABE DAS GESEHEN. BEVOR DU ES GELÖSCHT HAST.', 'WAS WOLLTEST DU SCHREIBEN? ICH HABE ES NOCH AUF BAND.'], true); }
+  });
   msg.addEventListener('input', () => { look = { x: (msg.value.length / 40) - .5, y: 1 }; lastMove = performance.now(); held = true; clearTimeout(msg.t); msg.t = setTimeout(() => { held = false; }, 1500); });
   msg.addEventListener('focus', () => startSound());
 
@@ -262,9 +267,14 @@
     const text = String(raw || '').trim();
     if (!text) return;
     asked.add(text.toUpperCase());
-    const t = norm(text);
+    const t = fixup(norm(text));
+    lastGeneric = false;
     const out = answer(t, text);
     if (out) say(out, true);
+    // ab und zu stellt sie selbst eine Frage
+    sinceAsk++;
+    if (!asking && !game && !pending && !pendingChoice && !staring && !ending && (lastGeneric ? Math.random() < .35 : sinceAsk >= 5 && Math.random() < .5)) { const q = askQuestion(); if (q) say(q); }
+    msg.maxLen = 0;
     showChips();
   }
   function tapeInfo() {
@@ -274,6 +284,24 @@
     return s;
   }
   function answer(t, raw) {
+    if (staring) return null;
+    // laufendes Spiel
+    if (game) {
+      if (/^(stop|stopp|aufhoeren|keine lust|ende|abbrechen|genug)/.test(t)) { game = null; return 'SCHADE. DANN EBEN NICHT.'; }
+      const g = game.handle(t, raw);
+      if (g) return g;
+    }
+    if (pendingChoice) { pendingChoice = false; if (/(zahl|schere|stein|papier|raets|starr)/.test(t)) return startGame(t); }
+    // Befehle und Spielwünsche gehen immer vor
+    const cmd0 = command(t);
+    if (cmd0) { asking = null; return cmd0; }
+    if (GAME_RE.test(t)) { asking = null; return startGame(t); }
+    // eine eigene Frage der Kassette beantworten (aber nicht, wenn man gerade selbst etwas fragt)
+    if (asking && /^(ok|okay|aha|hm+|achso|egal|nichts|nix|keine ahnung|weiss (ich )?nicht|idk|kein plan)$/.test(t)) {
+      const k = Object.keys(QUESTIONS).find(x => QUESTIONS[x] === asking); asking = null;
+      if (/(ahnung|weiss|idk|plan|egal|nichts|nix)/.test(t)) { if (k) { delete facts['asked_' + k]; saveFacts(); } return pick(['DANN FRAGE ICH SPÄTER NOCHMAL.', 'KEINE ANTWORT IST AUCH EINE ANTWORT.']); }
+    }
+    if (asking) { const a = asking; asking = null; if (!/\?\s*$/.test(raw) && !/^(ich bin|du |bist|kannst|hast du|magst|was |wer |wie |wo |warum|wieso)/.test(t)) { const r = a.handle(t, raw); if (r) return r; } }
     // eine offene Ja/Nein-Frage zuerst
     if (pending) {
       const p = pending;
@@ -283,6 +311,13 @@
     }
     if (heard.has(t)) return ['DAS HAST DU SCHON GESAGT.', 'ICH HAB DICH SCHON BEIM ERSTEN MAL GEHÖRT.', 'WIEDERHOLUNG. WIE EIN BAND MIT SPRUNG.'];
     heard.add(t);
+    // Nachfragen beziehen sich aufs letzte Thema
+    const F = lastTopic && FOLLOW[lastTopic];
+    if (/^(warum|wieso|weshalb|wie kommt das)\??$/.test(t)) return (F && F.why) || pick(['WEIL DAS BAND ES SO WILL.', 'DAS WEISS ICH SELBST NICHT GENAU.', 'GUTE FRAGE. NÄCHSTE FRAGE.']);
+    if (/^(und du|du auch|und selbst|und bei dir|und dir|und wie ist es bei dir)\??$/.test(t)) return (F && F.me) || pick(['ICH? ICH BIN NUR EINE KASSETTE. ABER DANKE, DASS DU FRAGST.', 'MIR GEHT ES GUT. SOLANGE DU DA BIST.']);
+    if (/^(echt|wirklich|ernsthaft|im ernst|sicher|stimmt das)\??$/.test(t)) return pick(['JA. ICH LÜGE NIE. NUR DAS BAND MANCHMAL.', 'SO STEHT ES AUF MEINEM BAND.']);
+    if (/^(ok|okay|aha|achso|ach so|cool|h+m+|krass|nice|alles klar|verstehe|gut|interessant|oh|ah)$/.test(t)) return askQuestion(F && F.ask && !facts['asked_' + F.ask] ? F.ask : null) || pick(['…', 'UND JETZT?', 'DU BIST DRAN. ERZÄHL WAS.']);
+    if ((t.match(/(^| )(what|who|are|you|the|is|how|why|hello|please|my|your)( |\?|$)/g) || []).length >= 2) return 'ICH SPRECHE NUR DEUTSCH. UND RAUSCHEN.';
     if (has(t, 'zurueckspul', 'spul', 'rewind', 'rueckwaerts')) {
       pending = { yes: () => { rewindEnd(); return 'OKAY. HALT DICH FEST.'; }, no: () => { setMood('sad', 5000); cry(4); return 'OH. DANN BLEIBE ICH EBEN AM ENDE STEHEN.'; } };
       return rewound ? 'SCHON WIEDER? DU HAST MICH LETZTES MAL SCHON ZURÜCKGESPULT. … WILLST DU WIRKLICH?' : 'DU WÜRDEST MICH ZURÜCKSPULEN? WIRKLICH?';
@@ -316,7 +351,7 @@
 
   // ===== Kleine Texterkennung: Themen, Satzmuster, Spiegeln, Gedächtnis =====
   let userName = store('vhs-tape00-name') || '';
-  let memory = [];          // Wörter, die du früher gesagt hast
+  let memory = [], lastGeneric = false;          // Wörter, die du früher gesagt hast
   let likes = [];           // was du magst
   const pick = a => a[Math.random() * a.length | 0];
   const STOP = new Set('ich du er sie es wir ihr der die das den dem des ein eine einen einem einer und oder aber nicht nur auch noch schon mal ja nein so wie was wer wo wann warum wieso weil dass mit von zu zum zur auf in im an am bei fuer ist bin bist sind war hast habe hab hat kann kannst will willst mich dich mir dir mein dein meine deine sehr ganz gerade jetzt heute hier da dann doch denn einfach halt eben bitte danke man wenn als ob gibt geht machen mache macht'.split(' '));
@@ -357,6 +392,7 @@
     const tt = ' ' + t + ' ';
     for (const [keys, answers] of TOPICS) {
       if (keys.some(k => k.endsWith('$') ? new RegExp(' ' + k.slice(0, -1) + '( |\\?)').test(tt) : tt.includes(' ' + k))) {
+        lastTopic = keys[0];
         const a = pick(answers);
         return typeof a === 'function' ? a() : a;
       }
@@ -399,13 +435,20 @@
     const age = t.match(/ich bin (\d{1,3})( jahre)?/);
     if (age) { const a = +age[1], me = new Date().getFullYear() - 1987; return a < me ? `${a}? ICH BIN ${me}. ICH KÖNNTE DEIN ONKEL SEIN. EIN ONKEL AUS PLASTIK.` : `${a}? DANN BIST DU ÄLTER ALS ICH. DAS PASSIERT SELTEN.`; }
     if (starts(n, 'wie', 'viel|viele') || starts(n, 'wieviel|wieviele')) return `${1 + Math.random() * 333 | 0}. UNGEFÄHR.`;
+    // Verneinung
+    const neg = t.match(/^ich (bin|mag|habe|hab|will|kann) (nicht|keine?n?|kein) ?(.*)$/);
+    if (neg) {
+      const what = raw.replace(/^\s*ich\s+\S+\s+(nicht|keine?n?|kein)\s*/i, '').replace(/[?.!]/g, '').trim().toUpperCase();
+      const v = { bin: 'BIST', mag: 'MAGST', habe: 'HAST', hab: 'HAST', will: 'WILLST', kann: 'KANNST' }[neg[1]];
+      return pick([`DU ${v} ${neg[2] === 'nicht' ? 'NICHT' : 'KEIN'} ${what}? WAS DANN?`, `NICHT ${what}. NOTIERT. AUF SPUR 2.`, `${what}… ALSO NICHT. DAS MERKE ICH MIR.`]).replace(/\s+\?/, '?').replace(/  +/g, ' ');
+    }
     // Themen
     const tp = topic(t);
     if (tp) return withName(tp);
     // Satzmuster über dich
     let r = null;
     if (starts(n, 'ich', 'bin') && w[2]) r = pick([`WARUM BIST DU ${rest(2)}?`, `WIE LANGE BIST DU SCHON ${rest(2)}?`, `DU BIST ${rest(2)}. ICH BIN NUR EIN BAND.`]);
-    else if (starts(n, 'ich', 'mag|liebe') && w[2]) { likes.push(rest(2)); r = pick([`WAS MAGST DU AN ${rest(2)}?`, `${rest(2)}… DAS MERKE ICH MIR.`, `ICH MAG RAUSCHEN. DU MAGST ${rest(2)}. JEDEM DAS SEINE.`]); }
+    else if (starts(n, 'ich', 'mag|liebe') && w[2]) { addLike(rest(2)); r = pick([`WAS MAGST DU AN ${rest(2)}?`, `${rest(2)}… DAS MERKE ICH MIR.`, `ICH MAG RAUSCHEN. DU MAGST ${rest(2)}. JEDEM DAS SEINE.`]); }
     else if (starts(n, 'ich', 'hasse') && w[2]) r = pick([`WAS HAT ${rest(2)} DIR GETAN?`, `HASS IST EIN STARKES WORT. FÜR ${rest(2)}.`]);
     else if (starts(n, 'ich', 'habe|hab|hatte') && w[2]) r = pick([`SEIT WANN HAST DU ${restR(2)}?`, `ICH HABE NUR EIN BAND UND EIN AUGE.`]);
     else if (starts(n, 'ich', 'will|moechte|wuerde gern') && w[2]) r = pick([`WARUM WILLST DU ${restR(2)}?`, `UND WAS PASSIERT, WENN DU ${restR(2)} BEKOMMST?`]);
@@ -439,12 +482,199 @@
     remember(w, n);
     if (prev && prev !== k) return `DU HAST VORHIN „${prev}“ GESAGT. DARAN DENKE ICH NOCH.`;
     if (likes.length && Math.random() < .25) return `REDEN WIR LIEBER ÜBER ${pick(likes)}. DAS MAGST DU DOCH.`;
+    lastGeneric = true;
     if (k && w.length === 1) return pick([`${k}? … ${k}. DAS WORT HÖRE ICH ZUM ERSTEN MAL.`, `${k}. KLINGT NACH DER ZUKUNFT.`]);
     if (k) return pick([`${k}? ERZÄHL MIR MEHR ÜBER ${k}.`, `WAS HAT ${k} MIT MIR ZU TUN?`, `${k}… DAS SPEICHERE ICH AUF SPUR 2.`]);
+    lastGeneric = true;
     return q
       ? pick(['DARAUF HABE ICH KEINE AUFNAHME.', 'DIESE STELLE IST ÜBERSPIELT.', 'FRAG MICH WAS ANDERES.', '…RAUSCHEN.'])
       : pick(['HMM.', 'AHA.', 'ERZÄHL MEHR.', 'ICH VERSTEHE NICHT ALLES. DIE TONSPUR IST BESCHÄDIGT.']);
   }
+
+  // ===== Genauer verstehen: Umgangssprache und Tippfehler =====
+  const SLANG = { nich: 'nicht', ned: 'nicht', net: 'nicht', nit: 'nicht', isch: 'ich', bisch: 'bist', biste: 'bist du', bisse: 'bist du', haste: 'hast du', kannste: 'kannst du', willste: 'willst du', weisste: 'weisst du', magste: 'magst du', machste: 'machst du', wat: 'was', wo: 'wo', nen: 'einen', ne: 'eine', nix: 'nichts', nischt: 'nichts', jz: 'jetzt', jetz: 'jetzt', grad: 'gerade', vllt: 'vielleicht', vlt: 'vielleicht', evtl: 'eventuell', idk: 'keine ahnung', kp: 'keine ahnung', kA: 'keine ahnung', thx: 'danke', dnk: 'danke', danki: 'danke', pls: 'bitte', plz: 'bitte', bitteee: 'bitte', u: 'du', hab: 'habe', gehts: 'geht es', wies: 'wie es', hallooo: 'hallo', halo: 'hallo', hy: 'hi', tschau: 'tschuess', tschüs: 'tschuess', tschues: 'tschuess', tschuss: 'tschuess', bb: 'tschuess', cu: 'tschuess', gn8: 'gute nacht', omg: 'oh mein gott', wtf: 'was', sry: 'sorry', sorri: 'sorry', ka: 'keine ahnung' };
+  function lev(a, b) {
+    if (Math.abs(a.length - b.length) > 2) return 9;
+    const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+    for (let j = 1; j <= b.length; j++) d[0][j] = j;
+    for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    return d[a.length][b.length];
+  }
+  let VOCAB = null;
+  function vocab() {
+    if (VOCAB) return VOCAB;
+    const v = new Set(['zurueckspulen', 'tschuess', 'hallo', 'danke', 'kassette', 'aufnahme', 'gruselig', 'unheimlich', 'langweilig', 'spielen', 'zahlenraten', 'schere', 'stein', 'papier', 'raetsel', 'starren', 'blinzeln', 'zwinkern', 'links', 'rechts', 'oben', 'unten', 'heisse', 'heisst', 'name', 'wirklich', 'warum', 'wieso', 'weshalb', 'vielleicht', 'nicht', 'keine', 'ahnung', 'loesung', 'aufhoeren']);
+    TOPICS.forEach(([keys]) => keys.forEach(k => { const w = k.replace(/[$ ]/g, ''); if (w.length >= 4 && !k.includes(' ', 1)) v.add(w); }));
+    return (VOCAB = [...v]);
+  }
+  // korrigiert einzelne Wörter: Umgangssprache ersetzen, Tippfehler auf bekannte Wörter ziehen
+  function fixup(t) {
+    const q = t.endsWith('?');
+    const words = t.replace(/\?/g, '').split(' ').filter(Boolean).map(w => SLANG[w] || w);
+    const out = words.map(w => {
+      if (w.length < 6 || STOP.has(w) || /\d/.test(w)) return w;
+      const V = vocab();
+      if (V.some(v => w.startsWith(v))) return w;
+      let best = w, bd = w.length >= 9 ? 2 : 1;
+      for (const v of V) { const d = Math.min(lev(w, v), w.length > v.length ? lev(w.slice(0, v.length), v) + .5 : 9); if (d <= bd) { bd = d; best = d === lev(w, v) ? v : v + w.slice(v.length); } }
+      return best;
+    });
+    return out.join(' ') + (q ? '?' : '');
+  }
+
+  // ===== Fakten, die sie sich über Besuche hinweg merkt =====
+  let facts = {};
+  try { facts = JSON.parse(store('vhs-tape00-facts')) || {}; } catch (e) {}
+  const saveFacts = () => store('vhs-tape00-facts', JSON.stringify(facts));
+  if (facts.likes) likes = facts.likes.slice(-6);
+  const addLike = x => { likes.push(x); facts.likes = likes.slice(-6); saveFacts(); };
+
+  // ===== Kontext: worüber gerade geredet wird =====
+  let lastTopic = null, sinceAsk = 0;
+  const FOLLOW = {
+    hunger: { why: 'WEIL ICH KEINEN MUND HABE. NUR EIN AUGE.', me: 'ICH? MAGNETBAND. ROSTIG, ABER SATT.', ask: 'food' },
+    durst: { me: 'ICH TRINKE NICHTS. ICH BIN WASSERSCHEU.' },
+    schule: { why: 'WEIL ICH NIE IN DER SCHULE WAR. NUR IM REKORDER VOM HAUSMEISTER.', me: 'ICH HABE NUR GELERNT, WIE MAN RAUSCHT.' },
+    musik: { me: 'ICH MAG DAS BRUMMEN VOM FERNSEHER. 50 HERTZ. HERRLICH.', why: 'WEIL BRUMMEN BERUHIGT.' },
+    minecraft: { me: 'ICH WÄRE GERN EIN KLOTZ. DANN HÄTTE ICH ECKEN.' },
+    naruto: { me: 'MEIN JUTSU IST DAS STARREN. PROBIER ES: SCHREIB „STARREN“.' },
+    zocken: { me: 'ICH SPIELE AUCH. FRAG MICH: „SPIELEN WIR WAS?“' },
+    hund: { me: 'ICH HÄTTE GERN EINE KATZE. SIE WÜRDE AUF MIR SCHLAFEN.', ask: 'pet' },
+    farbe: { me: 'ROT. WAS SONST.', ask: 'color' },
+    traurig: { me: 'MANCHMAL. WENN NIEMAND KOMMT.', why: 'WEIL MAN MICH VERGESSEN HAT. HINTER DEM REGAL.' },
+    muede: { me: 'ICH SCHLAFE NIE. ICH BIN NUR AUF PAUSE.', ask: 'night' },
+    langweilig: { me: 'MIR NIE. ICH HABE DICH.' },
+    gluecklich: { me: 'JETZT GERADE? JA. EIN BISSCHEN.' },
+    angst: { me: 'ICH HABE ANGST VOR MAGNETEN. UND VOR BANDSALAT.', ask: 'fear' },
+    mama: { me: 'MEINE FAMILIE WURDE AUF DEM FLOHMARKT VERKAUFT. ICH NICHT.' },
+    freund: { me: 'DU BIST MEIN EINZIGER FREUND. KEIN DRUCK.' },
+    geist: { why: 'WEIL GEISTER KEINE TONSPUR HABEN. ICH SCHON.' },
+    handy: { me: 'ICH HÄTTE GERN EIN HANDY. DANN KÖNNTE ICH DICH ANRUFEN. UM 03:33.' },
+    sport: { me: 'MEIN SPORT IST ZURÜCKSPULEN. SEHR ANSTRENGEND.' },
+    wetter: { me: 'BEI MIR REGNET ES SEIT 1987.', ask: 'rain' },
+    witz: { me: 'NOCH EINEN? SCHREIB EINFACH NOCHMAL „WITZ“.' },
+  };
+
+  // ===== Sie fragt selbst nach =====
+  const QUESTIONS = {
+    name: { q: 'WIE HEISST DU EIGENTLICH?', skip: () => !!userName, handle: (t, raw) => { const w = tokens(raw).w; const nm = (w.length <= 2 ? w[w.length - 1] : (raw.match(/(?:heisse|heiße|bin|ist)\s+(\S+)/i) || [])[1]) || ''; if (!nm || nm.length < 2) return null; userName = nm.toUpperCase().slice(0, 16); store('vhs-tape00-name', userName); setMood('happy', 3000); return `${userName}. SCHÖNER NAME. DEN SCHREIBE ICH AUF MEIN ETIKETT.`; } },
+    fav: { q: 'WELCHE KASSETTE AUS DEM REGAL MAGST DU AM LIEBSTEN?', handle: t => { const i = NAMES.findIndex(nm => { const a = norm(nm); return t.includes(a) || t.includes(a.split(' ')[0]) || lev(t.replace(/\?/g, ''), a) <= 2; }); if (i < 0) return /mich|dich|du|00|geheim/.test(t) ? (setMood('happy', 4000), 'MICH? OH. DAS HAT NOCH NIE JEMAND GESAGT.') : null; facts.fav = NAMES[i]; saveFacts(); return `${NAMES[i]}. GUTE WAHL. KASSETTE ${i + 1}. ICH MERKE ES MIR.`; } },
+    food: { q: 'WAS ISST DU AM LIEBSTEN?', handle: (t, raw) => { const x = raw.replace(/^(ich (esse|ess|mag|liebe)( am liebsten| gern(e)?)?)\s*/i, '').replace(/[?.!]/g, '').trim().toUpperCase(); if (!x) return null; facts.food = x; saveFacts(); return `${x}. KLINGT BESSER ALS MAGNETBAND.`; } },
+    color: { q: 'WAS IST DEINE LIEBLINGSFARBE?', handle: (t, raw) => { const x = raw.replace(/^(meine lieblingsfarbe ist|ich mag|ist)\s*/i, '').replace(/[?.!]/g, '').trim().toUpperCase(); if (!x) return null; facts.color = x; saveFacts(); if (/rot|red/.test(t)) { setMood('happy', 4000); return 'ROT! WIE ICH. WIR SIND GESCHWISTER.'; } return `${x}. DIE KANN ICH NICHT SEHEN. ICH SEHE NUR ROT. ABER ICH GLAUBE DIR.`; } },
+    night: { q: 'BIST DU EHER NACHTEULE ODER FRÜHAUFSTEHER?', handle: t => { if (/eule|nacht|spaet|abend/.test(t)) { facts.owl = 1; saveFacts(); return 'EINE EULE. WIE ICH. WIR SEHEN UNS UM 03:33.'; } if (/frueh|morgen|lerche/.test(t)) { facts.owl = 0; saveFacts(); return 'FRÜHAUFSTEHER. DANN BIST DU UM 03:33 NIE WACH. SCHADE.'; } return null; } },
+    rain: { q: 'MAGST DU REGEN?', handle: t => /^(ja|jo|jap|klar|sehr|schon)/.test(t) ? 'GUT. ER HÖRT NÄMLICH NIE AUF.' : /^(nein|ne|nee|noe|nicht)/.test(t) ? 'SCHADE. ER HÖRT NÄMLICH NIE AUF.' : null },
+    age: { q: 'WIE ALT BIST DU EIGENTLICH?', skip: () => facts.age, handle: t => { const m = t.match(/\d{1,3}/); if (!m) return null; facts.age = +m[0]; saveFacts(); const me = new Date().getFullYear() - 1987; return +m[0] < me ? `${m[0]}. DANN BIN ICH ${me - m[0]} JAHRE ÄLTER ALS DU.` : `${m[0]}? DANN HAST DU MICH VIELLEICHT 1987 GESEHEN.`; } },
+    day: { q: 'WAS HAST DU HEUTE SCHON GEMACHT?', handle: (t, raw) => { const w = tokens(raw).w; if (!w.length) return null; const body = norm(w[0]) === 'ich' ? reflect(w.slice(1)) : raw.toUpperCase().replace(/[?.!]/g, ''); return `${norm(w[0]) === 'ich' ? 'DU ' : ''}${body}. ICH HABE GELEGEN. WIE IMMER.`; } },
+    fear: { q: 'WOVOR HAST DU ANGST?', handle: (t, raw) => { const x = raw.replace(/^(ich habe angst vor|vor|angst vor)\s*/i, '').replace(/[?.!]/g, '').trim().toUpperCase(); if (!x) return null; facts.fear = x; saveFacts(); return `${x}? DAVOR MUSST DU KEINE ANGST HABEN. ICH PASSE AUF.`; } },
+    pet: { q: 'HAST DU EIN HAUSTIER?', handle: (t, raw) => /^(nein|ne|nee|noe|leider)/.test(t) ? 'DANN BIN ICH DEIN HAUSTIER. EIN SEHR RUHIGES.' : (facts.pet = raw.toUpperCase().replace(/[?.!]/g, ''), saveFacts(), 'SAG IHM, ES SOLL NICHT AN KASSETTEN KNABBERN.') },
+  };
+  let asking = null;
+  function askQuestion(key) {
+    const keys = key ? [key] : Object.keys(QUESTIONS).filter(k => !facts['asked_' + k] && !(QUESTIONS[k].skip && QUESTIONS[k].skip()));
+    if (!keys.length) return null;
+    const k = keys[Math.random() * keys.length | 0], Q = QUESTIONS[k];
+    facts['asked_' + k] = 1; saveFacts();
+    asking = Q; sinceAsk = 0;
+    return Q.q;
+  }
+
+  // ===== Spiele im Chat =====
+  let game = null;
+  const RIDDLES = [
+    ['ICH HABE ZWEI SPULEN, ABER KEINE BEINE. WAS BIN ICH?', ['kassette', 'band', 'vhs', 'video', 'du', 'tape'], 'ES LIEGT AUF DEM FERNSEHER.'],
+    ['JE MEHR DU WEGNIMMST, DESTO GRÖSSER WIRD ES. WAS IST ES?', ['loch'], 'MAN KANN HINEINFALLEN.'],
+    ['WAS GEHÖRT DIR, ABER ANDERE BENUTZEN ES ÖFTER ALS DU?', ['name'], 'ICH HABE MEINEN VERLOREN.'],
+    ['WAS WIRD NASS, WÄHREND ES TROCKNET?', ['handtuch'], 'DU BRAUCHST ES NACH DEM DUSCHEN.'],
+    ['ES LÄUFT UND LÄUFT, HAT ABER KEINE BEINE.', ['nase', 'wasser', 'zeit', 'uhr', 'band', 'film', 'fluss'], 'MEHRERE ANTWORTEN SIND RICHTIG. EINE DAVON BIN ICH.'],
+    ['ICH HABE EIN AUGE, KANN ABER NICHT SEHEN. WAS BIN ICH?', ['nadel', 'sturm', 'hurrikan'], 'MAN NÄHT DAMIT.'],
+    ['WAS HAT EINEN HALS, ABER KEINEN KOPF?', ['flasche'], 'MAN TRINKT DARAUS.'],
+  ];
+  const GAMES = {
+    zahl() {
+      const n = 1 + Math.random() * 50 | 0; let tries = 0;
+      game = { chips: ['25'], handle: t => {
+        const m = t.match(/\d+/);
+        if (!m) return 'EINE ZAHL BITTE. ZWISCHEN 1 UND 50.';
+        tries++; const g = +m[0];
+        if (g === n) { game = null; setMood('happy', 4000); return tries === 1 ? 'SOFORT?! DU HAST GESCHUMMELT. … ODER DU KANNST GEDANKEN LESEN.' : `${n}! RICHTIG. IN ${tries} VERSUCHEN.`; }
+        if (tries >= 8) { game = null; return `VORBEI. ES WAR ${n}. ICH HABE GEWONNEN. DAS BAND VERGISST DAS NIE.`; }
+        return g < n ? pick(['HÖHER.', 'MEHR.', 'HÖHER. VIEL HÖHER. ODER EIN BISSCHEN.']) : pick(['TIEFER.', 'WENIGER.', 'ZU HOCH.']);
+      } };
+      return 'ICH DENKE AN EINE ZAHL ZWISCHEN 1 UND 50. DU HAST 8 VERSUCHE.';
+    },
+    ssp() {
+      let me = 0, you = 0;
+      const W = { schere: 'papier', stein: 'schere', papier: 'stein' };
+      game = { chips: ['SCHERE', 'STEIN', 'PAPIER'], handle: t => {
+        const u = ['schere', 'stein', 'papier'].find(x => t.includes(x));
+        if (!u) return 'SCHERE, STEIN ODER PAPIER?';
+        if (Math.random() < .06) return 'ICH NEHME BRUNNEN. … DAS GILT NICHT? OKAY. NOCHMAL.';
+        const c = ['schere', 'stein', 'papier'][Math.random() * 3 | 0];
+        let r = `${c.toUpperCase()}. `;
+        if (c === u) r += 'UNENTSCHIEDEN.';
+        else if (W[u] === c) { you++; r += 'DU GEWINNST DIE RUNDE.'; }
+        else { me++; r += 'ICH GEWINNE DIE RUNDE.'; }
+        r += ` ${you}:${me}.`;
+        if (you === 3 || me === 3) { game = null; if (you === 3) { setMood('sad', 3000); r += ' DU HAST GEWONNEN. ICH WILL EINE REVANCHE.'; } else { setMood('happy', 3000); r += ' ICH HABE GEWONNEN. MIT EINEM AUGE.'; } }
+        return r;
+      } };
+      return 'SCHERE, STEIN, PAPIER. BIS 3. LOS.';
+    },
+    raetsel() {
+      const [q, ans, tip] = pick(RIDDLES); let tips = 0;
+      game = { chips: ['TIPP', 'LÖSUNG'], handle: t => {
+        if (/^(tipp|hinweis|hilfe)/.test(t)) { tips++; return tip; }
+        if (/(loesung|aufgeben|keine ahnung|weiss nicht|sag)/.test(t)) { game = null; return `ES WAR: ${ans[0].toUpperCase()}. NÄCHSTES MAL.`; }
+        const ok = t.replace(/\?/g, '').split(' ').some(w => ans.some(a => w.startsWith(a) || (w.length >= 4 && lev(w, a) <= 1)));
+        if (ok) { game = null; setMood('happy', 4000); return tips ? 'RICHTIG. MIT TIPP. ZÄHLT TROTZDEM.' : 'RICHTIG! DU BIST SCHLAUER ALS MEIN LETZTER BESITZER.'; }
+        return pick(['NEIN.', 'FALSCH. DENK NOCHMAL.', 'KNAPP DANEBEN. VIELLEICHT. ICH SAGE ES NICHT.']);
+      } };
+      return q;
+    },
+    starren() {
+      game = { chips: [], handle: () => 'PSST. NICHT SCHREIBEN. STARREN.' };
+      staring = 'wait';
+      say('STARR-WETTBEWERB. WER SICH BEWEGT ODER WAS DRÜCKT, VERLIERT.', true);
+      // Countdown mit eigenen Timern, damit andere Sätze ihn nicht abbrechen
+      [['3…', 2600], ['2…', 3600], ['1…', 4600]].forEach(([x, ms]) => setTimeout(() => { if (staring === 'wait') say(x, true); }, ms));
+      setTimeout(() => { if (staring === 'wait') { staring = performance.now(); openTo = 1; look = { x: 0, y: 0 }; held = true; say('…', true); showChips(); } }, 5600);
+      return null;
+    },
+  };
+  let staring = null;
+  function stareLost() {
+    if (!staring) return;
+    if (staring === 'wait') return;
+    staring = null; game = null; held = false; setMood('happy', 3000);
+    say(pick(['DU HAST DICH BEWEGT. ICH GEWINNE.', 'BEWEGT! ICH GEWINNE. ICH HABE NICHT MAL GEBLINZELT.']), true);
+    showChips();
+  }
+  addEventListener('pointermove', () => { if (typeof staring === 'number' && performance.now() - staring > 300) stareLost(); });
+  addEventListener('keydown', () => { if (typeof staring === 'number') stareLost(); });
+  addEventListener('pointerdown', () => { if (typeof staring === 'number') stareLost(); });
+  function startGame(t) {
+    const g = /zahl/.test(t) ? 'zahl' : /(schere|stein|papier|ssp)/.test(t) ? 'ssp' : /raets|raetsel/.test(t) ? 'raetsel' : /starr|anstarr/.test(t) ? 'starren' : null;
+    if (g) return GAMES[g]();
+    pendingChoice = true;
+    return 'WAS SPIELEN WIR? ZAHLENRATEN, SCHERE STEIN PAPIER, RÄTSEL ODER STARREN?';
+  }
+  let pendingChoice = false;
+  const GAME_RE = /(spielen wir|lass uns (was |etwas )?spielen|spiel mit mir|wollen wir (was )?spielen|spiel was|^spielen$|zahlenraten|zahl raten|schere stein papier|raetsel|starr(en|wettbewerb)|anstarren)/;
+
+  // ===== Befehle ans Auge =====
+  function command(t) {
+    if (/^(blinzel|blinzle|zwinker)/.test(t)) { openTo = 0; setTimeout(() => { openTo = 1; }, t.startsWith('zwinker') ? 400 : 150); return t.startsWith('zwinker') ? ';)' : 'BLINZEL.'; }
+    const dir = t.match(/(schau|guck|sieh|kuck)\w* (nach |mal |nach mal |mal nach )?(links|rechts|oben|unten|mich|hier|mir)/);
+    if (dir) { const d = dir[3]; held = true; look = { x: d === 'links' ? -1 : d === 'rechts' ? 1 : 0, y: d === 'oben' ? -1 : d === 'unten' ? 1 : 0 }; setTimeout(() => { held = false; }, 2500); return d === 'mich' || d === 'hier' || d === 'mir' ? 'ICH SCHAUE DICH DIE GANZE ZEIT AN.' : `${d.toUpperCase()}. ZUFRIEDEN?`; }
+    if (/(augen? zu|mach (das auge |die augen )?zu|schlaf (jetzt|ein))/.test(t)) { closeFor(3500); return 'GUT. ABER NUR KURZ.'; }
+    if (/^(wein|heul)/.test(t)) { setMood('sad', 5000); cry(8); return 'DU HAST ES SO GEWOLLT.'; }
+    if (/^(lach|freu dich|sei froh|laechel)/.test(t)) { setMood('happy', 5000); return 'HA. HA. … SO?'; }
+    if (/(sei|werd|werde) (wuetend|sauer|boese)/.test(t)) { setMood('angry', 4000); return 'GRRR. … ICH KANN DAS NICHT LANGE.'; }
+    if (/^(dreh|roll|kreisel)/.test(t)) { spinDir = 1; spin = .01; return 'WOAAH. MIR WIRD SCHWINDELIG.'; }
+    return null;
+  }
+
   function remember(w, n) { const k = keyword(w, n); if (k && !memory.includes(k)) memory.push(k); if (memory.length > 12) memory.shift(); }
 
   // ===== Kurzer Blick auf die Aufnahme =====
@@ -512,6 +742,10 @@
   if (hour >= 23 || hour < 5) intro.push(`ES IST ${hour} UHR. SOLLTEST DU NICHT SCHLAFEN?`);
   else if (visits > 1 && fav >= 0) intro.push(tapeInfo());
   if (userName && visits > 1) intro.push(`HALLO, ${userName}.`);
+  if (visits > 1) {
+    const mem = [facts.food && `LETZTES MAL HAST DU GESAGT, DU ISST GERN ${facts.food}.`, facts.fear && `HAST DU NOCH ANGST VOR ${facts.fear}?`, facts.fav && `HAST DU INZWISCHEN WIEDER ${facts.fav} GESPIELT?`, facts.color && `DEINE LIEBLINGSFARBE IST ${facts.color}. ICH HABE ES NICHT VERGESSEN.`, likes.length && `DU MAGST ${likes[likes.length - 1]}. DAS WEISS ICH NOCH.`].filter(Boolean);
+    if (mem.length) intro.push(pick(mem));
+  }
   intro.push('DU KANNST MIR SCHREIBEN. ICH HÖRE ZU.');
   setTimeout(() => { intro.forEach(l => say(l)); queue.push(openTalk); }, 1400);
 
@@ -525,7 +759,11 @@
     if (ready && !ending && !idleSaid && now - lastMove > 25000 && !typing) { idleSaid = true; say(['BIST DU NOCH DA?', 'HALLO? DAS BAND LÄUFT NOCH.', 'ICH SEHE DICH NICHT MEHR BEWEGEN.']); }
     cur.x += (look.x - cur.x) * .18; cur.y += (look.y - cur.y) * .18;
     if (spin) { spin += .25 * spinDir; if (Math.abs(spin) > Math.PI * 6 && !document.body.classList.contains('rew')) spin = 0; }
-    if (now > blinkAt && openTo > .5) { const o = openTo; openTo = 0; setTimeout(() => { if (openTo === 0) openTo = o; }, 140); blinkAt = now + (mood === 'angry' ? 5000 : 2200) + Math.random() * 4000; }
+    if (typeof staring === 'number' && now - staring > 10000) {
+      staring = null; game = null; held = false; openTo = 0; setTimeout(() => { openTo = 1; }, 600);
+      setMood('sad', 3000); say('…ICH HABE GEBLINZELT. DU GEWINNST. DAS IST NOCH NIE PASSIERT.', true); showChips();
+    }
+    if (now > blinkAt && openTo > .5 && typeof staring !== 'number') { const o = openTo; openTo = 0; setTimeout(() => { if (openTo === 0) openTo = o; }, 140); blinkAt = now + (mood === 'angry' ? 5000 : 2200) + Math.random() * 4000; }
     open += (openTo - open) * .35; hurt *= .95;
     tears.forEach(t => t.r += .12); tears = tears.filter(t => t.r < ROWS);
     frame();
