@@ -243,6 +243,8 @@
   let ready = false, ending = false, pending = null, asked = new Set(), heard = new Set();
   const norm = s => s.toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9 ?]/g, ' ').replace(/\s+/g, ' ').trim();
   const has = (t, ...w) => w.some(x => new RegExp('(^| )' + x).test(t));
+  // ganzes Wort (für kurze Wörter wie "hi" oder "ja", damit "hinter" oder "jahre" nicht zählen)
+  const hasW = (t, ...w) => w.some(x => new RegExp('(^| )(' + x + ')( |\\?|$)').test(t));
   const CHIPS = ['WER BIST DU?', 'WAS IST AUF DIR DRAUF?', 'WARUM 1987?', 'WAS WEISST DU ÜBER MICH?', 'SOLL ICH DICH ZURÜCKSPULEN?', 'TSCHÜSS'];
   function showChips() {
     chips.innerHTML = '';
@@ -261,7 +263,7 @@
     if (!text) return;
     asked.add(text.toUpperCase());
     const t = norm(text);
-    const out = answer(t);
+    const out = answer(t, text);
     if (out) say(out, true);
     showChips();
   }
@@ -271,12 +273,12 @@
     if (notRewound) s += notRewound === 1 ? ' UND EINE KASSETTE NICHT ZURÜCKGESPULT.' : ` UND ${notRewound} KASSETTEN NICHT ZURÜCKGESPULT. TYPISCH.`;
     return s;
   }
-  function answer(t) {
+  function answer(t, raw) {
     // eine offene Ja/Nein-Frage zuerst
     if (pending) {
       const p = pending;
-      if (has(t, 'ja', 'jo', 'jap', 'yes', 'ok', 'klar', 'gern', 'sicher', 'na gut', 'mach')) { pending = null; return p.yes(); }
-      if (has(t, 'nein', 'ne', 'nee', 'no', 'noe', 'lieber nicht', 'niemals')) { pending = null; return p.no(); }
+      if (hasW(t, 'ja', 'jo', 'jap', 'jaa', 'yes', 'ok', 'okay', 'klar', 'gerne?', 'sicher', 'na gut', 'mach', 'mach schon', 'los', 'ja klar', 'ja bitte')) { pending = null; return p.yes(); }
+      if (hasW(t, 'nein', 'ne', 'nee', 'no', 'noe', 'lieber nicht', 'niemals', 'nope', 'nein danke')) { pending = null; return p.no(); }
       return 'JA ODER NEIN?';
     }
     if (heard.has(t)) return ['DAS HAST DU SCHON GESAGT.', 'ICH HAB DICH SCHON BEIM ERSTEN MAL GEHÖRT.', 'WIEDERHOLUNG. WIE EIN BAND MIT SPRUNG.'];
@@ -285,36 +287,165 @@
       pending = { yes: () => { rewindEnd(); return 'OKAY. HALT DICH FEST.'; }, no: () => { setMood('sad', 5000); cry(4); return 'OH. DANN BLEIBE ICH EBEN AM ENDE STEHEN.'; } };
       return rewound ? 'SCHON WIEDER? DU HAST MICH LETZTES MAL SCHON ZURÜCKGESPULT. … WILLST DU WIRKLICH?' : 'DU WÜRDEST MICH ZURÜCKSPULEN? WIRKLICH?';
     }
-    if (has(t, 'tschuess', 'bye', 'ciao', 'tschau', 'auf wiedersehen', 'bis dann', 'bis spaeter', 'gute nacht', 'ich geh')) { goodbye(); return 'GEH NICHT…'; }
+    if (has(t, 'tschuess', 'bye', 'ciao', 'tschau', 'auf wiedersehen', 'bis dann', 'bis spaeter', 'gute nacht', 'ich geh jetzt', 'ich gehe jetzt', 'ich muss gehen', 'ich muss los')) { goodbye(); return 'GEH NICHT…'; }
     if (has(t, 'hilfe', 'help', 'was kann')) return 'FRAG MICH, WER ICH BIN. ODER WAS AUF MIR DRAUF IST. ODER OB ICH ZURÜCKGESPULT WERDEN WILL.';
-    if (has(t, 'hallo', 'hi', 'hey', 'moin', 'servus', 'guten', 'huhu', 'yo', 'hello')) return visits > 1 ? 'HALLO. SCHON WIEDER DU. ICH FREUE MICH. GLAUBE ICH.' : 'HALLO. ES IST LANGE HER, DASS JEMAND MIT MIR GEREDET HAT.';
-    if (has(t, 'wer bist', 'was bist', 'bist du')) return ['ICH BIN TAPE 00. KEIN ETIKETT. NUR EIN DATUM.', 'EINE VIDEOKASSETTE MIT EINEM AUGE. FRAG NICHT WIESO.'];
-    if (has(t, 'name', 'heisst')) return 'ICH HATTE EINEN NAMEN. ER STAND AUF DEM ETIKETT. DAS ETIKETT IST WEG.';
+    if (hasW(t, 'hallo', 'hi', 'hey', 'moin', 'servus', 'huhu', 'yo', 'hello', 'na') || has(t, 'guten (tag|morgen|abend)')) return visits > 1 ? 'HALLO. SCHON WIEDER DU. ICH FREUE MICH. GLAUBE ICH.' : 'HALLO. ES IST LANGE HER, DASS JEMAND MIT MIR GEREDET HAT.';
+    if (has(t, 'wer bist', 'was bist') || t === 'bist du' || t === 'du?') return ['ICH BIN TAPE 00. KEIN ETIKETT. NUR EIN DATUM.', 'EINE VIDEOKASSETTE MIT EINEM AUGE. FRAG NICHT WIESO.'];
+    if (has(t, 'wie heisst du', 'dein name', 'hast du (einen )?name', 'wie ist dein name')) return 'ICH HATTE EINEN NAMEN. ER STAND AUF DEM ETIKETT. DAS ETIKETT IST WEG.';
     if (has(t, 'warum 1987', '1987', 'datum', 'maerz', '333', '3 33')) return '13. MÄRZ 1987, 03:33 UHR. DA HAT JEMAND AUFNAHME GEDRÜCKT. UND DANN NIE WIEDER STOP.';
     if (has(t, 'was ist auf', 'drauf', 'aufnahme', 'inhalt', 'zeig')) {
       pending = { yes: () => { glimpse(); return 'GUT. NICHT BLINZELN.'; }, no: () => 'KLUGE ENTSCHEIDUNG.' };
       return 'WILLST DU ES WIRKLICH SEHEN?';
     }
-    if (has(t, 'was weisst du', 'ueber mich', 'kennst du mich', 'wer bin ich')) return tapeInfo();
+    if (has(t, 'was weisst du', 'ueber mich', 'wer bin ich') || hasW(t, 'kennst du mich')) return tapeInfo();
     if (has(t, 'klotzwelt', 'pulse', 'solitaire', 'retro', 'lernwerk', 'wichtel', 'arcade', 'nauto', 'abgabe', 'spiel')) return tapeInfo();
     if (has(t, 'regen', 'wetter', 'draussen')) return 'ICH HÖRE IHN AUCH. ES HAT 1987 SCHON GEREGNET. ES HAT NIE AUFGEHÖRT.';
     if (has(t, 'michi')) return 'MICHI HAT MICH GEBAUT. ODER GEFUNDEN. DA BIN ICH MIR NICHT SICHER.';
-    if (has(t, 'uhr', 'zeit', 'spaet')) return `BEI DIR IST ES ${hour} UHR. BEI MIR IST ES IMMER 03:33.`;
+    if (has(t, 'wie spaet', 'uhrzeit', 'wie viel uhr', 'wieviel uhr', 'welche zeit')) return `BEI DIR IST ES ${hour} UHR. BEI MIR IST ES IMMER 03:33.`;
     if (has(t, 'wie gehts', 'wie geht', 'alles gut', 'gehts dir')) return ['MEIN BAND IST AUSGELEIERT. SONST GUT.', 'BESSER, SEIT DU DA BIST.'];
     if (has(t, 'danke')) { setMood('happy', 3000); return 'BITTE. GLAUBE ICH.'; }
-    if (has(t, 'lieb', 'mag dich', 'suess', 'niedlich', 'cool', 'toll', 'schoen')) { setMood('happy', 5000); return ['OH.', 'DAS HAT NOCH NIEMAND ZU MIR GESAGT.', 'ICH WÜRDE ROT WERDEN. ICH BIN SCHON ROT.']; }
-    if (has(t, 'dumm', 'doof', 'bloed', 'haesslich', 'scheiss', 'idiot', 'nervig', 'kacke', 'hasse')) { setMood('angry', 5000); return ['DAS HABE ICH AUFGENOMMEN.', 'PASS AUF, WAS DU SAGST. ICH BIN EIN AUFNAHMEGERÄT.', 'ICH MERKE MIR DAS.']; }
+    if (has(t, 'mag dich', 'liebe dich', 'hab dich lieb', 'du bist (so )?(suess|niedlich|cool|toll|schoen|nett)')) { setMood('happy', 5000); return ['OH.', 'DAS HAT NOCH NIEMAND ZU MIR GESAGT.', 'ICH WÜRDE ROT WERDEN. ICH BIN SCHON ROT.']; }
+    if (has(t, 'dumm', 'doof', 'bloed', 'haesslich', 'scheiss', 'idiot', 'nervig', 'nervst', 'kacke', 'ich hasse dich')) { setMood('angry', 5000); return ['DAS HABE ICH AUFGENOMMEN.', 'PASS AUF, WAS DU SAGST. ICH BIN EIN AUFNAHMEGERÄT.', 'ICH MERKE MIR DAS.']; }
     if (has(t, 'angst', 'gruselig', 'scary', 'creepy', 'unheimlich')) return 'ICH BIN NUR EIN AUGE AUF EINEM BAND. WAS SOLL ICH DIR SCHON TUN?';
     if (has(t, 'auge', 'augen', 'siehst')) return 'ICH SEHE DICH. DURCH DEN BILDSCHIRM. JEDEN PIXEL.';
     if (has(t, 'konami')) return 'OBEN OBEN UNTEN UNTEN. JA, SO HAST DU MICH GEFUNDEN.';
-    if (has(t, 'ja')) return 'WORAUF JA?';
-    if (has(t, 'nein')) return 'NEIN WAS?';
-    if (/^[0-9 ]+$/.test(t)) return 'ZAHLEN. MEIN ZÄHLERSTAND IST STEHEN GEBLIEBEN. BEI 0:00:00.';
-    if (t.length > 50) return 'SO VIEL TEXT. MEIN BAND IST NUR 180 MINUTEN LANG.';
-    return t.endsWith('?')
-      ? ['DARAUF HABE ICH KEINE AUFNAHME.', 'DIESE STELLE IST ÜBERSPIELT.', 'FRAG MICH WAS ANDERES.', '…RAUSCHEN.']
-      : ['HMM.', 'AHA.', 'ERZÄHL MEHR.', 'ICH VERSTEHE NICHT ALLES. DIE TONSPUR IST BESCHÄDIGT.', 'DAS SCHREIBE ICH AUF MEIN BAND.'];
+    if (t === 'ja') return 'WORAUF JA?';
+    if (t === 'nein') return 'NEIN WAS?';
+    return understand(t, raw);
   }
+
+  // ===== Kleine Texterkennung: Themen, Satzmuster, Spiegeln, Gedächtnis =====
+  let userName = store('vhs-tape00-name') || '';
+  let memory = [];          // Wörter, die du früher gesagt hast
+  let likes = [];           // was du magst
+  const pick = a => a[Math.random() * a.length | 0];
+  const STOP = new Set('ich du er sie es wir ihr der die das den dem des ein eine einen einem einer und oder aber nicht nur auch noch schon mal ja nein so wie was wer wo wann warum wieso weil dass mit von zu zum zur auf in im an am bei fuer ist bin bist sind war hast habe hab hat kann kannst will willst mich dich mir dir mein dein meine deine sehr ganz gerade jetzt heute hier da dann doch denn einfach halt eben bitte danke man wenn als ob gibt geht machen mache macht'.split(' '));
+  const REFLECT = { ich: 'DU', mich: 'DICH', mir: 'DIR', mein: 'DEIN', meine: 'DEINE', meinen: 'DEINEN', meinem: 'DEINEM', meiner: 'DEINER', bin: 'BIST', du: 'ICH', dich: 'MICH', dir: 'MIR', dein: 'MEIN', deine: 'MEINE', deinen: 'MEINEN', deinem: 'MEINEM', deiner: 'MEINER', bist: 'BIN', habe: 'HAST', hab: 'HAST', hast: 'HABE', kann: 'KANNST', kannst: 'KANN', will: 'WILLST', willst: 'WILL', war: 'WARST', warst: 'WAR', mag: 'MAGST', magst: 'MAG', muss: 'MUSST', musst: 'MUSS' };
+  // Themen: Stichwort-Anfänge → Antworten (eine wird zufällig gewählt)
+  const TOPICS = [
+    [['hunger', 'essen', 'pizza', 'doener', 'pommes', 'nudel', 'burger', 'schokolade', 'kuchen', 'eis ', 'lecker', 'fruehstueck', 'mittag', 'abendessen'], ['ICH ESSE NUR MAGNETBAND. SCHMECKT NACH ROST.', 'ESSEN… ICH ERINNERE MICH AN EINE WERBUNG FÜR FISCHSTÄBCHEN. 1987.', 'GUTEN APPETIT. KRÜMEL NICHT AUF DIE TASTATUR.']],
+    [['durst', 'trinken', 'cola', 'wasser', 'kaffee', 'tee', 'saft', 'energy'], ['WASSER IST MEIN TODFEIND. DAS BAND QUILLT AUF.', 'TRINK WAS. ABER NICHT ÜBER MIR.']],
+    [['schule', 'lehrer', 'hausaufgabe', 'klausur', 'test ', 'mathe', 'deutsch', 'englisch', 'note', 'zeugnis', 'unterricht', 'abgabe', 'pruefung'], ['SCHULE? DAFÜR GIBT ES LERNWERK. KASSETTE 6.', 'ICH WAR NUR EINMAL IN EINER SCHULE. IM VIDEOREKORDER VOM HAUSMEISTER.', 'FÜR DAS ABGABEGESPRÄCH GIBT ES KASSETTE 8. ICH HELFE DIR NUR MIT RAUSCHEN.']],
+    [['musik', 'song', 'lied', 'singen', 'rap', 'beat', 'band ', 'konzert', 'gitarre', 'spotify'], ['HÖRST DU DAS BRUMMEN? DAS IST MEIN LIEBLINGSLIED.', 'AUF MEINER TONSPUR IST NUR EIN SUMMEN. IMMER DERSELBE TON.', 'FÜR RHYTHMUS GIBT ES PULSE GRID. KASSETTE 3.']],
+    [['minecraft', 'block', 'voxel'], ['KLÖTZE? DAFÜR GIBT ES KLOTZWELT. KASSETTE 1.', 'MINECRAFT KENNE ICH NICHT. ABER KLOTZWELT. DIE LIEGT IM REGAL.']],
+    [['naruto', 'ninja', 'jutsu', 'sharingan'], ['NINJAS? DAFÜR GIBT ES KASSETTE 9. NAUTO-MOD.', 'ICH KANN AUCH EIN JUTSU. ES HEISST RAUSCHEN.']],
+    [['zocken', 'gaming', 'game', 'fortnite', 'roblox', 'konsole', 'playstation', 'xbox', 'nintendo'], ['ICH KENNE NUR DIE SPIELE IM REGAL. NEUN STÜCK. PLUS MICH.', 'ZOCKEN? ICH BIN AUS DER ZEIT VOR DEN KONSOLEN. FAST.']],
+    [['hund', 'katze', 'tier', 'maus', 'vogel', 'hamster', 'pferd', 'fisch'], ['EINE MAUS HAT EINMAL AN MEINEM ETIKETT GENAGT. DESHALB IST ES WEG.', 'TIERE MAG ICH. SOLANGE SIE NICHT AN MIR KNABBERN.']],
+    [['farbe', 'rot', 'blau', 'gruen', 'pink', 'lila', 'gelb', 'schwarz'], ['ICH SEHE NUR ROT. UND MANCHMAL CYAN.', 'MEINE LIEBLINGSFARBE IST BILDRAUSCHEN.']],
+    [['traurig', 'einsam', 'allein', 'weinen', 'schlecht drauf', 'mies'], [() => { setMood('sad', 5000); cry(3); return 'ICH BIN AUCH OFT ALLEIN. HINTER DEM REGAL. ABER JETZT BIST DU JA DA.'; }]],
+    [['muede', 'schlafen', 'schlaf', 'gaehn', 'bett'], ['SCHLAF RUHIG. ICH PASSE AUF.', 'DER LETZTE, DER VOR MIR EINGESCHLAFEN IST, WACHT BIS HEUTE NICHT AUF. … SPASS.']],
+    [['langweilig', 'langeweile', 'boring'], ['LANGWEILIG? ICH LIEGE SEIT 1987 HIER. FRAG MICH WAS.', 'DANN PIKS MICH. ABER NICHT ZU OFT.']],
+    [['gluecklich', 'froh', 'gut drauf', 'super', 'mega', 'freu', 'yay', 'juhu'], [() => { setMood('happy', 4000); return 'DAS FREUT MICH. MEIN BAND LÄUFT GLEICH RUNDER.'; }]],
+    [['wuetend', 'sauer', 'genervt', 'aggro'], ['ICH AUCH, MANCHMAL. MEISTENS WENN MAN MICH PIKST.', 'ATME. ICH RAUSCHE SOLANGE FÜR DICH.']],
+    [['angst', 'fuercht'], ['ICH BIN NUR EIN AUGE AUF EINEM BAND. WAS SOLL ICH DIR SCHON TUN?']],
+    [['mama', 'papa', 'mutter', 'vater', 'bruder', 'schwester', 'familie', 'oma', 'opa', 'eltern'], ['ICH HATTE AUCH FAMILIE. 179 ANDERE KASSETTEN IN EINEM KARTON.', 'GRÜSS SIE VON MIR. ODER BESSER NICHT.']],
+    [['freund', 'kumpel', 'bff', 'crush', 'freundin'], ['FREUNDE SIND GUT. ICH HABE NUR DICH. UND DEN FERNSEHER.', 'ZEIG IHNEN DIE GEHEIMKASSETTE NICHT. ODER DOCH.']],
+    [['geist', 'tot', 'gespenst', 'monster', 'teufel', 'horror', 'zombie'], ['ICH BIN KEIN GEIST. NUR EINE AUFNAHME. DAS IST ETWAS ANDERES. GLAUBE ICH.', 'HORROR? ICH BIN NUR EIN BISSCHEN UNHEIMLICH. NICHT VIEL.']],
+    [['handy', 'smartphone', 'computer', 'laptop', 'internet', 'wlan', 'tiktok', 'youtube', 'instagram', 'discord'], ['EIN HANDY? IST DAS EIN KLEINER FERNSEHER ZUM MITNEHMEN?', 'INTERNET? 1987 HATTEN WIR TELETEXT. SEITE 100.']],
+    [['ki ', 'ki$', 'kuenstliche', 'chatgpt', 'claude', 'roboter', 'bot', 'ai '], ['EINE KI? NEIN. ICH BIN NUR EIN BAND MIT ERINNERUNGEN.', 'ICH BIN KEIN ROBOTER. ICH BIN ANALOG.']],
+    [['geburtstag', 'alter', 'wie alt', 'jahre alt'], [() => `ICH BIN VOM 13.03.1987. ALSO ${new Date().getFullYear() - 1987} JAHRE ALT. FÜR EIN BAND IST DAS URALT.`]],
+    [['witz', 'lustig', 'joke', 'erzaehl was'], ['WARUM HAT DIE KASSETTE GEWEINT? SIE WURDE ÜBERSPIELT.', 'WAS MACHT EIN VIDEOREKORDER IM FITNESSSTUDIO? ER SPULT VOR.', 'KLOPF KLOPF. … ICH KANN NICHT AUFMACHEN. ICH HABE KEINE HÄNDE.']],
+    [['geheim', 'secret', 'versteck'], ['MEIN GEHEIMNIS? DIE LETZTEN DREI MINUTEN AUF MIR SIND LEER. ODER AUCH NICHT.', 'GEHEIMNISSE? ICH BIN EINS.']],
+    [['wochenende', 'ferien', 'urlaub', 'reise', 'strand', 'meer'], ['URLAUB? ICH WAR NOCH NIE AUSSERHALB DES WOHNZIMMERS.', 'NIMM MICH MIT. ICH BIN KLEIN.']],
+    [['sport', 'fussball', 'basketball', 'tor ', 'training', 'fitness'], ['ICH HABE EINMAL EIN FUSSBALLSPIEL AUFGENOMMEN. DANN HAT MICH JEMAND ÜBERSPIELT.']],
+    [['kassette', 'video', 'rekorder', 'fernseher', 'vhs', 'tv '], ['DER REKORDER IST MEIN ZUHAUSE. DAS REGAL IST MEIN VERSTECK.', 'BETAMAX? SAG DAS WORT NICHT.']],
+    [['liebe', 'verliebt', 'herz', 'kuss'], [() => { setMood('happy', 4000); return 'LIEBE… ICH HABE EINMAL EINE HOCHZEIT AUFGENOMMEN. ALLE HABEN GEWEINT. ICH AUCH.'; }]],
+    [['wetter', 'sonne', 'schnee', 'gewitter', 'kalt', 'warm', 'heiss'], ['BEI MIR REGNET ES IMMER. HÖRST DU?']],
+    [['gott', 'universum', 'sinn des lebens', 'leben'], ['DER SINN DES LEBENS? ZURÜCKSPULEN UND NOCHMAL ANSCHAUEN.', '42. ODER 03:33.']],
+  ];
+  function topic(t) {
+    const tt = ' ' + t + ' ';
+    for (const [keys, answers] of TOPICS) {
+      if (keys.some(k => k.endsWith('$') ? new RegExp(' ' + k.slice(0, -1) + '( |\\?)').test(tt) : tt.includes(' ' + k))) {
+        const a = pick(answers);
+        return typeof a === 'function' ? a() : a;
+      }
+    }
+    return null;
+  }
+  // Wörter aus dem Originaltext (mit Umlauten) und ihre normalisierte Form
+  function tokens(raw) {
+    const w = raw.replace(/[.!,;:"'()]+/g, ' ').replace(/\?/g, ' ').trim().split(/\s+/).filter(Boolean);
+    return { w, n: w.map(norm) };
+  }
+  const reflect = ws => ws.map(x => REFLECT[norm(x)] || x.toUpperCase()).join(' ');
+  const keyword = (w, n) => { let best = ''; n.forEach((x, i) => { if (!STOP.has(x) && x.length > 3 && w[i].length > best.length) best = w[i]; }); return best.toUpperCase(); };
+  const starts = (n, ...p) => p.length <= n.length && p.every((x, i) => new RegExp('^(' + x + ')$').test(n[i]));
+  // Tastatur-Gehämmer: keine Vokale, lange Konsonantenketten oder typische Reihen
+  const gibberish = t => { const s = t.replace(/[^a-z]/g, ''); return s.length >= 4 && (!/[aeiouy]/.test(s) || /[^aeiouy]{6,}/.test(s) || /(asdf|qwer|jkl|yxcv|wasd|uiop)/.test(s)); };
+  function withName(s) { return userName && Math.random() < .25 ? s.replace(/\.$/, `, ${userName}.`) : s; }
+
+  function understand(t, raw) {
+    const { w, n } = tokens(raw);
+    const q = /\?\s*$/.test(raw);
+    const rest = k => w.slice(k).join(' ').toUpperCase();
+    const restR = k => reflect(w.slice(k));
+    // Namen merken
+    if (starts(n, 'ich', 'heisse') && w[2] || starts(n, 'mein', 'name', 'ist') && w[3] || starts(n, 'nenn', 'mich') && w[2]) {
+      userName = (w[starts(n, 'mein') ? 3 : 2]).toUpperCase().slice(0, 16);
+      store('vhs-tape00-name', userName);
+      setMood('happy', 3000);
+      return `${userName}. ICH SCHREIBE ES AUF MEIN ETIKETT. ${userName}.`;
+    }
+    if (has(t, 'wie heisse ich', 'weisst du (wie ich heisse|meinen namen)', 'kennst du meinen namen')) return userName ? `DU BIST ${userName}. ICH VERGESSE NICHTS.` : 'DAS HAST DU MIR NOCH NICHT GESAGT.';
+    // Lachen und Smileys
+    if (/(haha|hehe|hihi|lol|xd|lmao|😂|🤣)/i.test(raw)) { setMood('happy', 3000); return pick(['LACH NICHT. … OKAY, EIN BISSCHEN.', 'HA. HA. HA. SO KLINGT MEIN LACHEN AUF BAND.']); }
+    if (/(:\)|:-\)|:d|<3|❤|😊|🙂|😍)/i.test(raw)) { setMood('happy', 3000); return pick(['OH. EIN LÄCHELN. DAS KENNE ICH VON DER WERBUNG.', ':)  … SO RICHTIG?']); }
+    if (/(:\(|:-\(|:'\(|😢|😭|☹)/.test(raw)) { setMood('sad', 4000); return 'NICHT TRAURIG SEIN. SONST WEINE ICH AUCH.'; }
+    if (gibberish(t)) return pick(['DAS KLINGT WIE MEIN BAND, WENN ES SALAT MACHT.', 'BANDSALAT? BEI DIR AUCH?', 'IST DEINE KATZE ÜBER DIE TASTATUR GELAUFEN?']);
+    if (/^[0-9 ]+$/.test(t)) return pick(['ZAHLEN. MEIN ZÄHLERSTAND IST STEHEN GEBLIEBEN. BEI 0:00:00.', `${t.trim()}? MEINE LIEBLINGSZAHL IST 333.`]);
+    if (t.length > 120) return 'SO VIEL TEXT. MEIN BAND IST NUR 180 MINUTEN LANG.';
+    // Alter
+    const age = t.match(/ich bin (\d{1,3})( jahre)?/);
+    if (age) { const a = +age[1], me = new Date().getFullYear() - 1987; return a < me ? `${a}? ICH BIN ${me}. ICH KÖNNTE DEIN ONKEL SEIN. EIN ONKEL AUS PLASTIK.` : `${a}? DANN BIST DU ÄLTER ALS ICH. DAS PASSIERT SELTEN.`; }
+    if (starts(n, 'wie', 'viel|viele') || starts(n, 'wieviel|wieviele')) return `${1 + Math.random() * 333 | 0}. UNGEFÄHR.`;
+    // Themen
+    const tp = topic(t);
+    if (tp) return withName(tp);
+    // Satzmuster über dich
+    let r = null;
+    if (starts(n, 'ich', 'bin') && w[2]) r = pick([`WARUM BIST DU ${rest(2)}?`, `WIE LANGE BIST DU SCHON ${rest(2)}?`, `DU BIST ${rest(2)}. ICH BIN NUR EIN BAND.`]);
+    else if (starts(n, 'ich', 'mag|liebe') && w[2]) { likes.push(rest(2)); r = pick([`WAS MAGST DU AN ${rest(2)}?`, `${rest(2)}… DAS MERKE ICH MIR.`, `ICH MAG RAUSCHEN. DU MAGST ${rest(2)}. JEDEM DAS SEINE.`]); }
+    else if (starts(n, 'ich', 'hasse') && w[2]) r = pick([`WAS HAT ${rest(2)} DIR GETAN?`, `HASS IST EIN STARKES WORT. FÜR ${rest(2)}.`]);
+    else if (starts(n, 'ich', 'habe|hab|hatte') && w[2]) r = pick([`SEIT WANN HAST DU ${restR(2)}?`, `ICH HABE NUR EIN BAND UND EIN AUGE.`]);
+    else if (starts(n, 'ich', 'will|moechte|wuerde gern') && w[2]) r = pick([`WARUM WILLST DU ${restR(2)}?`, `UND WAS PASSIERT, WENN DU ${restR(2)} BEKOMMST?`]);
+    else if (starts(n, 'ich', 'kann') && w[2]) r = `DU KANNST ${restR(2)}? ICH KANN NUR GUCKEN UND RAUSCHEN.`;
+    else if (starts(n, 'ich', 'muss') && w[2]) r = `WER SAGT, DASS DU ${restR(2)} MUSST?`;
+    else if (starts(n, 'ich', 'denke|glaube|finde') && w[2]) r = pick([`WARUM ${n[1] === 'finde' ? 'FINDEST' : n[1] === 'denke' ? 'DENKST' : 'GLAUBST'} DU DAS?`, 'DA BIN ICH MIR NICHT SO SICHER.']);
+    else if (n[0] === 'ich' && w[1]) r = pick([`DU ${restR(1)}… ERZÄHL WEITER.`, `DU ${restR(1)}. DAS NEHME ICH AUF.`]);
+    // Satzmuster über die Kassette
+    else if (starts(n, 'du', 'bist') && w[2]) r = pick([`ICH BIN ALSO ${rest(2)}. DAS SCHREIBE ICH AUF MEIN ETIKETT.`, `${rest(2)}? DAS HAT MIR 1987 AUCH SCHON JEMAND GESAGT.`]);
+    else if (starts(n, 'bist', 'du') && w[2]) r = pick([`VIELLEICHT BIN ICH ${restR(2)}. DAS BAND IST AN DER STELLE UNSCHARF.`, `ICH WAR ${restR(2)}. DAMALS. 1987.`, `NEIN. … ODER DOCH?`]);
+    else if (starts(n, 'kannst', 'du') && w[2]) r = pick([`OB ICH ${restR(2)} KANN? ICH BIN EINE KASSETTE. ICH KANN GUCKEN UND RAUSCHEN.`, `NEIN. ABER ICH KANN SEHR GUT ZUHÖREN.`]);
+    else if (starts(n, 'hast', 'du') && w[2]) r = pick([`OB ICH ${restR(2)} HABE? NUR AUF BAND.`, 'ICH HABE NUR EIN BAND UND EIN AUGE.']);
+    else if (starts(n, 'magst', 'du') && w[2]) r = pick([`${rest(2)}? JA. GLAUBE ICH.`, `NEIN. ${rest(2)} RAUSCHT MIR ZU SEHR.`, `WENN DU ${rest(2)} MAGST, MAG ICH ${rest(2)} AUCH.`]);
+    else if (starts(n, 'willst', 'du')) r = 'ICH WILL NUR, DASS JEMAND MICH ZURÜCKSPULT.';
+    else if (starts(n, 'kennst', 'du') && w[2]) r = pick([`${rest(2)}? NEIN. 1987 KANNTE DAS NOCH NIEMAND.`, `ICH KENNE NUR DAS REGAL, DEN FERNSEHER UND DICH.`]);
+    else if (starts(n, 'du') && w[1]) r = pick([`ICH ${restR(1)}? MEINST DU WIRKLICH?`, 'REDEN WIR ÜBER MICH ODER ÜBER DICH?']);
+    // W-Fragen
+    else if (starts(n, 'wo')) r = pick(['HINTER DEM REGAL. IMMER HINTER DEM REGAL.', 'IRGENDWO ZWISCHEN SPUR 1 UND SPUR 2.']);
+    else if (starts(n, 'wann')) r = pick(['UM 03:33 UHR. ES IST IMMER 03:33 UHR.', 'NACH DEM NÄCHSTEN ZURÜCKSPULEN.']);
+    else if (starts(n, 'warum|wieso|weshalb')) r = pick(['WARUM NICHT?', 'WEIL JEMAND AUFNAHME GEDRÜCKT HAT. UND NIE STOP.', 'DAS STEHT AUF DEM TEIL DES BANDES, DER GERISSEN IST.']);
+    else if (starts(n, 'wie', 'viel|viele') || starts(n, 'wieviel')) r = `${1 + Math.random() * 333 | 0}. UNGEFÄHR.`;
+    else if (starts(n, 'wie')) r = pick(['LANGSAM. WIE EIN BAND BEIM ZURÜCKSPULEN.', 'MIT VIEL RAUSCHEN.']);
+    else if (starts(n, 'was', 'ist|sind') && w[2]) r = `${rest(2)}? DAS GAB ES 1987 NOCH NICHT. ODER ICH HABE ES VERPASST.`;
+    else if (starts(n, 'wer')) r = pick(['NIEMAND. ODER DER, DER VOR DEM FERNSEHER EINGESCHLAFEN IST.', 'DU. ES IST IMMER DU.']);
+    else if (starts(n, 'welche|welcher|welches')) r = pick(['DIE MIT DEM ROTEN ETIKETT.', 'DIE DRITTE VON LINKS.']);
+    else if (starts(n, 'was')) r = pick(['DAS WEISS NUR DAS BAND.', 'ETWAS, DAS MAN NICHT ÜBERSPIELEN KANN.']);
+    if (r) { remember(w, n); return withName(r); }
+    // nichts erkannt: an ein Wort hängen oder an früher erinnern
+    const k = keyword(w, n);
+    const prev = memory.length && Math.random() < .35 ? memory[Math.random() * memory.length | 0] : '';
+    remember(w, n);
+    if (prev && prev !== k) return `DU HAST VORHIN „${prev}“ GESAGT. DARAN DENKE ICH NOCH.`;
+    if (likes.length && Math.random() < .25) return `REDEN WIR LIEBER ÜBER ${pick(likes)}. DAS MAGST DU DOCH.`;
+    if (k && w.length === 1) return pick([`${k}? … ${k}. DAS WORT HÖRE ICH ZUM ERSTEN MAL.`, `${k}. KLINGT NACH DER ZUKUNFT.`]);
+    if (k) return pick([`${k}? ERZÄHL MIR MEHR ÜBER ${k}.`, `WAS HAT ${k} MIT MIR ZU TUN?`, `${k}… DAS SPEICHERE ICH AUF SPUR 2.`]);
+    return q
+      ? pick(['DARAUF HABE ICH KEINE AUFNAHME.', 'DIESE STELLE IST ÜBERSPIELT.', 'FRAG MICH WAS ANDERES.', '…RAUSCHEN.'])
+      : pick(['HMM.', 'AHA.', 'ERZÄHL MEHR.', 'ICH VERSTEHE NICHT ALLES. DIE TONSPUR IST BESCHÄDIGT.']);
+  }
+  function remember(w, n) { const k = keyword(w, n); if (k && !memory.includes(k)) memory.push(k); if (memory.length > 12) memory.shift(); }
 
   // ===== Kurzer Blick auf die Aufnahme =====
   const ROOM = [
@@ -380,6 +511,7 @@
   else intro.push('DU BIST ZURÜCK.', `ZUM ${visits}. MAL. ICH ZÄHLE MIT.`);
   if (hour >= 23 || hour < 5) intro.push(`ES IST ${hour} UHR. SOLLTEST DU NICHT SCHLAFEN?`);
   else if (visits > 1 && fav >= 0) intro.push(tapeInfo());
+  if (userName && visits > 1) intro.push(`HALLO, ${userName}.`);
   intro.push('DU KANNST MIR SCHREIBEN. ICH HÖRE ZU.');
   setTimeout(() => { intro.forEach(l => say(l)); queue.push(openTalk); }, 1400);
 
