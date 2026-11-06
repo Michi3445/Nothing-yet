@@ -356,6 +356,11 @@
     if (byPlayer && on()) kw('mhits/' + N.wid + '/' + this.owner).push({ m: this.mid, d: r1(dmg), x: r1(sx), z: r1(sz), ts: firebase.database.ServerValue.TIMESTAMP }).catch(() => { });
     return true;
   };
+  // taming a copy: the dog becomes ours, the owner removes theirs; shearing a copy: the owner marks it
+  N.taken = new Set();
+  const mhit = (m, f) => { if (on()) kw('mhits/' + N.wid + '/' + m.owner).push({ m: m.mid, d: 0, f, x: 0, z: 0, ts: firebase.database.ServerValue.TIMESTAMP }).catch(() => { }); };
+  Pets.netTake = m => { const key = m.owner + '/' + m.mid; N.taken.add(key); N.proxies.delete(key); mhit(m, 2); setTimeout(() => N.taken.delete(key), 15000); };
+  Pets.netShear = m => mhit(m, 3);
   // feeding a copy: the owner's computer does the breeding
   const oFeed = Mob.prototype.feed;
   Mob.prototype.feed = function () {
@@ -425,6 +430,7 @@
       if (!MOBDEF[type]) continue;
       const x = +q[1], y = +q[2], z = +q[3], yaw = +q[4], fl = +q[5] | 0, fuse = +q[6] || 0;
       const key = uid + '/' + mid; seen.add(key);
+      if (N.taken.has(key)) continue;   // a dog we just tamed: ours now, the old copy is gone
       let m = N.proxies.get(key);
       if (m && !m.dead && Ents.mobs.indexOf(m) < 0) { N.proxies.delete(key); m = null; }   // dropped for being far away
       if (!m) {
@@ -449,6 +455,7 @@
       m.aim = (fl & 4) ? .5 : 0; if ((fl & 8) && !m.swing) m.swing = 1; m.burn = (fl & 16) ? 1 : 0;
       if ((fl & 2) && m.hurtT <= 0) m.hurtT = .4;
       if (!!(fl & 32) !== !!m.baby) m.setBaby(!!(fl & 32));
+      m.sheared = (fl & 64) ? 1 : 0; m.tamed = (fl & 128) ? 1 : 0; m.sit = (fl & 256) ? 1 : 0;
       if ((fl & 1) && !m.dead) { m.dead = true; m.deathT = 0; G.sfx('death_' + m.type, 1, m.x, m.y, m.z); }
     }
     for (const [key, m] of N.proxies) if (m.owner === uid && !seen.has(key)) { if (!m.dead) { m.dead = true; m.deathT = 9; } N.proxies.delete(key); }
@@ -462,7 +469,8 @@
     for (const [key, m] of N.proxies) {
       if (m.owner !== uid) continue;
       N.proxies.delete(key);
-      if (m.dead) { m.deathT = 9; continue; }
+      // a tamed dog belongs to its player and leaves with them
+      if (m.dead || m.tamed) { m.dead = true; m.deathT = 9; continue; }
       if (heir !== N.uid) { N.orphans.set(uid.slice(0, 8) + '~' + m.mid, { m, t: performance.now() }); continue; }
       const c = w && w.chunkAt(m.tx, m.tz);
       if (!c || c.state < 1) { m.dead = true; m.deathT = 9; continue; }
@@ -485,7 +493,7 @@
       // nobody near enough to see it: don't send it (saves a lot of traffic with many players)
       if (!others.some(t => (t.x - m.x) ** 2 + (t.z - m.z) ** 2 < 96 * 96)) continue;
       if (m.dead && m.deathT > .5) continue;
-      const fl = (m.dead ? 1 : 0) | (m.hurtT > 0 ? 2 : 0) | (m.aim > 0 ? 4 : 0) | (m.swing > .5 ? 8 : 0) | (m.burn > 0 ? 16 : 0) | (m.baby ? 32 : 0);
+      const fl = (m.dead ? 1 : 0) | (m.hurtT > 0 ? 2 : 0) | (m.aim > 0 ? 4 : 0) | (m.swing > .5 ? 8 : 0) | (m.burn > 0 ? 16 : 0) | (m.baby ? 32 : 0) | (m.sheared ? 64 : 0) | (m.tamed ? 128 : 0) | (m.sit ? 256 : 0);
       out[m.mid] = m.type + ',' + r1(m.x) + ',' + r1(m.y) + ',' + r1(m.z) + ',' + r1(m.yaw) + ',' + fl + ',' + r1(m.fuse || 0);
     }
     const s = JSON.stringify(out);
@@ -498,7 +506,9 @@
     const v = s.val(); s.ref.remove().catch(() => { });
     if (!v || !on()) return;
     const m = Ents.mobs.find(e => !e.proxy && e.mid === v.m);
-    if (m && v.f) m.feed(); else if (m) m.hurt(+v.d || 1, +v.x, +v.z, false);
+    if (m && v.f === 2) { if (m.type === 'wolf' && !m.tamed) { m.dead = true; m.deathT = 9; } }
+    else if (m && v.f === 3) { if (m.type === 'sheep') m.sheared = 1; }
+    else if (m && v.f) m.feed(); else if (m) m.hurt(+v.d || 1, +v.x, +v.z, false);
   }
   function onPlayerHit(s) {
     const v = s.val(); s.ref.remove().catch(() => { });
