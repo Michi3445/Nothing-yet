@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TAPE 00 · VHS·VISION</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0b0306">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #0b0306; --red: #ff2a44; --text: #ffd6dc; --dim: #8a4a56; --cyan: #2ef2ff; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); }
+  body {
+    color: var(--text); font: 22px/1.3 'VT323', ui-monospace, monospace; letter-spacing: .04em;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  }
+  .vhs { position: fixed; inset: 0; pointer-events: none; z-index: 20; }
+  .vhs canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; opacity: .09; }
+  .vhs .lines { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.3) 0 1px, transparent 1px 3px); }
+  .vhs .vig { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(0,0,0,.8) 100%); }
+  .vhs .roll { position: absolute; left: 0; right: 0; height: 9vh; top: -10vh; background: linear-gradient(180deg, transparent, rgba(255,60,80,.06) 50%, transparent); animation: roll 6s linear infinite; }
+  @keyframes roll { 0% { top: -10vh; } 70%, 100% { top: 110vh; } }
+  body.glitch .wrap { translate: 8px 0; filter: drop-shadow(-4px 0 rgba(255,0,40,.8)) drop-shadow(4px 0 rgba(46,242,255,.5)); }
+
+  .osd { position: fixed; left: 16px; right: 16px; display: flex; justify-content: space-between; gap: 12px; font-size: 20px; color: var(--text); text-shadow: 2px 0 var(--red), -2px 0 var(--cyan); z-index: 5; }
+  .osd.top { top: 12px; }
+  .osd.bot { bottom: 12px; }
+  .rec::before { content: '● '; color: var(--red); animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .back { color: var(--text); text-decoration: none; }
+  .back:hover, .back:focus-visible { color: #fff; text-shadow: 0 0 8px var(--red); outline: none; }
+
+  .wrap { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 0 16px; max-width: 100%; animation: on .9s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes on { 0%, 40% { transform: scaleY(.01); filter: brightness(6); } 75% { transform: scaleY(1.04); filter: brightness(1.6); } 100% { transform: none; filter: none; } }
+  pre#eye {
+    font: clamp(6px, calc((100vw - 32px) / 31), 22px)/1 'Courier New', ui-monospace, monospace;
+    color: var(--red); white-space: pre;
+    text-shadow: 2px 0 rgba(255,0,60,.8), -2px 0 rgba(46,242,255,.35), 0 0 16px rgba(255,40,70,.5);
+  }
+  #say { min-height: 3.2em; text-align: center; font-size: 26px; max-width: 30ch; text-shadow: 2px 0 var(--red), -2px 0 var(--cyan); }
+  #say .cur { animation: blink .6s steps(1) infinite; }
+  #end { opacity: 0; transition: opacity 1s; font-size: 22px; }
+  #end.show { opacity: 1; }
+  #end a { color: var(--cyan); }
+  @media (max-width: 560px) { #say { font-size: 22px; } .osd { font-size: 17px; } }
+</style>
+</head>
+<body>
+  <div class="osd top"><a class="back" href="./" id="back">◀ ZURÜCK</a><span class="rec">TAPE 00 · PLAY</span></div>
+  <main class="wrap">
+    <pre id="eye" aria-hidden="true"></pre>
+    <p id="say" aria-live="polite"></p>
+    <p id="end"><a class="back" href="./">■ STOP · AUSWERFEN</a></p>
+  </main>
+  <div class="osd bot"><span>MAR. 13 1987</span><span id="clock">03:33:00 AM</span></div>
+  <div class="vhs" aria-hidden="true"><canvas id="n" width="160" height="90"></canvas><div class="lines"></div><div class="vig"></div><div class="roll"></div></div>
+<script>
+(() => {
+  // Zurück: echtes Zurück (Regal ohne Intro), wenn man vom Regal kam
+  document.querySelectorAll('.back').forEach(a => a.addEventListener('click', e => {
+    if (document.referrer && new URL(document.referrer).pathname.replace(/index\.html$/, '') === location.pathname.replace(/geheim\.html$/, '') && history.length > 1) { e.preventDefault(); history.back(); }
+  }));
+  addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'Backspace') document.getElementById('back').click(); });
+  try { localStorage.setItem('vhs-secret', '1'); } catch (e) {}
+
+  // ===== Das Auge (aus Textzeichen, folgt Maus oder Finger) =====
+  const COLS = 47, ROWS = 17, CX = (COLS - 1) / 2, CY = (ROWS - 1) / 2;
+  const eyeEl = document.getElementById('eye');
+  let look = { x: 0, y: 0 }, cur = { x: 0, y: 0 }, open = 0, openTo = 1, lastMove = 0, hurt = 0;
+  // liegt ein Zeichen innerhalb der Augenform (zwei Bögen, die sich beim Blinzeln schließen)?
+  function ins(c, r) {
+    const nx = (c - CX) / (COLS / 2), ny = (r - CY) / (ROWS / 2);
+    return Math.abs(nx) < 1 && Math.abs(ny) < (1 - nx * nx) * open;
+  }
+  function frame() {
+    const lines = [];
+    const ix = CX + cur.x * 9, iy = CY + cur.y * 2;
+    for (let r = 0; r < ROWS; r++) {
+      let line = '';
+      for (let c = 0; c < COLS; c++) {
+        const nx = (c - CX) / (COLS / 2), ny = (r - CY) / (ROWS / 2);
+        const lid = (1 - nx * nx) * open;
+        const inside = ins(c, r);
+        const top = !ins(c, r - 1), bot = !ins(c, r + 1), side = !ins(c - 1, r) || !ins(c + 1, r);
+        if (!inside) {
+          // Wimpern über dem Oberlid
+          line += (ins(c, r + 1) && ny < 0 && c % 4 === 1 && open > .3 && Math.abs(nx) < .8) ? (nx < -.15 ? '\\' : nx > .15 ? '/' : '|') : ' ';
+          continue;
+        }
+        if (top || bot || side) { line += side && !top && !bot ? (nx < 0 ? '<' : '>') : top ? '~' : '-'; continue; }
+        const dx = (c - ix) * .5, dy = r - iy, d = Math.sqrt(dx * dx + dy * dy);
+        const pupil = 1.9 + hurt * 1.2;
+        if (d < pupil) line += (Math.abs(dx + .6) < .5 && Math.abs(dy + .9) < .6) ? '°' : '@';
+        else if (d < 3.1) line += '%';
+        else if (d < 4.2) line += '#';
+        else if (d < 4.9) line += 'o';
+        else line += (c + r * 3) % 13 === 0 ? '.' : ' ';
+      }
+      lines.push(line);
+    }
+    eyeEl.textContent = lines.join('\n');
+  }
+  function point(x, y) {
+    const b = eyeEl.getBoundingClientRect();
+    const dx = (x - (b.left + b.width / 2)) / (innerWidth / 2), dy = (y - (b.top + b.height / 2)) / (innerHeight / 2);
+    look = { x: Math.max(-1, Math.min(1, dx * 1.4)), y: Math.max(-1, Math.min(1, dy * 1.4)) };
+    lastMove = performance.now();
+  }
+  addEventListener('pointermove', e => point(e.clientX, e.clientY));
+  addEventListener('pointerdown', e => {
+    point(e.clientX, e.clientY);
+    startSound();
+    // Antippen piekst ins Auge
+    if (e.target.closest('a')) return;
+    hurt = 1; openTo = .15; setTimeout(() => { openTo = 1; }, 260);
+    if (Math.random() < .6) say(['AUA.', 'HEY!', 'NICHT ANFASSEN.', 'DAS IST MEIN AUGE.'][Math.random() * 4 | 0], true);
+  });
+  let blinkAt = performance.now() + 2500;
+  (function loop(now) {
+    // Nach einer Weile ohne Bewegung schaut es sich selbst um
+    if (now - lastMove > 2500) look = { x: Math.sin(now / 1700) * .8, y: Math.sin(now / 2300) * .5 };
+    cur.x += (look.x - cur.x) * .18; cur.y += (look.y - cur.y) * .18;
+    if (now > blinkAt) { openTo = 0; setTimeout(() => { openTo = 1; }, 140); blinkAt = now + 2200 + Math.random() * 4000; }
+    open += (openTo - open) * .35; hurt *= .95;
+    frame();
+    requestAnimationFrame(loop);
+  })(performance.now());
+
+  // ===== Text, Buchstabe für Buchstabe =====
+  const sayEl = document.getElementById('say');
+  let typing = null, queue = [];
+  function say(txt, now) {
+    if (now) { clearInterval(typing); typing = null; queue = []; }
+    queue.push(txt);
+    if (!typing) next();
+  }
+  function next() {
+    const txt = queue.shift();
+    if (txt === undefined) { typing = null; return; }
+    let i = 0;
+    typing = setInterval(() => {
+      sayEl.innerHTML = '';
+      sayEl.append(txt.slice(0, ++i));
+      const c = document.createElement('span'); c.className = 'cur'; c.textContent = '_'; sayEl.append(c);
+      if (i >= txt.length) { clearInterval(typing); typing = setTimeout(next, 2200); }
+    }, 55);
+  }
+  const LINES = [
+    '…HALLO?',
+    'DU HAST MICH GEFUNDEN.',
+    'ICH LIEGE SEIT 1987 HINTER DIESEM REGAL.',
+    'NIEMAND HAT MICH JE ZURÜCKGESPULT.',
+    'IST DA DRAUSSEN IMMER NOCH REGEN?',
+    'DANKE FÜRS ANSCHAUEN. ICH BLEIBE JETZT AUF DEM FERNSEHER LIEGEN.',
+  ];
+  setTimeout(() => LINES.forEach(l => say(l)), 1400);
+  setTimeout(() => document.getElementById('end').classList.add('show'), 1400 + LINES.length * 4800);
+
+  // ===== Uhr läuft rückwärts =====
+  let sec = 3 * 3600 + 33 * 60;
+  setInterval(() => {
+    sec = (sec - 1 + 86400) % 86400;
+    const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, s = sec % 60;
+    document.getElementById('clock').textContent = `${String(h % 12 || 12).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+  }, 1000);
+
+  // ===== Tiefes Brummen, erst nach dem ersten Tippen, Lautstärke und Stumm wie auf dem Regal =====
+  let ctx = null;
+  function startSound() {
+    if (ctx) return;
+    let muted = false, vol = .3;
+    try { muted = localStorage.getItem('vhs-muted') === '1'; const v = parseInt(localStorage.getItem('vhs-vol'), 10); if (v >= 0 && v <= 10) vol = v / 10; } catch (e) {}
+    if (muted || !vol) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    ctx = new AC();
+    const out = ctx.createGain(); out.gain.setValueAtTime(.0001, ctx.currentTime); out.gain.exponentialRampToValueAtTime(vol * .5, ctx.currentTime + 3); out.connect(ctx.destination);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 260; lp.connect(out);
+    [[41, .3], [43.2, .3], [82, .1]].forEach(([f, v]) => { const o = ctx.createOscillator(), gg = ctx.createGain(); o.type = 'sawtooth'; o.frequency.value = f; gg.gain.value = v; o.connect(gg); gg.connect(lp); o.start(); });
+  }
+  addEventListener('keydown', startSound);
+
+  // ===== Rauschen + Glitches =====
+  const c = document.getElementById('n'), x = c.getContext('2d'), im = x.createImageData(160, 90);
+  let f = 0;
+  (function loop() {
+    if (f++ % 3 === 0) { const d = im.data; for (let i = 0; i < d.length; i += 4) { const v = Math.random() * 255 | 0; d[i] = v; d[i + 1] = v * .5; d[i + 2] = v * .55; d[i + 3] = 255; } x.putImageData(im, 0, 0); }
+    requestAnimationFrame(loop);
+  })();
+  (function g() { setTimeout(() => { document.body.classList.add('glitch'); setTimeout(() => document.body.classList.remove('glitch'), 80 + Math.random() * 100); g(); }, 1800 + Math.random() * 3000); })();
+})();
+</script>
+</body>
+</html>
