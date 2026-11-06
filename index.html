@@ -356,28 +356,28 @@
   // ================= Daten =================
   // NEUE KASSETTE: einfach unten in TAPES anhängen (Reihenfolge = Kanalnummer CH 01, CH 02, ...).
   //   box: 'retro'      → liegt in dieser Sammelbox (Boxen stehen weiter unten in BOXES, max. 8 Kassetten pro Box)
-  //   lose: true        → liegt irgendwo lose herum, schief auf einem Stapel im Regal oder auf dem Boden
-  //   lose: 'boden'     → liegt auf dem Boden,   lose: 'regal' → liegt schief oben auf einem Stapel im Regal
+  //   lose: true        → liegt irgendwo lose herum: auf dem Fernseher, auf dem Boden oder schief auf einem Stapel im Regal
+  //   lose: 'fernseher' / 'boden' / 'regal' → liegt genau dort
   // Ist im Regal kein Platz mehr, landet der Rest automatisch lose auf dem Boden.
   // Vorschaubild: previews/<name der html-datei>.jpg
   const TAPES = [
     { name: 'KLOTZWELT',      tag: 'VOXEL · SURVIVAL',      url: 'games/klotzwelt.html',      desc: 'Eigene Klötzchenwelt mit Überleben- und Kreativmodus, Crafting, Monstern und Wetter.' },
-    { name: 'ASCII ARCADE',   tag: '5 RETRO-SPIELE',        url: 'games/ascii-arcade.html',   desc: 'Doom, Pong, Tetris, Pacman und Nachtschicht, alles aus Textzeichen.', box: 'retro' },
-    { name: 'PULSE GRID',     tag: 'RHYTHMUS',              url: 'games/pulse-grid.html',     desc: 'Triff die Noten im 3×3-Raster. Eigene Songs laden, Maps importieren, Mods an.', lose: 'regal' },
-    { name: 'SOLITAIRE',      tag: 'KARTEN',                url: 'games/solitaire.html',      desc: 'Klassisches Klondike im Retro-Fenster. Doppelklick legt Karten ab.', box: 'retro' },
-    { name: 'RETRO 98',       tag: 'DESKTOP',               url: 'games/retro98.html',        desc: 'Ein ganzer Retro-Desktop mit Startmenü, Paint, Minesweeper und mehr.', box: 'retro' },
-    { name: 'LERNWERK',       tag: 'SCHULE',                url: 'games/lernwerk.html',       desc: 'Aufgaben, Noten-Schnitt, Stundenplan, Karteikarten, Formeln und 3D-Labor.', box: 'schule' },
-    { name: 'WICHTEL',        tag: 'PARTY',                 url: 'games/wichtel.html',        desc: 'Sieht aus wie ein Weihnachts-Countdown. Dahinter steckt eine ganze Spielhalle.', lose: 'boden' },
-    { name: 'ABGABE-TRAINER', tag: 'KI · EIGENER API-KEY',  url: 'games/abgabe-trainer.html', desc: 'Übt das Abgabegespräch. Eine KI spielt die Lehrkraft.', box: 'schule' },
+    { name: 'ASCII ARCADE',   tag: '5 RETRO-SPIELE',        url: 'games/ascii-arcade.html',   desc: 'Doom, Pong, Tetris, Pacman und Nachtschicht, alles aus Textzeichen.' },
+    { name: 'PULSE GRID',     tag: 'RHYTHMUS',              url: 'games/pulse-grid.html',     desc: 'Triff die Noten im 3×3-Raster. Eigene Songs laden, Maps importieren, Mods an.' },
+    { name: 'SOLITAIRE',      tag: 'KARTEN',                url: 'games/solitaire.html',      desc: 'Klassisches Klondike im Retro-Fenster. Doppelklick legt Karten ab.' },
+    { name: 'RETRO 98',       tag: 'DESKTOP',               url: 'games/retro98.html',        desc: 'Ein ganzer Retro-Desktop mit Startmenü, Paint, Minesweeper und mehr.' },
+    { name: 'LERNWERK',       tag: 'SCHULE',                url: 'games/lernwerk.html',       desc: 'Aufgaben, Noten-Schnitt, Stundenplan, Karteikarten, Formeln und 3D-Labor.' },
+    { name: 'WICHTEL',        tag: 'PARTY',                 url: 'games/wichtel.html',        desc: 'Sieht aus wie ein Weihnachts-Countdown. Dahinter steckt eine ganze Spielhalle.', lose: 'fernseher' },
+    { name: 'ABGABE-TRAINER', tag: 'KI · EIGENER API-KEY',  url: 'games/abgabe-trainer.html', desc: 'Übt das Abgabegespräch. Eine KI spielt die Lehrkraft.', lose: 'boden' },
     { name: 'NAUTO-MOD',      tag: 'MINECRAFT-MOD',         url: 'nauto-mod.html',            desc: 'Naruto-Mod für Minecraft 1.21.1, portiert von AHZNBs Original.' },
     // Geheimkassette: erscheint erst nach dem Konami-Code oder 5x Tippen auf das VHS-VISION-Schild
     { name: '???',            tag: 'NICHT ABSPIELEN',       url: 'geheim.html', secret: true, desc: 'Lag hinter dem Regal. Kein Etikett, nur ein Datum: 13.03.1987.' },
   ];
   // Sammelboxen: stehen wie eine dicke Kassette im Regal, ein Klick klappt sie auf.
   // color = Farbe vom Klebeband, lose: true geht hier genauso wie bei Kassetten.
+  // Beispiel: { id: 'retro', name: 'RETRO-KISTE', tag: 'SAMMELBOX · PC-KRAM', color: '#2ef2ff', desc: 'Alles, was nach altem Computer aussieht.' },
+  // (gerade keine Boxen in Benutzung, alle Kassetten liegen direkt im Regal oder herum)
   const BOXES = [
-    { id: 'retro',  name: 'RETRO-KISTE', tag: 'SAMMELBOX · PC-KRAM', color: '#2ef2ff', desc: 'Alles, was nach altem Computer aussieht.' },
-    { id: 'schule', name: 'SCHULKRAM',   tag: 'SAMMELBOX · LERNEN',  color: '#39ff6a', desc: 'Werkzeuge für Schule und Abgaben.' },
   ];
   const NT = TAPES.length, SECRET = TAPES.findIndex(t => t.secret);
   // Auswahl-Nummern: 0..NT-1 = Kassette, BOX0+b = geschlossene Box, LID = Deckel einer offenen Box (zurück)
@@ -451,10 +451,11 @@
       const colX = [50, 180, 310], JIT = [[-3, 5, 0], [2, -2, 4], [-5, 3, -3]];
       const slot = (c, r) => ({ x: colX[c] + JIT[c][Math.min(2, r)], y: cab.y + cab.h - 4 - (r + 1) * 17, w: 120, h: 16 });
       // Boden vor dem Regal: Stapel, auf die lose Kassetten fallen (x/y = Mitte)
-      const floor = { piles: [{ x: 84, y: 287 }, { x: 214, y: 292 }, { x: 330, y: 286 }, { x: 420, y: 291 }], w: 120, h: 16, step: 12, max: 2 };
+      const floor = { piles: [{ x: 56, y: 289 }, { x: 424, y: 291 }, { x: 196, y: 293 }, { x: 318, y: 287 }], w: 120, h: 16, step: 12, max: 2 };
       const secretSpot = { x: tv.x + tv.w - 84, y: tv.y - 16, w: 66, h: 14 };
+      const tvTop = { x: tv.x + 14, y: tv.y - 16, w: 80, h: 14, max: 3 };
       const remote = { x: 52, y: shelfY - 5, w: 88 };
-      return { W, H, portrait, tv, bezel, screen, shelfY, cab, slot, cols: 3, rows: 3, floor, secretSpot, remote, fs: 7 };
+      return { W, H, portrait, tv, bezel, screen, shelfY, cab, slot, cols: 3, rows: 3, floor, secretSpot, tvTop, remote, fs: 7 };
     } else {
       const W = 270, H = 520;
       const tv = { x: 22, y: 26, w: 226, h: 184 };
@@ -467,7 +468,8 @@
       const remote = { x: (W - 88) / 2, y: cab.y + cab.h + 18, w: 88 };
       const floor = { piles: [{ x: 76, y: 498 }, { x: 196, y: 503 }], w: 140, h: 21, step: 16, max: 1 };
       const secretSpot = { x: tv.x + tv.w - 88, y: tv.y - 16, w: 66, h: 14 };
-      return { W, H, portrait, tv, bezel, screen, shelfY, cab, slot, cols: 1, rows: 9, floor, secretSpot, remote, fs: 7 };
+      const tvTop = { x: tv.x + 16, y: tv.y - 16, w: 100, h: 14, max: 3 };
+      return { W, H, portrait, tv, bezel, screen, shelfY, cab, slot, cols: 1, rows: 9, floor, secretSpot, tvTop, remote, fs: 7 };
     }
   }
 
@@ -485,32 +487,45 @@
       else if (!seen.has(b)) { seen.add(b); loose.push({ id: BOX0 + b, lose: BOXES[b].lose }); }
     });
     const entries = loose.splice(0);
+    // Regal wie früher Spalte für Spalte füllen, die erste Kassette einer Spalte liegt oben auf dem Stapel
+    const colIt = Array.from({ length: cols }, () => []);
+    let cc = 0;
     for (const e of entries) {
       const s = isBox(e.id) ? 2 : 1;
-      let best = -1;
-      if (!e.lose) for (let c = 0; c < cols; c++) if (hgt[c] + s <= rows && (best < 0 || hgt[c] < hgt[best])) best = c;
-      if (best < 0) { loose.push({ id: e.id, lose: e.lose || 'boden', s }); continue; }
-      const lo = L.slot(best, hgt[best]), hi = L.slot(best, hgt[best] + s - 1);
-      main.push({ id: e.id, x: lo.x, y: hi.y, w: lo.w, h: lo.y + lo.h - hi.y, ang: 0, where: 'cab', c: best, r: hgt[best] + s });
-      hgt[best] += s;
+      if (!e.lose) while (cc < cols && hgt[cc] + s > rows) cc++;
+      if (e.lose || cc >= cols) { loose.push({ id: e.id, lose: e.lose || 'boden', s }); continue; }
+      colIt[cc].push({ id: e.id, s }); hgt[cc] += s;
     }
+    colIt.forEach((list, c) => {
+      let r = hgt[c];
+      for (const { id, s } of list) {
+        r -= s;
+        const lo = L.slot(c, r), hi = L.slot(c, r + s - 1);
+        main.push({ id, x: lo.x, y: hi.y, w: lo.w, h: lo.y + lo.h - hi.y, ang: 0, where: 'cab', c, r: r + s });
+      }
+    });
     // Deckfläche nur bei der obersten Kassette eines Stapels sichtbar
     main.forEach(it => { it.top = L.portrait || it.r === hgt[it.c]; });
 
     const piles = [];
     for (let c = 0; c < cols; c++) if (hgt[c] < rows) piles.push({ kind: 'regal', c, lvl: hgt[c], max: rows });
     L.floor.piles.forEach(p => piles.push({ kind: 'boden', x: p.x, y: p.y, lvl: 0, max: L.floor.max }));
-    const shelfL = [], floorL = [];
+    piles.push({ kind: 'fernseher', lvl: 0, max: L.tvTop.max });
+    const shelfL = [], floorL = [], tvL = [];
     for (const e of loose) {
       const key = isBox(e.id) ? 'BOX ' + BOXES[e.id - BOX0].id : TAPES[e.id].name, hs = hashS(key);
       const rnd = k => ((hs >>> k) & 255) / 255;
-      const want = e.lose === 'regal' || e.lose === 'boden' ? e.lose : null, s = isBox(e.id) ? 2 : 1;
-      const fits = p => (!want || p.kind === want) && p.lvl + (p.kind === 'regal' ? s : 1) <= p.max;
+      const want = ['regal', 'boden', 'fernseher'].includes(e.lose) ? e.lose : null, s = isBox(e.id) ? 2 : 1;
+      const fits = p => (!want || p.kind === want) && !(s > 1 && p.kind === 'fernseher') && p.lvl + (p.kind === 'regal' ? s : 1) <= p.max;
       let cand = piles.filter(fits);
       if (!cand.length) cand = piles.filter(p => p.kind === 'boden' && p.lvl + 1 <= p.max);
       if (!cand.length) { const m = Math.min(...piles.filter(p => p.kind === 'boden').map(p => p.lvl)); cand = piles.filter(p => p.kind === 'boden' && p.lvl === m); }
       const p = cand[hs % cand.length];
-      if (p.kind === 'regal') {
+      if (p.kind === 'fernseher') {
+        const t = L.tvTop;
+        tvL.push({ id: e.id, x: t.x + rnd(3) * 8 + p.lvl * 3, y: t.y - p.lvl * (t.h - 3), w: t.w, h: t.h, ang: 0, where: 'fernseher', top: true });
+        p.lvl++;
+      } else if (p.kind === 'regal') {
         const lo = L.slot(p.c, p.lvl), hi = L.slot(p.c, p.lvl + s - 1);
         const ang = (rnd(9) * 2 - 1) * (L.portrait ? 1.6 : 3.2) * DEG;
         const lift = Math.abs(Math.sin(ang)) * lo.w / 2;
@@ -534,8 +549,8 @@
     });
     // Wo liegt welche Kassette im normalen Regal?
     const where = TAPES.map((t, i) => t.secret ? 'tv' : BOX_OF[i] >= 0 ? 'box' : 'cab');
-    shelfL.concat(floorL).forEach(it => { if (isTape(it.id)) where[it.id] = it.where; });
-    Object.assign(L, { main, shelfL, floorL, boxView, where, secretIt: { id: SECRET, ...L.secretSpot, ang: 0, where: 'tv', top: true } });
+    shelfL.concat(floorL, tvL).forEach(it => { if (isTape(it.id)) where[it.id] = it.where; });
+    Object.assign(L, { main, shelfL, floorL, tvL, boxView, where, secretIt: { id: SECRET, ...L.secretSpot, ang: 0, where: 'tv', top: true } });
   }
 
   // ================= Zeichen-Helfer (alles pixelgenau) =================
@@ -930,7 +945,7 @@
   // Was gerade sichtbar ist, in Malreihenfolge (die ausgewählte Kassette zuletzt, damit sie obenauf liegt)
   function itemGroups(vb) {
     const cabI = vb >= 0 ? L.boxView[vb] : L.main.concat(L.shelfL);
-    const front = L.floorL.concat(secretOn ? [L.secretIt] : []);
+    const front = L.tvL.concat(L.floorL, secretOn ? [L.secretIt] : []);
     const selLast = a => { const k = a.findIndex(it => it.id === sel); return k < 0 ? a : a.filter((_, j) => j !== k).concat(a[k]); };
     return [selLast(cabI), selLast(front)];
   }

@@ -42,9 +42,9 @@ Auf dem Regal stehen die Kassetten. Wer eine auswählt, sieht auf dem Fernseher 
 | 08 | **ABGABE-TRAINER** | Übt das Abgabegespräch, eine KI spielt die Lehrkraft |
 | 09 | **NAUTO-MOD** | Infoseite zur Naruto-Mod für Minecraft 1.21.1 |
 
-Manche Kassetten stecken in **Sammelboxen** (RETRO-KISTE, SCHULKRAM): Klick auf die Box klappt sie auf, `Esc` oder **< ZURÜCK** klappt sie wieder zu. Beim Kanal-Zapping klappt die passende Box von selbst auf. Andere Kassetten liegen lose schief auf einem Stapel oder auf dem Boden.
+Ein paar Kassetten liegen einfach herum: oben auf dem Fernseher oder auf dem Boden neben dem Regal.
 
-**Neue Kassette hinzufügen:** in `index.html` einen Eintrag unten in `TAPES` anhängen. Mit `box: 'retro'` kommt sie in eine Box (neue Boxen in `BOXES`, max. 8 Kassetten pro Box), mit `lose: true` (oder `'boden'` / `'regal'`) liegt sie lose herum. Ist das Regal voll, landet der Rest automatisch auf dem Boden.
+**Neue Kassette hinzufügen:** in `index.html` einen Eintrag unten in `TAPES` anhängen. Mit `lose: true` (oder genau `'fernseher'`, `'boden'`, `'regal'`) liegt sie herum statt im Regal. Ist das Regal voll, landet der Rest automatisch auf dem Boden. Für später gibt es auch Sammelboxen zum Aufklappen (`BOXES`, Kassette mit `box: 'id'`), sind gerade aber nicht in Benutzung.
 
 Die Spiele in `games/` sind Kopien aus [Shittty-ahh-AI-games](https://github.com/Michi3445/Shittty-ahh-AI-games). Ändert sich dort ein Spiel, die Datei hier einfach neu hineinkopieren.
 
@@ -77,8 +77,7 @@ Auf dem Fernseher erscheint dabei eine grüne **VOL**-Anzeige, und die Lautstär
 | Taste | Aktion |
 |---|---|
 | `←` `↑` `→` `↓` | Kassette wählen |
-| `Enter` / Klick | Einlegen und starten, Box aufklappen |
-| `Esc` | Offene Box zuklappen |
+| `Enter` / Klick | Einlegen und starten |
 | `+` / `-` / `M` | Lauter, leiser, stumm |
 | `Bild↑` / `Bild↓` / `1`–`9` | Kanal wechseln |
 | `R` | Kassette zurückspulen |
