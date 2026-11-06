@@ -260,6 +260,37 @@
     100% { transform: translate(0); filter: none; }
   }
 
+  /* Werbepause: kurze Fake-Spots für die eigenen Spiele */
+  .ad { position: absolute; inset: 0; display: none; overflow: hidden; background: #000; }
+  .screen.ad-mode .ad { display: block; }
+  .screen.ad-mode .preview, .screen.ad-mode .p-img, .screen.ad-mode .title { display: none !important; }
+  .ad-bg { position: absolute; inset: -6%; background-size: cover; background-position: center; }
+  .ad-bg.img { filter: saturate(1.5) contrast(1.15) brightness(.48); animation: adpan 6s linear infinite alternate; }
+  .ad-bg.col::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(-45deg, rgba(0,0,0,.2) 0 4cqw, transparent 4cqw 8cqw); background-size: 11.3cqw 11.3cqw; animation: adstripe 1.2s linear infinite; }
+  @keyframes adpan { from { transform: scale(1.05) translateX(-2%); } to { transform: scale(1.15) translateX(2%); } }
+  @keyframes adstripe { to { background-position: 11.3cqw 0; } }
+  .ad-txt { position: absolute; inset: 13% 7% 19%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+    font-size: 10cqw; line-height: .95; letter-spacing: .04em; color: #fff;
+    text-shadow: .5cqw .5cqw 0 #000, .45cqw 0 var(--pink), -.45cqw 0 var(--cyan); }
+  .ad-txt.big { font-size: 15cqw; }
+  .ad-txt.name { font-size: 12cqw; color: #ffd23e; }
+  .ad-txt small { display: block; margin-top: 2cqw; font-size: 4.6cqw; letter-spacing: .14em; color: #ffd23e; text-shadow: .3cqw .3cqw 0 #000; }
+  .ad-txt.name small { color: #fff; }
+  .ad-txt.pop { animation: adpop .4s steps(4) both; }
+  @keyframes adpop { 0% { transform: scale(2.2); opacity: 0; } 50% { transform: scale(.9); opacity: 1; } 100% { transform: scale(1); } }
+  .ad-fine { position: absolute; left: 6%; right: 6%; bottom: 5.5%; font-size: 3.4cqw; line-height: 1; text-align: center; color: rgba(255,255,255,.8); text-shadow: .3cqw .3cqw 0 #000; }
+  .ad-lbl { position: absolute; top: 5%; left: 6%; font-size: 3.8cqw; letter-spacing: .15em; color: var(--green); text-shadow: 0 0 2cqw rgba(57,255,106,.6); }
+  .ad-star { position: absolute; right: 4%; top: 9%; width: 24cqw; height: 24cqw; display: none; align-items: center; justify-content: center; text-align: center;
+    background: #ffd23e; color: #d0263f; font-size: 4.6cqw; line-height: .9;
+    clip-path: polygon(50% 0, 61% 18%, 82% 10%, 80% 32%, 100% 40%, 85% 56%, 96% 76%, 74% 78%, 68% 100%, 50% 86%, 32% 100%, 26% 78%, 4% 76%, 15% 56%, 0 40%, 20% 32%, 18% 10%, 39% 18%);
+    animation: adstar .5s steps(2) infinite; }
+  .ad-star.show { display: flex; }
+  @keyframes adstar { 0%, 100% { transform: rotate(-12deg) scale(1); } 50% { transform: rotate(-8deg) scale(1.08); } }
+  /* Bildschirmschoner: hüpfendes VHS-Logo */
+  .saver { position: absolute; inset: 0; width: 100%; height: 100%; display: none; image-rendering: pixelated; background: #000; }
+  .screen.saver-on .saver { display: block; }
+  .screen.saver-on .preview, .screen.saver-on .p-img, .screen.saver-on .title, .screen.saver-on .ad, .screen.saver-on .content > .osd:not(.vol) { display: none !important; }
+
   .hint.big { font-size: 26px; color: var(--text); bottom: 46%; animation: blink 1.1s steps(1) infinite; text-shadow: 2px 0 var(--pink), -2px 0 var(--cyan); }
   .btns { position: fixed; top: 10px; right: 12px; z-index: 10; display: flex; gap: 8px; }
   .sound {
@@ -332,6 +363,14 @@
           <div class="p-desc" id="pDesc"></div>
           <div class="p-play" id="pPlay"></div>
         </section>
+        <section class="ad" id="ad" aria-live="polite">
+          <div class="ad-bg" id="adBg"></div>
+          <div class="ad-txt" id="adTxt"></div>
+          <div class="ad-star" id="adStar"></div>
+          <div class="ad-fine" id="adFine"></div>
+          <div class="ad-lbl">WERBUNG</div>
+        </section>
+        <canvas class="saver" id="saver"></canvas>
       </div>
       <div class="osd ch" id="chOsd"></div>
       <div class="tracking"></div>
@@ -370,6 +409,7 @@
     { name: 'WICHTEL',        tag: 'PARTY',                 url: 'games/wichtel.html',        desc: 'Sieht aus wie ein Weihnachts-Countdown. Dahinter steckt eine ganze Spielhalle.', lose: 'fernseher' },
     { name: 'ABGABE-TRAINER', tag: 'KI · EIGENER API-KEY',  url: 'games/abgabe-trainer.html', desc: 'Übt das Abgabegespräch. Eine KI spielt die Lehrkraft.', lose: 'boden' },
     { name: 'NAUTO-MOD',      tag: 'MINECRAFT-MOD',         url: 'nauto-mod.html',            desc: 'Naruto-Mod für Minecraft 1.21.1, portiert von AHZNBs Original.' },
+    { name: 'GÄSTEBUCH',      tag: 'BAND FÜR ALLE',         url: 'gaestebuch.html',           desc: 'Eine Kassette für Grüße. Zurückspulen, lesen und selbst etwas draufsprechen.' },
     // Geheimkassette: erscheint erst nach dem Konami-Code oder 5x Tippen auf das VHS-VISION-Schild
     { name: '???',            tag: 'NICHT ABSPIELEN',       url: 'geheim.html', secret: true, desc: 'Lag hinter dem Regal. Kein Etikett, nur ein Datum: 13.03.1987.' },
   ];
@@ -418,7 +458,7 @@
   // Tracking: Knopfstellung 0..1. Jede Kassette hat ihren eigenen Idealpunkt, abgenutzte wandern weiter weg.
   let trk = .5;
   try { const v = parseFloat(localStorage.getItem('vhs-trk')); if (v >= 0 && v <= 1) trk = v; } catch (e) {}
-  const SWEET = [.5, .44, .57, .47, .6, .41, .53, .58, .45, .16];
+  const SWEET = [.5, .44, .57, .47, .6, .41, .53, .58, .45];
   const hashS = s => { let h = 2166136261; for (const ch of s) h = Math.imul(h ^ ch.codePointAt(0), 16777619); return h >>> 0; };
   const sweet = i => {
     if (!isTape(i)) return .5;
@@ -615,7 +655,7 @@
     6:'00110010001000011110100011000101110', 7:'11111000010001000100010000100001000', 8:'01110100011000101110100011000101110',
     9:'01110100011000101111000010001001100', '-':'00000000000000011111000000000000000', '·':'00000000000000000100000000000000000',
     '.':'00000000000000000000000000110001100', '?':'01110100010000100010001000000000100', ' ':'00000000000000000000000000000000000',
-    'Ü':'01010000001000110001100011000101110', '<':'00010001000100010000010000010000010',
+    'Ü':'01010000001000110001100011000101110', 'Ä':'01010000000111010001111111000110001', '<':'00010001000100010000010000010000010',
   };
   function textWidth(str, sp = 1) { return str.length * (5 + sp) - sp; }
   function text(str, x, y, _size, color, align = 'left', spacing = 1) {
@@ -1119,7 +1159,7 @@
     const dt = Math.min(100, now - pLast);
     pLast = now;
     const box = pCan.parentElement;
-    if (!box.classList.contains('has') || !pPic.complete || !pPic.naturalWidth || state !== 'shelf') return;
+    if (!box.classList.contains('has') || !pPic.complete || !pPic.naturalWidth || state !== 'shelf' || saverOn) return;
     const W = pCan.width, H = pCan.height, t = reducedMotion ? 0 : now / 1000;
     const rew = rewinding, pan = rew ? t * 9 : t;
     const w = wear(sel), a = trkAmt();
@@ -1251,6 +1291,8 @@
   }
 
   function powerOff() {
+    if (adOn) endAd(true);
+    if (saverOn) stopSaver();
     clearInterval(faceTimer);
     clearInterval(spinTimer); clearInterval(timer);
     timers.forEach(clearTimeout); timers.length = 0;
@@ -1543,12 +1585,14 @@
     if (h === 'chdown' || h === 'chup') {
       const dir = h === 'chup' ? 1 : -1;
       chBlink = dir; irPulse();
+      if (state === 'ad') return endAd();
       if (state === 'shelf') return zap(dir);
       if (state === 'off') return powerOn();
       if (state === 'title') return enterShelf(false);
       return;
     }
     if (h === 'knob') return;
+    if (state === 'ad' && !(typeof h === 'string' && /^(mute|vdown|vup|seg)/.test(h))) return endAd();
     if (h === 'slot') return rewind();
     if (h === 'logo') logoTap();
     if (h === 'mute') { toggleSound(); return remoteFeedback(); }
@@ -1569,6 +1613,7 @@
     if (e.key === '+' || e.key === '=') return setLevel(level + 1);
     if (e.key === '-') return setLevel(level - 1);
     startMusic();
+    if (state === 'ad') { e.preventDefault(); return endAd(); }
     if (state === 'off') return powerOn();
     if (state === 'title') return enterShelf(false);
     if (state !== 'shelf') return;
@@ -1720,6 +1765,8 @@
     off(t) { tone(t, .2, 500, 70, 'sine', .15); },
     // Pappdeckel: dumpfes Rascheln, beim Zuklappen ein Plopp
     box(t, open) { nz(t, .12, 'bandpass', open ? 900 : 600, 1.2, .35); nz(t + .05, .08, 'lowpass', 400, .7, .4); if (!open) tone(t + .1, .1, 110, 55, 'sine', .35); },
+    // Werbe-Jingle: kurzes Arpeggio aus dem Heimcomputer, dann ein Pling
+    jingle(t) { [523, 659, 784, 1047].forEach((f, k) => tone(t + k * .1, .15, f, f * .98, 'square', .05)); tone(t + .45, .6, 1568, 1550, 'triangle', .08); tone(t + .45, .6, 2093, 2080, 'sine', .03); },
     evil(t) { tone(t, 2.6, 55, 41, 'sawtooth', .1); tone(t, 2.6, 58, 39, 'sawtooth', .1); nz(t, 1.2, 'lowpass', 300, 1, .4); },
   };
   function sfxPlay(name, ...a) {
@@ -1823,10 +1870,12 @@
   }
   const chName = i => 'CH ' + String(chNum(i)).padStart(2, '0');
   const chans = () => secretOn ? [SECRET, ...CHANS] : CHANS;
-  function zapTo(i) {
+  function zapTo(i, noAd) {
     if (rewinding || !TAPES[i] || (TAPES[i].secret && !secretOn)) return;
     if (state === 'title') return enterShelf(false);
     if (state !== 'shelf') return;
+    // zwischen den Kassetten kommt ab und zu eine Werbepause
+    if (!noAd && i !== sel && maybeAd(i)) return;
     screen.classList.add('zap');
     glowKick = performance.now() + 260;
     sfxPlay('zap');
@@ -1953,7 +2002,7 @@
     try { localStorage.setItem('vhs-secret', '1'); } catch (e) {}
     sfxPlay('evil');
     bigGlitch(); setTimeout(bigGlitch, 200); setTimeout(bigGlitch, 420);
-    if (state === 'shelf') setTimeout(() => zapTo(SECRET), 300); else render();
+    if (state === 'shelf') setTimeout(() => zapTo(SECRET, true), 300); else render();
     if (first) {
       hint.textContent = 'EINE KASSETTE IST AUFGETAUCHT…';
       setTimeout(() => { if (state === 'shelf') hint.textContent = shelfHint(); }, 3500);
@@ -1963,6 +2012,184 @@
     if (openBox >= 0) return touch ? 'ANTIPPEN · ZURÜCK = BOX ZU' : '↑↓←→ WÄHLEN · ENTER START · ESC BOX ZU · BILD↑↓ KANAL';
     return touch ? 'ANTIPPEN · WISCHEN = KANAL' : '↑↓←→ WÄHLEN · ENTER START · BILD↑↓ KANAL · R SPULEN · T TRACKING';
   }
+
+  // ================= Werbepause =================
+  // Beim Kanalwechsel läuft ab und zu ein kurzer Fake-Spot für eines der Spiele. Klick oder Taste überspringt ihn.
+  // Neue Werbung: Eintrag mit dem Kassettennamen anlegen. Jeder Spot hat ein paar Bilder,
+  // bg: 'img' = Vorschaubild des Spiels, sonst eine Farbe. Am Ende kommt automatisch Name + Kanal + Preis.
+  const ADS = {
+    'KLOTZWELT':    { fine: 'Monster und Wetter sind im Preis enthalten.', f: [{ t: 'ZU WENIG<br>KLÖTZE<br>IM LEBEN?', bg: '#2a4a1c' }, { t: 'BAUEN!<br>GRABEN!<br>ÜBERLEBEN!', bg: 'img' }] },
+    'ASCII ARCADE': { fine: 'Kann Spuren von Semikolons enthalten.', f: [{ t: 'GRAFIKKARTE<br>ZU TEUER?', bg: '#202020' }, { t: '5 SPIELE<small>AUS 100% ECHTEN BUCHSTABEN</small>', bg: 'img' }] },
+    'PULSE GRID':   { fine: 'Mit Online-Modus. Freunde nicht im Lieferumfang.', f: [{ t: 'DEIN HERZ<br>SCHLÄGT<br>IM TAKT?', bg: '#4a0a34' }, { t: '9 FELDER.<br>1 RHYTHMUS.', bg: 'img' }] },
+    'SOLITAIRE':    { fine: 'Der Chef muss davon nichts wissen.', f: [{ t: 'DAS BÜRO-<br>GEFÜHL FÜR<br>ZUHAUSE', bg: '#0d5a32' }, { t: 'KARTEN!<small>SO VIELE KARTEN</small>', bg: 'img' }] },
+    'RETRO 98':     { fine: 'Bluescreen nur gegen Aufpreis.', f: [{ t: 'IHR PC IST<br>ZU SCHNELL?', bg: '#008080' }, { t: 'JETZT MIT<br>STARTMENÜ!', bg: 'img' }] },
+    'LERNWERK':     { fine: 'Lernen musst du trotzdem selbst.', f: [{ t: 'SCHON WIEDER<br>EINE 5?', bg: '#1c2a6a' }, { t: 'NOTEN-SCHNITT!<br>KARTEIKARTEN!<br>3D-LABOR!', bg: 'img' }] },
+    'WICHTEL':      { fine: 'Mehr wird nicht verraten.', f: [{ t: 'NUR EIN<br>COUNTDOWN…', bg: '#6a0a18' }, { t: '…ODER?', bg: 'img', cls: 'big' }] },
+    'GÄSTEBUCH':    { fine: 'Bitte freundlich draufsprechen.', f: [{ t: 'SIE HABEN<br>WAS ZU<br>SAGEN?', bg: '#3a1c5a' }, { t: 'SPRECHEN SIE<br>ES AUFS BAND!', bg: 'img' }] },
+  };
+  const adEl = { bg: document.getElementById('adBg'), txt: document.getElementById('adTxt'), star: document.getElementById('adStar'), fine: document.getElementById('adFine') };
+  // ?werbung an die Adresse hängen = beim nächsten Kanalwechsel kommt sicher Werbung
+  const AD_FORCE = qs.has('werbung');
+  let adOn = false, adTimers = [], adTarget = -1, lastAdAt = performance.now() - 30000, zapsSinceAd = 0, lastAdName = '';
+  function maybeAd(target) {
+    zapsSinceAd++;
+    if (adOn) return false;
+    const since = performance.now() - lastAdAt;
+    const want = AD_FORCE || (zapsSinceAd >= 4 && since > 60000 && Math.random() < .3) || (zapsSinceAd >= 12 && since > 30000);
+    if (!want) return false;
+    const pool = CHANS.filter(i => ADS[TAPES[i].name] && i !== target && TAPES[i].name !== lastAdName);
+    if (!pool.length) return false;
+    startAd(pool[Math.random() * pool.length | 0], target);
+    return true;
+  }
+  function adFrame(fr, name) {
+    adEl.bg.className = 'ad-bg ' + (fr.bg === 'img' ? 'img' : 'col');
+    adEl.bg.style.background = fr.bg === 'img' ? `center / cover url("${previewOf(name)}")` : fr.bg;
+    adEl.txt.className = 'ad-txt' + (fr.cls ? ' ' + fr.cls : '');
+    adEl.txt.innerHTML = fr.t;   // nur feste Texte von oben, keine Eingaben
+    void adEl.txt.offsetWidth; adEl.txt.classList.add('pop');
+    adEl.star.innerHTML = fr.star || ''; adEl.star.classList.toggle('show', !!fr.star);
+    adEl.fine.textContent = fr.fine || '';
+    screen.classList.add('flash');
+    setTimeout(() => screen.classList.remove('flash'), 90);
+  }
+  function startAd(game, target) {
+    const name = TAPES[game].name, A = ADS[name];
+    adOn = true; state = 'ad'; adTarget = target; lastAdName = name;
+    lastAdAt = performance.now(); zapsSinceAd = 0;
+    const frames = [
+      { t: 'WERBUNG', bg: '#1b1290', cls: 'big', ms: 1100 },
+      ...A.f.map(f => ({ ms: 1700, ...f })),
+      { t: `${name}<small>JETZT IM REGAL · CH ${String(chNum(game)).padStart(2, '0')}</small>`, bg: 'img', cls: 'name', star: 'NUR<br>0,00<br>DM', fine: A.fine, ms: 2600 },
+      { t: 'UND JETZT<br>WEITER IM<br>PROGRAMM', bg: '#1b1290', ms: 1100 },
+    ];
+    screen.classList.add('zap'); sfxPlay('zap');
+    glowKick = performance.now() + 260;
+    chOsd.classList.remove('show');
+    hint.textContent = touch ? 'TIPPEN = WERBUNG ÜBERSPRINGEN' : 'KLICK / TASTE = WERBUNG ÜBERSPRINGEN';
+    let at = 260;
+    adTimers.push(setTimeout(() => {
+      screen.classList.remove('zap'); screen.classList.add('ad-mode');
+      modeEl.textContent = 'WERBUNG';
+      setGlow([255, 214, 150]);
+    }, at));
+    frames.forEach((fr, k) => {
+      adTimers.push(setTimeout(() => { adFrame(fr, name); if (k === 1) sfxPlay('jingle'); }, at));
+      at += fr.ms;
+    });
+    adTimers.push(setTimeout(() => endAd(), at));
+  }
+  function endAd(quiet) {
+    if (!adOn) return;
+    adTimers.forEach(clearTimeout); adTimers = [];
+    adOn = false;
+    screen.classList.remove('ad-mode', 'zap');
+    modeEl.textContent = 'PLAY ▶';
+    if (quiet) return;
+    state = 'shelf';
+    hint.textContent = shelfHint();
+    const t = adTarget;
+    if (t === sel) { sel = -1; }
+    zapTo(t, true);
+  }
+  const previewOf = name => { const t = TAPES.find(x => x.name === name); return 'previews/' + t.url.split('/').pop().replace('.html', '.jpg'); };
+
+  // ================= Bildschirmschoner =================
+  // Nach einer Weile ohne Eingabe hüpft ein VHS-Logo über den Bildschirm und wechselt bei jedem Abprall die Farbe.
+  // Trifft es genau eine Ecke, gibt's eine kleine Feier. ?schoner=5 an die Adresse = schon nach 5 Sekunden.
+  const saverCan = document.getElementById('saver'), svx = saverCan.getContext('2d');
+  const SAVER_IDLE = (qs.has('schoner') ? Math.max(2, parseFloat(qs.get('schoner')) || 45) : 45) * 1000;
+  const SV_COLS = ['#ff2e88', '#2ef2ff', '#39ff6a', '#ffd23e', '#b98cff', '#ff8a2e'];
+  let saverOn = false, idleAt = performance.now(), sv = null, saverWoke = 0, lastMouse = null;
+  // Logo: „VHS" in doppelt großer Pixelschrift, darunter eine Scheibe mit „VISION" (wie bei alten DVD-Spielern)
+  function saverLogo(col) {
+    const c = document.createElement('canvas'), W = 44, H = 26;
+    c.width = W; c.height = H;
+    const x = c.getContext('2d');
+    const glyphs = (str, ox, oy, k, color) => {
+      x.fillStyle = color;
+      for (const ch of str) {
+        const gl = GLYPHS[ch] || GLYPHS[' '];
+        for (let i = 0; i < 35; i++) if (gl[i] === '1') x.fillRect(ox + (i % 5) * k, oy + (i / 5 | 0) * k, k, k);
+        ox += 6 * k;
+      }
+    };
+    glyphs('VHS', (W - (3 * 12 - 2)) >> 1, 0, 2, col);
+    x.fillStyle = col;
+    for (let j = 0; j < 9; j++) { const hw = Math.round(22 * Math.sqrt(Math.max(0, 1 - ((j - 4) / 4.6) ** 2))); x.fillRect(22 - hw, 16 + j, hw * 2, 1); }
+    glyphs('VISION', (W - 35) >> 1, 17, 1, '#000');
+    return c;
+  }
+  function startSaver() {
+    if (saverOn || !L) return;
+    saverOn = true;
+    const s = L.screen;
+    saverCan.width = s.w; saverCan.height = s.h;
+    const k = Math.random() * SV_COLS.length | 0;
+    sv = { x: Math.random() * (s.w - 44), y: Math.random() * (s.h - 26), vx: (Math.random() < .5 ? -1 : 1) * 17, vy: (Math.random() < .5 ? -1 : 1) * 13,
+           k, img: saverLogo(SV_COLS[k]), t: performance.now(), corner: 0, glow: glowRGB.slice() };
+    screen.classList.add('saver-on');
+    setGlow(SV_COLS[k].match(/\w\w/g).map(h => parseInt(h, 16)));
+    requestAnimationFrame(saverStep);
+  }
+  function saverStep(now) {
+    if (!saverOn) return;
+    requestAnimationFrame(saverStep);
+    const dt = Math.min(.1, (now - sv.t) / 1000);
+    if (dt < 1 / 30) return;
+    sv.t = now;
+    const W = saverCan.width, H = saverCan.height, LW = 44, LH = 26;
+    sv.x += sv.vx * dt; sv.y += sv.vy * dt;
+    let hx = false, hy = false;
+    if (sv.x <= 0) { sv.x = 0; sv.vx = Math.abs(sv.vx); hx = true; } else if (sv.x >= W - LW) { sv.x = W - LW; sv.vx = -Math.abs(sv.vx); hx = true; }
+    if (sv.y <= 0) { sv.y = 0; sv.vy = Math.abs(sv.vy); hy = true; } else if (sv.y >= H - LH) { sv.y = H - LH; sv.vy = -Math.abs(sv.vy); hy = true; }
+    if (hx || hy) {
+      let k; do { k = Math.random() * SV_COLS.length | 0; } while (k === sv.k);
+      sv.k = k; sv.img = saverLogo(SV_COLS[k]);
+      setGlow(SV_COLS[k].match(/\w\w/g).map(h => parseInt(h, 16)));
+      // Ecke: beide Wände fast gleichzeitig getroffen
+      const near = (hx && (sv.y < 3 || sv.y > H - LH - 3)) || (hy && (sv.x < 3 || sv.x > W - LW - 3));
+      if (near && now - sv.corner > 2000) {
+        sv.corner = now;
+        osdMsg('ECKE!', 2200); sfxPlay('jingle'); glowKick = now + 600;
+        screen.classList.add('flash'); setTimeout(() => screen.classList.remove('flash'), 140);
+      }
+    }
+    svx.fillStyle = '#000'; svx.fillRect(0, 0, W, H);
+    svx.drawImage(sv.img, Math.round(sv.x), Math.round(sv.y));
+  }
+  function stopSaver() {
+    if (!saverOn) return;
+    saverOn = false;
+    screen.classList.remove('saver-on');
+    idleAt = performance.now();
+    setGlow(sv.glow);
+    if (state === 'shelf' && isTape(sel) && TAPES[sel].url && !TAPES[sel].secret) glowFromPic();
+    screen.classList.add('flash'); setTimeout(() => screen.classList.remove('flash'), 140);
+    sfxPlay('tick');
+  }
+  // Jede Eingabe zählt als Aktivität. Läuft der Schoner, weckt die Eingabe nur auf (startet also nicht aus Versehen ein Spiel).
+  const wake = e => {
+    idleAt = performance.now();
+    if (!saverOn) return;
+    stopSaver(); saverWoke = performance.now();
+    e.stopPropagation(); if (e.type !== 'pointerdown') e.preventDefault();
+  };
+  addEventListener('pointerdown', wake, true);
+  addEventListener('keydown', wake, true);
+  addEventListener('wheel', wake, { capture: true, passive: false });
+  addEventListener('click', e => { if (performance.now() - saverWoke < 900) { saverWoke = 0; e.stopPropagation(); e.preventDefault(); } }, true);
+  addEventListener('mousemove', e => {
+    // nur echte Mausbewegungen, kein Zittern
+    if (lastMouse && Math.abs(e.clientX - lastMouse[0]) + Math.abs(e.clientY - lastMouse[1]) < 8) return;
+    lastMouse = [e.clientX, e.clientY];
+    idleAt = performance.now();
+    if (saverOn) stopSaver();
+  }, true);
+  setInterval(() => {
+    if (saverOn || adOn || rewinding || camMoving || !(state === 'shelf' || state === 'title')) return;
+    if (performance.now() - idleAt > SAVER_IDLE) startSaver();
+  }, 1000);
 
   // ================= Start =================
   (async () => {

@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GÄSTEBUCH · VHS·VISION</title>
+<meta name="description" content="Das Gästebuch von VHS·VISION: eine Kassette, auf die jeder eine kurze Nachricht sprechen kann.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="VHS·VISION">
+<meta property="og:title" content="GÄSTEBUCH · VHS·VISION">
+<meta property="og:description" content="Eine Kassette, auf die jeder eine kurze Nachricht sprechen kann.">
+<meta property="og:image" content="https://michi3445.github.io/VHS-VISION/previews/gaestebuch.jpg">
+<meta property="og:locale" content="de_DE">
+<meta name="theme-color" content="#0b0612">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0612; --panel: #140b1d; --line: #3d2552;
+    --text: #e8ddff; --dim: #8a7fa3;
+    --pink: #ff2e88; --cyan: #2ef2ff; --green: #39ff6a; --yellow: #ffd23e;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html { background: var(--bg); overflow-x: hidden; }
+  body {
+    min-height: 100vh; color: var(--text); background: var(--bg);
+    font: 22px/1.35 'VT323', ui-monospace, monospace; letter-spacing: .03em;
+    overflow-x: hidden;
+  }
+  /* VHS-Schleier wie auf der Startseite */
+  .vhs { position: fixed; inset: 0; pointer-events: none; z-index: 20; }
+  .vhs canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; opacity: .05; }
+  .vhs .lines { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px); }
+  .vhs .vig { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0,0,0,.55) 100%); }
+  .vhs .roll { position: absolute; left: 0; right: 0; height: 8vh; top: -10vh; background: linear-gradient(180deg, transparent, rgba(255,255,255,.04) 50%, transparent); animation: roll 9s linear infinite; }
+  @keyframes roll { 0% { top: -10vh; } 60%, 100% { top: 110vh; } }
+  body.glitch main { translate: 6px 0; filter: drop-shadow(-3px 0 rgba(255,46,136,.7)) drop-shadow(3px 0 rgba(46,242,255,.6)); }
+
+  main { max-width: 820px; margin: 0 auto; padding: 22px 16px 60px; animation: on .7s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes on { 0% { transform: scaleY(.01); filter: brightness(5); } 60% { transform: scaleY(1.03); filter: brightness(1.6); } 100% { transform: none; filter: none; } }
+
+  .osd { display: flex; flex-wrap: wrap; gap: 4px 16px; justify-content: space-between; color: var(--dim); font-size: 18px; margin-bottom: 18px; }
+  .osd .rec { color: var(--pink); }
+  .osd .rec::before { content: '● '; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .back { color: var(--cyan); text-decoration: none; }
+  .back:hover, .back:focus-visible { color: #fff; text-shadow: 0 0 8px var(--cyan); outline: none; }
+
+  pre.logo {
+    font: clamp(5px, calc((100vw - 34px) / 40), 15px)/1.05 ui-monospace, 'Courier New', monospace; color: var(--yellow);
+    text-shadow: 2px 0 rgba(255,46,136,.75), -2px 0 rgba(46,242,255,.55), 0 0 14px rgba(255,210,62,.4);
+    overflow: hidden; white-space: pre; margin: 6px 0 4px;
+  }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .tag { color: var(--cyan); font-size: 24px; margin-top: 4px; }
+  .lead { margin: 14px 0 18px; font-size: 23px; }
+
+  /* Der Bildschirm, auf dem das Band abläuft */
+  .tv { position: relative; border: 3px solid #2f2a3b; border-radius: 18px; background: #050608; padding: 10px;
+        box-shadow: 0 0 0 6px #1d1a25, 0 0 40px rgba(46,242,255,.08) inset; }
+  .scr { position: relative; height: min(56vh, 430px); min-height: 260px; overflow: hidden; border-radius: 10px; background: #07050d; }
+  .roll-in { position: absolute; left: 0; right: 0; top: 0; padding: 0 7%; will-change: transform; }
+  .scr::before { content: ''; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    background: linear-gradient(180deg, #07050d 0, transparent 14%, transparent 86%, #07050d 100%),
+                repeating-linear-gradient(0deg, rgba(0,0,0,.35) 0 1px, transparent 1px 3px); }
+  .scr::after { content: ''; position: absolute; left: 0; right: 0; height: 12%; top: -15%; z-index: 3; pointer-events: none;
+    background: linear-gradient(180deg, transparent, rgba(255,255,255,.06) 50%, transparent); animation: trk 6s linear infinite; }
+  @keyframes trk { 0% { top: -15%; } 70%, 100% { top: 115%; } }
+  .scr .o { position: absolute; z-index: 4; font-size: 20px; color: var(--green); text-shadow: 2px 0 rgba(0,90,30,.9), 0 0 10px rgba(57,255,106,.5); pointer-events: none; }
+  .scr .o.tl { top: 8px; left: 14px; } .scr .o.tr { top: 8px; right: 14px; }
+  .scr .o.bl { bottom: 6px; left: 14px; color: var(--text); text-shadow: 2px 0 var(--pink), -2px 0 var(--cyan); }
+  .scr .o.br { bottom: 6px; right: 14px; color: var(--text); text-shadow: 2px 0 var(--pink), -2px 0 var(--cyan); }
+  .scr.ff .roll-in, .scr.rew .roll-in { filter: blur(.6px) drop-shadow(4px 0 rgba(255,46,136,.5)); }
+  .scr.ff::after, .scr.rew::after { animation-duration: .8s; }
+  .scr.flash .roll-in { filter: brightness(2.2) blur(1px); }
+
+  .e { text-align: center; padding: 22px 0; }
+  .e .n { color: var(--pink); font-size: 30px; letter-spacing: .1em; text-shadow: 2px 0 rgba(46,242,255,.45); overflow-wrap: anywhere; }
+  .e .d { color: var(--dim); font-size: 17px; letter-spacing: .15em; }
+  .e p { font-size: 25px; line-height: 1.2; margin-top: 6px; overflow-wrap: anywhere; white-space: pre-line; }
+  .e.new .n { color: var(--green); }
+  .sep { text-align: center; color: #3d2552; letter-spacing: .6em; }
+  .msg { text-align: center; padding: 40px 0; color: var(--dim); font-size: 26px; }
+  .msg b { display: block; color: var(--text); font-size: 40px; font-weight: normal; text-shadow: 3px 0 var(--pink), -3px 0 var(--cyan); }
+
+  /* Laufwerkstasten */
+  .deck { display: flex; justify-content: center; gap: 8px; margin: 14px 0 0; flex-wrap: wrap; }
+  .deck button, .send { font: 22px 'VT323', monospace; letter-spacing: .1em; color: var(--text); background: #1f1530;
+    border: 2px solid var(--text); border-bottom-width: 4px; padding: 2px 14px 0; cursor: pointer; min-width: 74px; }
+  .deck button:hover, .deck button:focus-visible { border-color: var(--pink); color: #fff; outline: none; }
+  .deck button.on { background: var(--pink); border-color: #fff; color: #fff; }
+
+  h2 { font-weight: normal; font-size: 32px; color: var(--pink); margin: 34px 0 12px; letter-spacing: .1em; }
+  h2::before { content: '● '; color: var(--text); }
+  form { background: var(--panel); border: 2px solid var(--line); padding: 14px 16px 16px; display: grid; gap: 10px; }
+  label { color: var(--cyan); font-size: 20px; letter-spacing: .1em; display: flex; justify-content: space-between; gap: 10px; }
+  label small { color: var(--dim); font-size: 18px; }
+  input, textarea { font: 24px/1.2 'VT323', monospace; color: #fff; background: #0b0612; border: 2px solid var(--line); padding: 6px 10px; width: 100%; resize: vertical; }
+  input:focus, textarea:focus { border-color: var(--pink); outline: none; }
+  textarea { min-height: 90px; }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .send { background: var(--pink); border-color: #fff; color: #fff; font-size: 26px; padding: 3px 22px 1px; }
+  .send:disabled { background: #3a2a48; border-color: #6e6782; color: #8a7fa3; cursor: default; }
+  .send:not(:disabled):hover { box-shadow: 0 0 14px rgba(255,46,136,.6); }
+  #status { color: var(--dim); font-size: 20px; min-height: 1.3em; }
+  #status.ok { color: var(--green); } #status.bad { color: var(--pink); }
+  .note { color: var(--dim); font-size: 18px; margin-top: 10px; }
+
+  footer { margin-top: 40px; color: var(--dim); font-size: 18px; text-align: center; }
+  @media (max-width: 560px) {
+    body { font-size: 20px; }
+    .e .n { font-size: 26px; } .e p { font-size: 23px; }
+    .deck button { min-width: 0; flex: 1; padding: 2px 6px 0; }
+    .scr .o { font-size: 17px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="osd"><a class="back" href="./" id="back">◀ ZURÜCK ZUM REGAL</a><span class="rec" id="osdTape">TAPE 10 · PLAY</span></div>
+
+  <pre class="logo" aria-hidden="true">
+         o o
+  ____    _    ____ _____ _____ ____  _   _  ____ _   _
+ / ___|  / \  / ___|_   _| ____| __ )| | | |/ ___| | | |
+| |  _  / _ \ \___ \ | | |  _| |  _ \| | | | |   | |_| |
+| |_| |/ ___ \ ___) || | | |___| |_) | |_| | |___|  _  |
+ \____/_/   \_\____/ |_| |_____|____/ \___/ \____|_| |_|</pre>
+  <h1 class="sr">GÄSTEBUCH</h1>
+  <div class="tag">EINE KASSETTE FÜR ALLE · BITTE NICHT ÜBERSPIELEN</div>
+  <p class="lead">Auf diesem Band hinterlassen Besucher kurze Grüße. Spul zurück, spul vor, oder sprich selbst etwas drauf.</p>
+
+  <div class="tv">
+    <div class="scr" id="scr" aria-live="polite">
+      <div class="roll-in" id="roll"></div>
+      <div class="o tl" id="oMode">PLAY ▶</div>
+      <div class="o tr" id="oCount">00 GRÜSSE</div>
+      <div class="o bl" id="oTime">SP 0:00:00</div>
+      <div class="o br" id="oDate"></div>
+    </div>
+  </div>
+  <div class="deck" role="group" aria-label="Laufwerk">
+    <button type="button" id="bRew" aria-label="Zurückspulen">◀◀</button>
+    <button type="button" id="bPlay" class="on" aria-label="Abspielen oder Pause">▶ / ❚❚</button>
+    <button type="button" id="bFf" aria-label="Vorspulen">▶▶</button>
+  </div>
+
+  <h2>DRAUFSPRECHEN</h2>
+  <form id="form" autocomplete="off" novalidate>
+    <label for="fName">NAME <small id="cName">16</small></label>
+    <input id="fName" maxlength="16" spellcheck="false" required>
+    <label for="fText">NACHRICHT <small id="cText">140</small></label>
+    <textarea id="fText" maxlength="140" required></textarea>
+    <input class="hp" id="fUrl" tabindex="-1" aria-hidden="true" autocomplete="off" placeholder="Website">
+    <div class="row"><button class="send" id="bSend" type="submit">● REC</button><span id="status" role="status"></span></div>
+  </form>
+  <p class="note">Keine Links, maximal 140 Zeichen, eine Nachricht pro Minute. Was gemein ist, wird wieder gelöscht.</p>
+
+  <footer>■ STOP · <a class="back" href="./">◀ ZURÜCK ZUM REGAL</a></footer>
+</main>
+<div class="vhs" aria-hidden="true"><canvas id="n" width="160" height="90"></canvas><div class="lines"></div><div class="vig"></div><div class="roll"></div></div>
+<script>
+(() => {
+  // Zurück: echtes Zurück (Regal ohne Intro), wenn man vom Regal kam
+  document.querySelectorAll('.back').forEach(a => a.addEventListener('click', e => {
+    if (document.referrer && new URL(document.referrer).pathname.replace(/index\.html$/, '') === location.pathname.replace(/gaestebuch\.html$/, '') && history.length > 1) { e.preventDefault(); history.back(); }
+  }));
+  addEventListener('keydown', e => {
+    if (e.target.closest && e.target.closest('input, textarea')) return;
+    if (e.key === 'Escape' || e.key === 'Backspace') document.getElementById('back').click();
+  });
+  // Rauschen + gelegentlicher Glitch
+  const nc = document.getElementById('n'), nx = nc.getContext('2d'), nim = nx.createImageData(160, 90);
+  let nf = 0;
+  (function loop() {
+    if (nf++ % 3 === 0) { const d = nim.data; for (let i = 0; i < d.length; i += 4) { const v = Math.random() * 255 | 0; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; } nx.putImageData(nim, 0, 0); }
+    requestAnimationFrame(loop);
+  })();
+  (function gl() { setTimeout(() => { document.body.classList.add('glitch'); setTimeout(() => document.body.classList.remove('glitch'), 90 + Math.random() * 80); gl(); }, 3500 + Math.random() * 4000); })();
+
+  // ================= Das Band =================
+  const $ = id => document.getElementById(id);
+  const scr = $('scr'), roll = $('roll');
+  const MAXN = 16, MAXT = 140, COOLDOWN = 60000;
+  let entries = [], myKeys = new Set(), loaded = false, problem = '';
+  const pad = n => String(n).padStart(2, '0');
+  const fmtDate = ts => { const d = new Date(ts); return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} · ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+  const M = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  const today = new Date();
+  $('oDate').textContent = `${M[today.getMonth()]}. ${pad(today.getDate())} ${today.getFullYear()}`;
+
+  function render() {
+    roll.textContent = '';
+    const add = (cls, html) => { const d = document.createElement('div'); d.className = cls; if (html) d.innerHTML = html; roll.appendChild(d); return d; };
+    if (problem) { add('msg', `<b>KEIN SIGNAL</b>${problem}`); }
+    else if (!loaded) { add('msg', '<b>LADE BAND…</b>Einen Moment.'); }
+    else if (!entries.length) { add('msg', '<b>NOCH LEER</b>Sei die erste Stimme auf diesem Band.'); }
+    else {
+      add('msg', '<b>GÄSTEBUCH</b>▶ PLAY');
+      entries.forEach((m, k) => {
+        if (k) add('sep').textContent = '· · ·';
+        const e = add('e' + (myKeys.has(m.k) ? ' new' : ''));
+        const n = document.createElement('div'); n.className = 'n'; n.textContent = m.n;
+        const d = document.createElement('div'); d.className = 'd'; d.textContent = fmtDate(m.ts);
+        const p = document.createElement('p'); p.textContent = m.t;
+        e.append(n, d, p);
+      });
+      add('msg', '■ ENDE DES BANDES<br>ZURÜCKSPULEN NICHT VERGESSEN');
+    }
+    $('oCount').textContent = `${pad(Math.min(99, entries.length))} ${entries.length === 1 ? 'GRUSS' : 'GRÜSSE'}`;
+  }
+
+  // Laufwerk: PLAY läuft langsam nach oben wie ein Abspann, ◀◀ / ▶▶ spulen schnell
+  const SPEED = { play: 26, pause: 0, ff: 260, rew: -260 };
+  let mode = 'play', pos = 0, last = performance.now(), held = false;
+  function setMode(m) {
+    mode = m;
+    scr.classList.toggle('ff', m === 'ff'); scr.classList.toggle('rew', m === 'rew');
+    $('oMode').textContent = { play: 'PLAY ▶', pause: 'PAUSE ❚❚', ff: '▶▶ FF', rew: '◀◀ REW' }[m];
+    $('osdTape').textContent = 'TAPE 10 · ' + { play: 'PLAY', pause: 'PAUSE', ff: 'FF', rew: 'REW' }[m];
+    $('bPlay').classList.toggle('on', m === 'play'); $('bFf').classList.toggle('on', m === 'ff'); $('bRew').classList.toggle('on', m === 'rew');
+  }
+  (function tick(now) {
+    const dt = Math.min(100, now - last); last = now;
+    const H = scr.clientHeight, C = roll.offsetHeight;
+    if (!held) pos += SPEED[mode] * dt / 1000;
+    // am Ende von vorn, beim Zurückspulen am Anfang stoppen
+    if (pos > C) pos = -H;
+    if (pos < -H * .6) { pos = -H * .6; if (mode === 'rew') { setMode('play'); flash(); } }
+    roll.style.transform = `translateY(${Math.round(-pos)}px)`;
+    const s = Math.max(0, (pos + H * .6) / SPEED.play) | 0;
+    $('oTime').textContent = `SP ${Math.floor(s / 3600)}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
+    requestAnimationFrame(tick);
+  })(last);
+  pos = -scr.clientHeight * .3;
+  function flash() { scr.classList.add('flash'); setTimeout(() => scr.classList.remove('flash'), 120); }
+  $('bPlay').addEventListener('click', () => { setMode(mode === 'play' ? 'pause' : 'play'); flash(); });
+  $('bFf').addEventListener('click', () => { setMode(mode === 'ff' ? 'play' : 'ff'); flash(); });
+  $('bRew').addEventListener('click', () => { setMode(mode === 'rew' ? 'play' : 'rew'); flash(); });
+  // Mit dem Finger oder der Maus am Band ziehen, Mausrad spult
+  let drag = null;
+  scr.addEventListener('pointerdown', e => { drag = { y: e.clientY, p: pos }; held = true; try { scr.setPointerCapture(e.pointerId); } catch (_) {} });
+  scr.addEventListener('pointermove', e => { if (drag) pos = drag.p - (e.clientY - drag.y); });
+  const up = () => { drag = null; held = false; };
+  scr.addEventListener('pointerup', up); scr.addEventListener('pointercancel', up);
+  scr.style.touchAction = 'pan-x';
+  scr.addEventListener('wheel', e => { e.preventDefault(); pos += e.deltaY * .6; }, { passive: false });
+
+  // ================= Spamschutz (zusätzlich zu den Firebase-Regeln) =================
+  const opened = Date.now();
+  const BAD = ['hurensohn', 'fotze', 'wichser', 'missgeburt', 'schlampe', 'nutte', 'spast', 'schwuchtel', 'nigg', 'negger', 'kanake', 'heil hitler', 'sieg heil', 'hitler', 'nazi', 'fick', 'fuck', 'bitch', 'cunt', 'retard', 'faggot', 'porn', 'porno', 'casino', 'crypto', 'bitcoin', 'viagra'];
+  const LINK = /(https?:|www\.|\b[a-z0-9-]+\.(com|de|net|org|ru|io|gg|xyz|me|tk|ly|co|info|biz)\b|discord\.gg)/i;
+  const clean = s => s.normalize('NFC').replace(/[\u0000-\u0009\u000b-\u001f\u007f​-‏‪-‮⁦-⁩]/g, '')
+    .replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').replace(/(.)\1{5,}/gu, '$1$1$1$1$1').trim();
+  const flat = s => s.toLowerCase().replace(/[0@]/g, 'o').replace(/[1!|]/g, 'i').replace(/3/g, 'e').replace(/4/g, 'a').replace(/5|\$/g, 's').replace(/[^a-zäöüß ]/g, '');
+  const rude = s => { const f = flat(s), g = f.replace(/ /g, ''); return BAD.some(w => f.includes(w) || g.includes(w.replace(/ /g, ''))); };
+  const lastSent = () => { try { return +localStorage.getItem('vhs-gb-last') || 0; } catch (e) { return 0; } };
+  try { $('fName').value = localStorage.getItem('vhs-gb-name') || ''; } catch (e) {}
+
+  const status = (t, cls = '') => { const s = $('status'); s.textContent = t; s.className = cls; };
+  const counters = () => { $('cName').textContent = MAXN - $('fName').value.length; $('cText').textContent = MAXT - $('fText').value.length; };
+  $('fName').addEventListener('input', counters); $('fText').addEventListener('input', counters); counters();
+  // Enter schickt ab, Shift+Enter macht eine neue Zeile
+  $('fText').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('form').requestSubmit(); } });
+
+  let coolT = 0;
+  function cooldown() {
+    clearInterval(coolT);
+    const left = () => Math.ceil((lastSent() + COOLDOWN - Date.now()) / 1000);
+    const step = () => {
+      const l = left();
+      if (l > 0) { $('bSend').disabled = true; $('bSend').textContent = `● ${l} S`; }
+      else { clearInterval(coolT); $('bSend').disabled = false; $('bSend').textContent = '● REC'; }
+    };
+    step(); coolT = setInterval(step, 500);
+  }
+  if (lastSent() + COOLDOWN > Date.now()) cooldown();
+
+  // ================= Firebase =================
+  const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
+  const DEMO = new URLSearchParams(location.search).has('demo');
+  const loadScript = src => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Skript ' + src)); document.head.appendChild(s); });
+  let fbReady = null, db = null, auth = null;
+  function fb() {
+    return fbReady || (fbReady = (async () => {
+      if (!window.FIREBASE_CONFIG) await loadScript('firebase-config.js');
+      if (!window.firebase) await loadScript(SDK + 'firebase-app-compat.js');
+      await loadScript(SDK + 'firebase-auth-compat.js');
+      await loadScript(SDK + 'firebase-database-compat.js');
+      const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(window.FIREBASE_CONFIG);
+      db = app.database(); auth = app.auth();
+    })());
+  }
+  const errText = e => {
+    const c = String(e && (e.code || e.message) || e);
+    if (/permission|PERMISSION/.test(c)) return 'Das Gästebuch ist noch nicht freigeschaltet (Datenbank-Regeln fehlen) oder du warst zu schnell.';
+    if (/admin-restricted|operation-not-allowed/.test(c)) return 'Anonyme Anmeldung ist in Firebase ausgeschaltet.';
+    if (/network|Skript/.test(c)) return 'Keine Verbindung.';
+    return 'Fehler: ' + c.slice(0, 80);
+  };
+  const byTime = () => entries.sort((a, b) => b.ts - a.ts);
+  function upsert(k, v) {
+    if (!v || typeof v.n !== 'string' || typeof v.t !== 'string' || typeof v.ts !== 'number') return;
+    const i = entries.findIndex(e => e.k === k), m = { k, n: v.n.slice(0, MAXN), t: v.t.slice(0, MAXT), ts: v.ts };
+    if (i >= 0) entries[i] = m; else entries.push(m);
+  }
+
+  async function start() {
+    if (DEMO) {
+      const now = Date.now();
+      [['MICHI', 'Willkommen auf dem Band! Schreib was Nettes rein.', 0], ['PIXELPETE', 'Die Rauschen-Animation beim Einschalten ist so gut, hab den Fernseher 10x an und aus gemacht.', 2], ['LENA', 'Pulse Grid auf Expert ist zu schwer. Bitte leichter machen :D', 5], ['KASSETTENKIND', 'Erst den Konami-Code probiert. Ich sag nix.', 9], ['TOM', 'Grüße aus der 9b!', 26]]
+        .forEach(([n, t, h], k) => upsert('d' + k, { n, t, ts: now - h * 3600e3 - k * 61e3 }));
+      loaded = true; byTime(); render(); return;
+    }
+    try {
+      await fb();
+      const q = db.ref('gb/msgs').orderByChild('ts').limitToLast(100);
+      q.on('child_added', s => { upsert(s.key, s.val()); loaded = true; byTime(); render(); });
+      q.on('child_changed', s => { upsert(s.key, s.val()); byTime(); render(); });
+      q.on('child_removed', s => { entries = entries.filter(e => e.k !== s.key); render(); });
+      q.once('value', () => { loaded = true; render(); }, e => { problem = errText(e); render(); });
+    } catch (e) { problem = errText(e); render(); }
+  }
+  render(); start();
+
+  $('form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const name = clean($('fName').value).replace(/\n/g, ' ').slice(0, MAXN), text = clean($('fText').value).slice(0, MAXT);
+    // Falle für Bots: unsichtbares Feld ausgefüllt oder blitzschnell abgeschickt = so tun, als hätte es geklappt
+    if ($('fUrl').value || Date.now() - opened < 4000) { status('● AUFGENOMMEN', 'ok'); $('fText').value = ''; counters(); return; }
+    if (!name) return status('Bitte einen Namen eintragen.', 'bad');
+    if (text.length < 2) return status('Die Nachricht ist zu kurz.', 'bad');
+    if (LINK.test(text) || LINK.test(name)) return status('Links gehen leider nicht aufs Band.', 'bad');
+    if (rude(name) || rude(text)) return status('Bitte freundlich bleiben.', 'bad');
+    if (lastSent() + COOLDOWN > Date.now()) return cooldown();
+    try { localStorage.setItem('vhs-gb-name', name); } catch (_) {}
+    $('bSend').disabled = true; status('● REC …');
+    try {
+      if (DEMO) { upsert('me' + Date.now(), { n: name, t: text, ts: Date.now() }); myKeys.add(entries[entries.length - 1].k); }
+      else {
+        await fb();
+        if (!auth.currentUser) await auth.signInAnonymously();
+        const uid = auth.currentUser.uid, key = db.ref('gb/msgs').push().key, TS = firebase.database.ServerValue.TIMESTAMP;
+        myKeys.add(key);
+        // Nachricht und Zeitstempel zusammen schreiben: die Regeln lassen nur eine Nachricht pro Minute durch
+        await db.ref('gb').update({ ['msgs/' + key]: { u: uid, n: name, t: text, ts: TS }, ['last/' + uid]: TS });
+      }
+      try { localStorage.setItem('vhs-gb-last', String(Date.now())); } catch (_) {}
+      $('fText').value = ''; counters();
+      status('● AUFGENOMMEN. DANKE!', 'ok');
+      byTime(); render();
+      // zurückspulen, damit man den eigenen Eintrag gleich oben sieht
+      pos = -scr.clientHeight * .3; setMode('play'); flash();
+      cooldown();
+    } catch (err) {
+      $('bSend').disabled = false;
+      status(errText(err), 'bad');
+    }
+  });
+})();
+</script>
+</body>
+</html>
