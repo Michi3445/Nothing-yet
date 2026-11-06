@@ -31,7 +31,7 @@
     --text: #e8ddff;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; }
+  html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
   body {
     background: var(--bg);
     color: var(--text);
@@ -41,6 +41,9 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* Feste Bühne: schneidet die hochskalierte Szene ab, damit die Seite auf dem Handy
+     nicht breiter wird als der Bildschirm (sonst wächst innerWidth mit und alles zoomt zu weit) */
+  .stage { position: fixed; inset: 0; overflow: hidden; touch-action: none; }
   /* Die ganze Szene wird in kleiner Auflösung gezeichnet und hochskaliert */
   .scene {
     position: absolute; left: 0; top: 0;
@@ -269,6 +272,7 @@
       <feBlend in="rg" in2="b2" mode="screen"/>
     </filter>
   </svg>
+  <div class="stage" id="stage">
   <div class="scene" id="scene">
     <canvas id="art" aria-label="Fernseher auf einem Regal mit Videokassetten"></canvas>
 
@@ -310,6 +314,7 @@
       <div class="scanlines"></div>
       <div class="glass"></div>
     </div>
+  </div>
   </div>
 
   <nav id="list" style="position:absolute;left:-9999px" aria-label="Spiele"></nav>
@@ -666,6 +671,10 @@
 
   // ================= Szene einpassen / zoomen =================
   const scene = document.getElementById('scene');
+  // Sichtbare Fläche: von der festen Bühne gemessen, nicht innerWidth (das wächst auf Handys mit überstehendem Inhalt)
+  const stage = document.getElementById('stage');
+  const VW = () => stage.clientWidth || document.documentElement.clientWidth;
+  const VH = () => stage.clientHeight || document.documentElement.clientHeight;
   const screen = document.getElementById('screen');
   const noise = document.getElementById('noise');
   const nctx = noise.getContext('2d');
@@ -678,7 +687,7 @@
   const reducedMotion = false;
 
   function setupLayout() {
-    const portrait = innerHeight > innerWidth * 1.15;
+    const portrait = VH() > VW() * 1.15;
     if (L && L.portrait === portrait) return;
     L = makeLayout(portrait);
     art.width = L.W; art.height = L.H;
@@ -707,16 +716,18 @@
 
   // Kamera: Zoomfaktor k und Bildmitte (cx, cy) in Szenen-Pixeln
   function fitView() {
-    return { k: Math.min(innerWidth / L.W, innerHeight / L.H), cx: L.W / 2, cy: L.H / 2 };
+    // unten Platz für die Hinweiszeile lassen, sonst liegt sie quer auf dem Handy über den Kassetten
+    const pad = 28, k = Math.min(VW() / L.W, (VH() - pad) / L.H);
+    return { k, cx: L.W / 2, cy: L.H / 2 + pad / 2 / k };
   }
   function zoomView() {
     const b = L.bezel;
-    return { k: Math.min(innerHeight * 1.08 / b.h, innerWidth / b.w), cx: b.x + b.w / 2, cy: b.y + b.h / 2 };
+    return { k: Math.min(VH() * 1.08 / b.h, VW() / b.w), cx: b.x + b.w / 2, cy: b.y + b.h / 2 };
   }
   let cam = null, camAnim = 0, camMoving = false;
   function setCam(v) {
     cam = v;
-    scene.style.transform = `translate(${innerWidth / 2 - v.cx * v.k}px, ${innerHeight / 2 - v.cy * v.k}px) scale(${v.k})`;
+    scene.style.transform = `translate(${VW() / 2 - v.cx * v.k}px, ${VH() / 2 - v.cy * v.k}px) scale(${v.k})`;
   }
   // Kamerafahrt: gleichmäßig (Zoomfaktor logarithmisch), sanft an- und auslaufend.
   // Der Fernseher gleitet dabei ruhig an seinen Platz, statt zu springen.
@@ -732,13 +743,13 @@
     const ease = u => (1 - Math.cos(Math.PI * u)) / 2;
     // Bildschirmposition der Fernsehmitte linear führen, damit nichts seitlich wegrutscht
     const b = L.bezel, tx = b.x + b.w / 2, ty = b.y + b.h / 2;
-    const sx0 = innerWidth / 2 + (tx - from.cx) * from.k, sy0 = innerHeight / 2 + (ty - from.cy) * from.k;
-    const sx1 = innerWidth / 2 + (tx - to.cx) * to.k, sy1 = innerHeight / 2 + (ty - to.cy) * to.k;
+    const sx0 = VW() / 2 + (tx - from.cx) * from.k, sy0 = VH() / 2 + (ty - from.cy) * from.k;
+    const sx1 = VW() / 2 + (tx - to.cx) * to.k, sy1 = VH() / 2 + (ty - to.cy) * to.k;
     (function step(now) {
       const u = Math.min(1, (now - start) / dur), e = ease(u);
       const k = from.k * Math.pow(to.k / from.k, e);
       const sx = sx0 + (sx1 - sx0) * e, sy = sy0 + (sy1 - sy0) * e;
-      setCam({ k, cx: tx - (sx - innerWidth / 2) / k, cy: ty - (sy - innerHeight / 2) / k });
+      setCam({ k, cx: tx - (sx - VW() / 2) / k, cy: ty - (sy - VH() / 2) / k });
       if (u < 1) camAnim = requestAnimationFrame(step); else if (done) done();
     })(start);
   }
