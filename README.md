@@ -41,6 +41,7 @@ Auf dem Regal stehen die Kassetten. Wer eine auswählt, sieht auf dem Fernseher 
 | 07 | **WICHTEL** | Sieht aus wie ein Weihnachts-Countdown, dahinter steckt eine Spielhalle |
 | 08 | **ABGABE-TRAINER** | Übt das Abgabegespräch, eine KI spielt die Lehrkraft |
 | 09 | **NAUTO-MOD** | Infoseite zur Naruto-Mod für Minecraft 1.21.1 |
+| 10 | **GÄSTEBUCH** | Besucher sprechen kurze Grüße aufs Band, die wie ein Abspann durchlaufen |
 
 Ein paar Kassetten liegen einfach herum: oben auf dem Fernseher oder auf dem Boden neben dem Regal.
 
@@ -70,6 +71,8 @@ Auf dem Fernseher erscheint dabei eine grüne **VOL**-Anzeige, und die Lautstär
 | **Tracking-Regler** | Drehknopf ganz rechts auf der Fernbedienung (ziehen, Mausrad, antippen) oder `[` / `]`. Falsch eingestellt wird das Bild unscharf, rauscht und rollt durch. `T` oder Doppeltippen = Auto-Tracking |
 | **Raumlicht** | Der Fernseher wirft einen flackernden Schein in der Farbe des Spiels ins Zimmer. Abends und nachts wird das Zimmer dunkler (zum Ausprobieren `?stunde=23` an die Adresse hängen) |
 | **Raumgeräusche** | Regen am Fenster und Röhrenbrummen, dazu Klacken beim Einlegen, Surren beim Spulen und Rauschen beim Umschalten. Startet erst nach dem ersten Klick, Knopf **☂ RAUM** schaltet es aus, Stumm auf der Fernbedienung schaltet alles aus |
+| **Werbepause** | Beim Kanalwechsel kommt ab und zu ein kurzer Retro-Werbespot für eins der Spiele, mit Jingle und „NUR 0,00 DM“. Klick oder Taste überspringt ihn. Zum Ausprobieren `?werbung` an die Adresse hängen |
+| **Bildschirmschoner** | Nach 45 Sekunden ohne Eingabe hüpft ein VHS-Logo über den Bildschirm und wechselt bei jedem Abprall die Farbe (das Raumlicht auch). Trifft es genau eine Ecke: **ECKE!** Die erste Eingabe weckt nur auf. Zum Ausprobieren `?schoner=5` |
 | **???** | Gibt es auch. Mehr wird nicht verraten |
 
 ## ⌨ Steuerung
@@ -99,6 +102,14 @@ Teilt man den Link in Discord oder WhatsApp, erscheint ein eigenes Vorschaubild.
 ![Nauto-moD-Infoseite](docs/bilder/nauto-mod.jpg)
 
 Eine Portierung der **Naruto Mod von [AHZNB](https://github.com/AHZNB/naruto_mod)** von Minecraft 1.12.2 auf **1.21.1 (NeoForge)**. Es gibt **keinen Download**: Die Nutzungsbedingungen des Originals erlauben keine veröffentlichten .jar-Dateien. Alle Ideen, Texturen, Modelle und Sounds stammen von AHZNB.
+
+## ✉ Gästebuch
+
+Die Kassette **GÄSTEBUCH** öffnet `gaestebuch.html`. Die Einträge laufen wie ein Abspann über den Bildschirm, mit ◀◀ / ▶ / ▶▶ spult man, am Band ziehen oder Mausrad geht auch. Gespeichert wird in derselben Firebase-Datenbank wie die Online-Modi der Spiele.
+
+**Spamschutz:** Name höchstens 16, Nachricht höchstens 140 Zeichen, keine Links, eine Nachricht pro Minute (wird von den Datenbank-Regeln erzwungen), dazu im Browser ein Wortfilter und eine unsichtbare Falle für Bots. Einträge löschen: Firebase-Konsole → Realtime Database → `gb/msgs` → Eintrag mit dem Mülleimer entfernen.
+
+**Einrichten:** Den Inhalt von `database.rules.json` in der Firebase-Konsole unter Realtime Database → Regeln einfügen und veröffentlichen. Ohne diese Regeln zeigt das Gästebuch „KEIN SIGNAL“. Mit `?demo` an der Adresse läuft es mit Beispiel-Einträgen ohne Datenbank.
 
 ## ⚙ Technik
 
