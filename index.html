@@ -354,6 +354,12 @@
 <script>
 (() => {
   // ================= Daten =================
+  // NEUE KASSETTE: einfach unten in TAPES anhängen (Reihenfolge = Kanalnummer CH 01, CH 02, ...).
+  //   box: 'retro'      → liegt in dieser Sammelbox (Boxen stehen weiter unten in BOXES, max. 8 Kassetten pro Box)
+  //   lose: true        → liegt irgendwo lose herum: auf dem Fernseher, auf dem Boden oder schief auf einem Stapel im Regal
+  //   lose: 'fernseher' / 'boden' / 'regal' → liegt genau dort
+  // Ist im Regal kein Platz mehr, landet der Rest automatisch lose auf dem Boden.
+  // Vorschaubild: previews/<name der html-datei>.jpg
   const TAPES = [
     { name: 'KLOTZWELT',      tag: 'VOXEL · SURVIVAL',      url: 'games/klotzwelt.html',      desc: 'Eigene Klötzchenwelt mit Überleben- und Kreativmodus, Crafting, Monstern und Wetter.' },
     { name: 'ASCII ARCADE',   tag: '5 RETRO-SPIELE',        url: 'games/ascii-arcade.html',   desc: 'Doom, Pong, Tetris, Pacman und Nachtschicht, alles aus Textzeichen.' },
@@ -361,20 +367,51 @@
     { name: 'SOLITAIRE',      tag: 'KARTEN',                url: 'games/solitaire.html',      desc: 'Klassisches Klondike im Retro-Fenster. Doppelklick legt Karten ab.' },
     { name: 'RETRO 98',       tag: 'DESKTOP',               url: 'games/retro98.html',        desc: 'Ein ganzer Retro-Desktop mit Startmenü, Paint, Minesweeper und mehr.' },
     { name: 'LERNWERK',       tag: 'SCHULE',                url: 'games/lernwerk.html',       desc: 'Aufgaben, Noten-Schnitt, Stundenplan, Karteikarten, Formeln und 3D-Labor.' },
-    { name: 'WICHTEL',        tag: 'PARTY',                 url: 'games/wichtel.html',        desc: 'Sieht aus wie ein Weihnachts-Countdown. Dahinter steckt eine ganze Spielhalle.' },
-    { name: 'ABGABE-TRAINER', tag: 'KI · EIGENER API-KEY',  url: 'games/abgabe-trainer.html', desc: 'Übt das Abgabegespräch. Eine KI spielt die Lehrkraft.' },
+    { name: 'WICHTEL',        tag: 'PARTY',                 url: 'games/wichtel.html',        desc: 'Sieht aus wie ein Weihnachts-Countdown. Dahinter steckt eine ganze Spielhalle.', lose: 'fernseher' },
+    { name: 'ABGABE-TRAINER', tag: 'KI · EIGENER API-KEY',  url: 'games/abgabe-trainer.html', desc: 'Übt das Abgabegespräch. Eine KI spielt die Lehrkraft.', lose: 'boden' },
     { name: 'NAUTO-MOD',      tag: 'MINECRAFT-MOD',         url: 'nauto-mod.html',            desc: 'Naruto-Mod für Minecraft 1.21.1, portiert von AHZNBs Original.' },
     // Geheimkassette: erscheint erst nach dem Konami-Code oder 5x Tippen auf das VHS-VISION-Schild
     { name: '???',            tag: 'NICHT ABSPIELEN',       url: 'geheim.html', secret: true, desc: 'Lag hinter dem Regal. Kein Etikett, nur ein Datum: 13.03.1987.' },
   ];
-  const SECRET = 9, NT = 9;
+  // Sammelboxen: stehen wie eine dicke Kassette im Regal, ein Klick klappt sie auf.
+  // color = Farbe vom Klebeband, lose: true geht hier genauso wie bei Kassetten.
+  // Beispiel: { id: 'retro', name: 'RETRO-KISTE', tag: 'SAMMELBOX · PC-KRAM', color: '#2ef2ff', desc: 'Alles, was nach altem Computer aussieht.' },
+  // (gerade keine Boxen in Benutzung, alle Kassetten liegen direkt im Regal oder herum)
+  const BOXES = [
+  ];
+  // Platzhalter: leere Kassetten ohne Etikett füllen die freien Plätze im Regal, dazu eine auf dem Boden. Kommt eine echte Kassette dazu, verschwindet automatisch eine leere.
+  {
+    const used = TAPES.filter(t => !t.secret && !t.lose && !t.box).length;
+    const LEER = ['', '', '', '', '', '', '', '', ''].slice(0, Math.max(0, 9 - used)).map(() => null);
+    LEER.push('boden');
+    LEER.forEach((lose, k) => TAPES.push({ name: '', label: ['???', 'BALD', '? ? ?', 'NEU?'][k % 4], key: 'LEER ' + k, leer: true, tag: 'PLATZ FREI', desc: 'Noch leer. Hier kommt bald etwas Neues drauf.', ...(lose ? { lose } : {}) }));
+  }
+  const NT = TAPES.length, SECRET = TAPES.findIndex(t => t.secret);
+  // Auswahl-Nummern: 0..NT-1 = Kassette, BOX0+b = geschlossene Box, LID = Deckel einer offenen Box (zurück)
+  const BOX0 = 1000, LID = 999;
+  const isTape = i => i >= 0 && i < NT, isBox = i => i >= BOX0 && i < BOX0 + BOXES.length;
+  // Wer steckt in welcher Box (über 8 hinaus liegen die Kassetten wieder normal im Regal)
+  const BOXN = BOXES.map(() => []), BOX_OF = TAPES.map(() => -1);
+  TAPES.forEach((t, i) => {
+    if (t.secret || !t.box) return;
+    const b = BOXES.findIndex(x => x.id === t.box);
+    if (b >= 0 && BOXN[b].length < 8) { BOXN[b].push(i); BOX_OF[i] = b; }
+  });
+  // Kanalnummern: alle normalen Kassetten der Reihe nach, die Geheimkassette ist CH 00
+  const CHANS = TAPES.map((t, i) => i).filter(i => !TAPES[i].secret && !TAPES[i].leer);
+  const chNum = i => TAPES[i].leer ? '' : TAPES[i].secret ? 0 : CHANS.indexOf(i) + 1;
 
   // ================= Kassetten-Zustand (Zählerstand + Abnutzung, bleibt gespeichert) =================
-  let tapeData = {};
-  try { tapeData = JSON.parse(localStorage.getItem('vhs-tapes')) || {}; } catch (e) {}
-  const td = i => tapeData[i] || (tapeData[i] = { c: 0, p: 0 });
+  // gespeichert nach Name, damit man die Liste umsortieren kann (früher nach Platznummer, das wird umgerechnet)
+  const LEGACY = ['KLOTZWELT', 'ASCII ARCADE', 'PULSE GRID', 'SOLITAIRE', 'RETRO 98', 'LERNWERK', 'WICHTEL', 'ABGABE-TRAINER', 'NAUTO-MOD'];
+  const tapeData = {};
+  try {
+    const raw = JSON.parse(localStorage.getItem('vhs-tapes')) || {};
+    for (const k in raw) tapeData[/^\d+$/.test(k) && LEGACY[k] ? LEGACY[k] : k] = raw[k];
+  } catch (e) {}
+  const td = i => tapeData[TAPES[i].name] || (tapeData[TAPES[i].name] = { c: 0, p: 0 });
   const saveTapes = () => { try { localStorage.setItem('vhs-tapes', JSON.stringify(tapeData)); } catch (e) {} };
-  const wear = i => i < 0 || i >= NT ? 0 : Math.min(10, td(i).p);
+  const wear = i => !isTape(i) || TAPES[i].secret || TAPES[i].leer ? 0 : Math.min(10, td(i).p);
   const fmtCount = s => `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(Math.floor(s) % 60).padStart(2, '0')}`;
   let secretOn = false;
   try { secretOn = localStorage.getItem('vhs-secret') === '1'; } catch (e) {}
@@ -382,7 +419,12 @@
   let trk = .5;
   try { const v = parseFloat(localStorage.getItem('vhs-trk')); if (v >= 0 && v <= 1) trk = v; } catch (e) {}
   const SWEET = [.5, .44, .57, .47, .6, .41, .53, .58, .45, .16];
-  const sweet = i => { if (i < 0) return .5; const b = SWEET[i]; return Math.min(.95, Math.max(.05, b + (b < .5 ? -1 : 1) * wear(i) * .012)); };
+  const hashS = s => { let h = 2166136261; for (const ch of s) h = Math.imul(h ^ ch.codePointAt(0), 16777619); return h >>> 0; };
+  const sweet = i => {
+    if (!isTape(i)) return .5;
+    const b = TAPES[i].secret ? .16 : i < SWEET.length ? SWEET[i] : .38 + (hashS(TAPES[i].name) % 25) / 100;
+    return Math.min(.95, Math.max(.05, b + (b < .5 ? -1 : 1) * wear(i) * .012));
+  };
   let chBlink = 0, rewinding = false;
 
   // ================= Palette =================
@@ -397,50 +439,137 @@
     lab: '#bcaed6', labHi: '#d8ccef', labLo: '#9283ae', labDim: '#8a8598', ink: '#231a33',
     note: '#efe6d2', noteLo: '#cfc4ab', red: '#d0263f',
     pink: '#ff2e88', pinkLo: '#a01a58', cyan: '#2ef2ff',
+    box0: '#3a2614', box1: '#573a20', box2: '#7a5631', box3: '#9c7446', box4: '#c39a63',
     led: '#ff3048', ledOff: '#4a1018',
     plant0: '#1d3b2a', plant1: '#2e5e3c', plant2: '#45874f', pot0: '#6b2f22', pot1: '#9c4a33',
   };
 
   // ================= Layout =================
+  // slot(c, r) = Fach im Regal: Spalte c, Reihe r von unten gezählt (Kassetten liegen gestapelt)
   let L;
   function makeLayout(portrait) {
     if (!portrait) {
-      const W = 480, H = 270;
+      const W = 480, H = 304;
       const tv = { x: 150, y: 20, w: 180, h: 150 };
       const bezel = { x: tv.x + 12, y: tv.y + 10, w: tv.w - 24, h: 106 };
       const screen = { x: bezel.x + 4, y: bezel.y + 4, w: bezel.w - 8, h: bezel.h - 8 };
       const shelfY = tv.y + tv.h;
       const cab = { x: 34, y: shelfY + 14, w: 412, h: 74 };
-      const tapes = [];
-      const colX = [50, 180, 310], tw = 120;
-      for (let c = 0; c < 3; c++) for (let r = 0; r < 3; r++) {
-        const off = [[0, 5, -3], [4, -2, 2], [-3, 3, -5]][c][r];
-        tapes.push({ x: colX[c] + off, y: cab.y + cab.h - 4 - (3 - r) * 17, w: tw, h: 16, top: r === 0 });
-      }
-      tapes.push({ x: tv.x + tv.w - 84, y: tv.y - 16, w: 66, h: 14, top: true });
+      const colX = [50, 180, 310], JIT = [[-3, 5, 0], [2, -2, 4], [-5, 3, -3]];
+      const slot = (c, r) => ({ x: colX[c] + JIT[c][Math.min(2, r)], y: cab.y + cab.h - 4 - (r + 1) * 17, w: 120, h: 16 });
+      // Boden vor dem Regal: Stapel, auf die lose Kassetten fallen (x/y = Mitte)
+      const floor = { piles: [{ x: 74, y: 286 }, { x: 410, y: 288 }, { x: 196, y: 290 }, { x: 318, y: 285 }], w: 120, h: 16, step: 12, max: 2 };
+      const secretSpot = { x: tv.x + tv.w - 84, y: tv.y - 16, w: 66, h: 14 };
+      const tvTop = { x: tv.x + 14, y: tv.y - 16, w: 80, h: 14, max: 1 };
       const remote = { x: 52, y: shelfY - 5, w: 88 };
-      return { W, H, portrait, tv, bezel, screen, shelfY, cab, tapes, remote, cols: 3, fs: 7 };
+      return { W, H, portrait, tv, bezel, screen, shelfY, cab, slot, cols: 3, rows: 3, floor, secretSpot, tvTop, remote, fs: 7 };
     } else {
-      const W = 270, H = 480;
+      const W = 270, H = 520;
       const tv = { x: 22, y: 26, w: 226, h: 184 };
       const bezel = { x: tv.x + 12, y: tv.y + 11, w: tv.w - 24, h: 136 };
       const screen = { x: bezel.x + 4, y: bezel.y + 4, w: bezel.w - 8, h: bezel.h - 8 };
       const shelfY = tv.y + tv.h;
       const cab = { x: 16, y: shelfY + 14, w: 238, h: 9 * 23 + 14 };
-      const tapes = [];
-      for (let i = 0; i < 9; i++) {
-        const off = [0, 4, -3, 2, -4, 3, -2, 5, 0][i];
-        tapes.push({ x: 34 + off, y: cab.y + 10 + i * 23, w: 196, h: 21, top: true });
-      }
-      tapes.push({ x: tv.x + tv.w - 88, y: tv.y - 16, w: 66, h: 14, top: true });
+      const JIT = [0, 4, -3, 2, -4, 3, -2, 5, 0];
+      const slot = (c, r) => ({ x: 34 + JIT[8 - r], y: cab.y + 10 + (8 - r) * 23, w: 196, h: 21 });
       const remote = { x: (W - 88) / 2, y: cab.y + cab.h + 18, w: 88 };
-      return { W, H, portrait, tv, bezel, screen, shelfY, cab, tapes, remote, cols: 1, fs: 7 };
+      const floor = { piles: [{ x: 76, y: 498 }, { x: 196, y: 503 }], w: 140, h: 21, step: 16, max: 1 };
+      const secretSpot = { x: tv.x + tv.w - 88, y: tv.y - 16, w: 66, h: 14 };
+      const tvTop = { x: tv.x + 16, y: tv.y - 16, w: 100, h: 14, max: 1 };
+      return { W, H, portrait, tv, bezel, screen, shelfY, cab, slot, cols: 1, rows: 9, floor, secretSpot, tvTop, remote, fs: 7 };
     }
+  }
+
+  // Verteilt Kassetten und Boxen: erst ins Regal (immer auf den niedrigsten Stapel),
+  // was "lose" ist oder keinen Platz mehr hat, landet schief auf einem Stapel oder auf dem Boden.
+  // Wohin genau, hängt vom Namen ab: sieht zufällig aus, bleibt aber bei jedem Besuch gleich.
+  function placeAll(L) {
+    const { cols, rows } = L, DEG = Math.PI / 180;
+    const hgt = Array(cols).fill(0), main = [], loose = [];
+    const seen = new Set();
+    TAPES.forEach((t, i) => {
+      if (t.secret) return;
+      const b = BOX_OF[i];
+      if (b < 0) loose.push({ id: i, lose: t.lose });
+      else if (!seen.has(b)) { seen.add(b); loose.push({ id: BOX0 + b, lose: BOXES[b].lose }); }
+    });
+    const entries = loose.splice(0);
+    // Regal wie früher Spalte für Spalte füllen, die erste Kassette einer Spalte liegt oben auf dem Stapel
+    const colIt = Array.from({ length: cols }, () => []);
+    let cc = 0;
+    for (const e of entries) {
+      const s = isBox(e.id) ? 2 : 1;
+      if (!e.lose) while (cc < cols && hgt[cc] + s > rows) cc++;
+      if (e.lose || cc >= cols) { loose.push({ id: e.id, lose: e.lose || 'boden', s }); continue; }
+      colIt[cc].push({ id: e.id, s }); hgt[cc] += s;
+    }
+    colIt.forEach((list, c) => {
+      let r = hgt[c];
+      for (const { id, s } of list) {
+        r -= s;
+        const lo = L.slot(c, r), hi = L.slot(c, r + s - 1);
+        // leere Kassetten liegen schlampig reingeschoben: etwas versetzt und schief
+        const lz = isTape(id) && TAPES[id].leer, hz = lz ? hashS(TAPES[id].key) : 0;
+        const la = lz ? ((hz & 255) / 255 * 2 - 1) * (L.portrait ? 1.2 : 2.2) * DEG : 0;
+        main.push({ id, x: lo.x + (lz ? ((hz >>> 8) & 15) - 4 : 0), y: hi.y - (lz ? Math.abs(Math.sin(la)) * lo.w / 2 : 0), w: lo.w, h: lo.y + lo.h - hi.y, ang: la, where: 'cab', c, r: r + s });
+      }
+    });
+    // Deckfläche nur bei der obersten Kassette eines Stapels sichtbar
+    main.forEach(it => { it.top = L.portrait || it.r === hgt[it.c]; });
+
+    const piles = [];
+    for (let c = 0; c < cols; c++) if (hgt[c] < rows) piles.push({ kind: 'regal', c, lvl: hgt[c], max: rows });
+    L.floor.piles.forEach(p => piles.push({ kind: 'boden', x: p.x, y: p.y, lvl: 0, max: L.floor.max }));
+    piles.push({ kind: 'fernseher', lvl: 0, max: L.tvTop.max });
+    const shelfL = [], floorL = [], tvL = [];
+    for (const e of loose) {
+      const key = isBox(e.id) ? 'BOX ' + BOXES[e.id - BOX0].id : TAPES[e.id].key || TAPES[e.id].name, hs = hashS(key);
+      const rnd = k => ((hs >>> k) & 255) / 255;
+      const want = ['regal', 'boden', 'fernseher'].includes(e.lose) ? e.lose : null, s = isBox(e.id) ? 2 : 1;
+      const fits = p => (!want || p.kind === want) && !(s > 1 && p.kind === 'fernseher') && p.lvl + (p.kind === 'regal' ? s : 1) <= p.max;
+      let cand = piles.filter(fits);
+      if (!cand.length) cand = piles.filter(p => p.kind === 'boden' && p.lvl + 1 <= p.max);
+      if (!cand.length) { const m = Math.min(...piles.filter(p => p.kind === 'boden').map(p => p.lvl)); cand = piles.filter(p => p.kind === 'boden' && p.lvl === m); }
+      // erst freie Stellen nehmen, gestapelt wird nur, wenn es nicht anders geht
+      const ml = Math.min(...cand.map(p => p.lvl));
+      cand = cand.filter(p => p.lvl === ml);
+      const p = cand[hs % cand.length];
+      if (p.kind === 'fernseher') {
+        const t = L.tvTop;
+        tvL.push({ id: e.id, x: t.x + rnd(3) * 8 + p.lvl * 3, y: t.y - p.lvl * (t.h - 3), w: t.w, h: t.h, ang: 0, where: 'fernseher', top: true });
+        p.lvl++;
+      } else if (p.kind === 'regal') {
+        const lo = L.slot(p.c, p.lvl), hi = L.slot(p.c, p.lvl + s - 1);
+        const ang = (rnd(9) * 2 - 1) * (L.portrait ? 1.6 : 3.2) * DEG;
+        const lift = Math.abs(Math.sin(ang)) * lo.w / 2;
+        shelfL.push({ id: e.id, x: lo.x + (rnd(3) * 12 - 6), y: hi.y - lift + 1, w: lo.w, h: lo.y + lo.h - hi.y, ang, where: 'regal', top: true });
+        p.lvl += s;
+      } else {
+        const w = L.floor.w, h = L.floor.h * s;
+        const ang = (rnd(9) * 2 - 1) * (p.lvl ? 3 : 5) * DEG;
+        floorL.push({ id: e.id, x: p.x - w / 2 + (rnd(3) * 16 - 8), y: p.y - h / 2 - p.lvl * L.floor.step + (rnd(17) * 4 - 2), w, h, ang, where: 'boden', top: true });
+        p.lvl++;
+      }
+    }
+    floorL.sort((a, b) => (a.y + a.h) - (b.y + b.h));
+    // Aufgeklappte Box: Deckel (zurück) zuerst, dann der Inhalt, unten anfangend
+    const boxView = BOXN.map(mem => {
+      const n = mem.length + 1;
+      return [LID, ...mem].map((id, k) => {
+        const c = k % cols, r = Math.floor(k / cols), sl = L.slot(c, Math.min(rows - 1, r));
+        return { id, ...sl, ang: 0, where: 'cab', top: L.portrait || k + cols >= n };
+      });
+    });
+    // Wo liegt welche Kassette im normalen Regal?
+    const where = TAPES.map((t, i) => t.secret ? 'tv' : BOX_OF[i] >= 0 ? 'box' : 'cab');
+    shelfL.concat(floorL, tvL).forEach(it => { if (isTape(it.id)) where[it.id] = it.where; });
+    Object.assign(L, { main, shelfL, floorL, tvL, boxView, where, secretIt: { id: SECRET, ...L.secretSpot, ang: 0, where: 'tv', top: true } });
   }
 
   // ================= Zeichen-Helfer (alles pixelgenau) =================
   const art = document.getElementById('art');
-  const g = art.getContext('2d');
+  const g0 = art.getContext('2d');
+  let g = g0;   // alle Zeichen-Helfer malen auf g (kurz umgeschaltet, wenn eine Kassette einzeln gemalt und gedreht wird)
   const R = (x, y, w, h, c) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
   const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
   const bay = (x, y) => (BAYER[(y & 3) * 4 + (x & 3)] + .5) / 16;
@@ -486,6 +615,7 @@
     6:'00110010001000011110100011000101110', 7:'11111000010001000100010000100001000', 8:'01110100011000101110100011000101110',
     9:'01110100011000101111000010001001100', '-':'00000000000000011111000000000000000', '·':'00000000000000000100000000000000000',
     '.':'00000000000000000000000000110001100', '?':'01110100010000100010001000000000100', ' ':'00000000000000000000000000000000000',
+    'Ü':'01010000001000110001100011000101110', '<':'00010001000100010000010000010000010',
   };
   function textWidth(str, sp = 1) { return str.length * (5 + sp) - sp; }
   function text(str, x, y, _size, color, align = 'left', spacing = 1) {
@@ -524,6 +654,23 @@
       const l = 1 - (dx * dx + dy * dy);
       if (l > 0 && bay(x, y) < l * .35 && (x + y) % 3 === 0) g.fillRect(x, y, 1, 1);
     }
+    // Holzboden vor dem Regal (Dielen laufen nach hinten zusammen)
+    const fy = cab.y + cab.h + 6;
+    if (fy < H) {
+      ditherV(0, fy, W, H - fy, C.in2, C.wood0, .05, .75);
+      g.fillStyle = C.in1;
+      for (let k = -14; k <= 14; k++) {
+        for (let y = fy; y < H; y++) {
+          const t = (y - fy) / Math.max(1, H - fy);
+          g.fillRect(Math.round(W / 2 + k * (L.portrait ? 30 : 34) * (1 + t * .5)), y, 1, 1);
+        }
+      }
+      for (let i = 0; i < 26; i++) {
+        const y = fy + 3 + (i * 7) % Math.max(1, H - fy - 4), x = (i * 97) % W;
+        g.fillRect(x, y, 1, 3); g.fillStyle = C.wood1; g.fillRect(x + 2, y + 1, 9 + (i * 5) % 14, 1); g.fillStyle = C.in1;
+      }
+      R(0, fy, W, 1, C.in0);
+    }
     // Vignette
     g.fillStyle = C.void;
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -553,7 +700,6 @@
     R(frontL, cab.y + cab.h + 7, frontR - frontL, 1, C.wood0);
     R(frontL + 4, cab.y + cab.h + 8, 8, 4, C.wood0);
     R(frontR - 12, cab.y + cab.h + 8, 8, 4, C.wood0);
-    if (cab.y + cab.h + 12 < H) R(0, cab.y + cab.h + 12, W, H - (cab.y + cab.h + 12), C.void);
 
     // ===== Deko =====
     if (!portrait) {
@@ -660,13 +806,11 @@
     R(x + w - 3, y + 2, 2, 5, irBlink ? '#ff5a6e' : '#3a1420');
   }
 
-  function drawTape(i) {
-    const t = L.tapes[i], d = TAPES[i];
-    if (d.secret && !secretOn) return;
-    const s = i === sel && (state === 'shelf' || state === 'playing');
-    const x = t.x - (s ? 7 : 0), y = t.y, w = t.w, h = t.h;
+  // Kassettenrücken (x, y = linke obere Ecke)
+  function drawTape(i, x, y, w, h, s, top) {
+    const d = TAPES[i];
     const th = 3, fh = h - th;
-    if (t.top || s) {
+    if (top || s) {
       trap(y, y + th, x + 3, x + w - 1, x, x + w, C.tp3);
       R(x + 3, y, w - 4, 1, C.tp4);
     }
@@ -677,7 +821,7 @@
     const nw = fh + 1;
     R(x + 3, y + th + 1, nw, fh - 2, C.note);
     R(x + 3, y + th + fh - 2, nw, 1, C.noteLo);
-    text(d.secret ? '0' : String(i + 1), x + 3 + nw / 2, y + th + (fh - L.fs) / 2, L.fs, C.red, 'center');
+    text(String(chNum(i)), x + 3 + nw / 2, y + th + (fh - L.fs) / 2, L.fs, C.red, 'center');
     const lx = x + 6 + nw, lw = w - nw - 12;
     const lc = d.secret ? (s ? '#5a1424' : '#3a0d18') : !d.url ? C.labDim : s ? '#ffffff' : C.lab;
     R(lx, y + th + 2, lw, fh - 4, lc);
@@ -692,16 +836,134 @@
       R(sx, sy, rnd() < .3 ? 2 : 1, 1, rnd() < .5 ? C.labLo : '#8c7a66');
     }
     if (wv >= 6 && !d.secret) { R(lx + lw - 3, y + th + 2, 3, 1, C.tp2); R(lx + lw - 1, y + th + 3, 1, 1, C.tp2); }
-    R(lx + 3, y + th + 4, 1, fh - 8, C.ink); R(lx + 5, y + th + 4, 1, fh - 8, C.ink);
-    text(d.name, lx + lw / 2 + 3, y + th + 1 + (fh - 2 - L.fs) / 2, L.fs, d.secret ? C.red : C.ink, 'center', 1);
-    if (s) {
-      g.fillStyle = d.secret ? C.red : C.pink;
-      g.fillRect(x - 2, y - 1, w + 4, 1); g.fillRect(x - 2, y + h, w + 4, 1);
-      g.fillRect(x - 2, y - 1, 1, h + 2); g.fillRect(x + w + 1, y - 1, 1, h + 2);
-      g.fillStyle = C.pinkLo;
-      g.fillRect(x - 3, y, 1, h); g.fillRect(x + w + 2, y, 1, h);
-    }
+    if (!d.leer) { R(lx + 3, y + th + 4, 1, fh - 8, C.ink); R(lx + 5, y + th + 4, 1, fh - 8, C.ink); }
+    // zu lange Namen werden gekürzt, damit nichts übers Etikett hinausläuft
+    if (d.leer) text(d.label, lx + lw / 2 + 3, y + th + 1 + (fh - 2 - L.fs) / 2, L.fs, '#4e4760', 'center', 1);
+    let nm = d.name; while (nm.length > 3 && textWidth(nm) > lw - 10) nm = nm.slice(0, -1);
+    text(nm, lx + lw / 2 + 3, y + th + 1 + (fh - 2 - L.fs) / 2, L.fs, d.secret ? C.red : C.ink, 'center', 1);
+    if (s) outline(x, y, w, h, d.secret ? C.red : C.pink);
   }
+  function outline(x, y, w, h, c) {
+    g.fillStyle = c;
+    g.fillRect(x - 2, y - 1, w + 4, 1); g.fillRect(x - 2, y + h, w + 4, 1);
+    g.fillRect(x - 2, y - 1, 1, h + 2); g.fillRect(x + w + 1, y - 1, 1, h + 2);
+    g.fillStyle = C.pinkLo;
+    g.fillRect(x - 3, y, 1, h); g.fillRect(x + w + 2, y, 1, h);
+  }
+  // Sammelbox aus Pappe: Griffloch, Klebeband in der Box-Farbe, Zettel mit Name und Anzahl
+  function drawBox(b, x, y, w, h, s, top) {
+    const B = BOXES[b], n = BOXN[b].length, th = 3, fh = h - th;
+    if (top || s) {
+      trap(y, y + th, x + 3, x + w - 1, x, x + w, C.box3);
+      R(x + 3, y, w - 4, 1, C.box4);
+      R(x + (w >> 1), y, 1, th, C.box1);
+    }
+    R(x, y + th, w, fh, C.box2);
+    R(x, y + th, w, 1, C.box3);
+    R(x, y + h - 1, w, 1, C.box0);
+    R(x + w - 2, y + th, 2, fh, C.box1);
+    let seed = b * 7919 + 3;
+    const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    for (let k = 0; k < w * fh / 40; k++) R(x + 1 + rnd() * (w - 3), y + th + 1 + rnd() * (fh - 2), 1, 1, rnd() < .5 ? C.box1 : C.box3);
+    // Griffloch
+    rrect(x + 4, y + th + (fh >> 1) - 2, 9, 5, 2, C.box0);
+    R(x + 5, y + th + (fh >> 1) + 2, 7, 1, C.box3);
+    // Klebeband
+    R(x + w - 13, y, 6, h, B.color); R(x + w - 13, y, 1, h, 'rgba(255,255,255,.35)'); R(x + w - 8, y, 1, h, 'rgba(0,0,0,.3)');
+    // Zettel
+    const two = fh >= 26;
+    const line2 = n + (n === 1 ? ' KASSETTE' : ' KASSETTEN');
+    let nm = B.name; while (nm.length > 3 && textWidth(nm) > w - 40) nm = nm.slice(0, -1);
+    const lw = Math.min(w - 32, Math.max(textWidth(nm), two ? textWidth(line2) : 0) + 10), lx = x + 16 + ((w - 32 - lw) >> 1);
+    const ly = y + th + 3, lh = fh - 6;
+    R(lx, ly, lw, lh, C.note); R(lx, ly + lh - 1, lw, 1, C.noteLo); R(lx + lw - 1, ly, 1, lh, C.noteLo);
+    if (two) {
+      text(nm, lx + lw / 2, ly + (lh >> 1) - 8, L.fs, C.ink, 'center');
+      text(line2, lx + lw / 2, ly + (lh >> 1) + 1, L.fs, C.red, 'center');
+    } else text(nm, lx + lw / 2, ly + (lh - L.fs) / 2, L.fs, C.ink, 'center');
+    if (s) outline(x, y, w, h, C.pink);
+  }
+  // Deckel einer offenen Box: zurück zum Regal
+  function drawLid(x, y, w, h, s) {
+    const th = 3, fh = h - th;
+    trap(y, y + th, x + 3, x + w - 1, x, x + w, C.box3);
+    R(x, y + th, w, fh, C.box3);
+    R(x, y + th, w, 1, C.box4);
+    R(x, y + h - 1, w, 1, C.box1);
+    R(x + 2, y + th + 2, w - 4, 1, C.box2);
+    text('< ZURÜCK', x + w / 2, y + th + (fh - L.fs) / 2, L.fs, s ? '#fff' : C.ink, 'center');
+    if (s) outline(x, y, w, h, C.pink);
+  }
+  // Innenseite der aufgeklappten Box (füllt das Regalfach)
+  function drawTray(b) {
+    const { cab } = L, B = BOXES[b];
+    R(cab.x, cab.y, cab.w, cab.h, C.box1);
+    ditherV(cab.x, cab.y, cab.w, 10, C.box0, C.box1, 0, 1);
+    R(cab.x, cab.y, 3, cab.h, C.box0); R(cab.x + cab.w - 3, cab.y, 3, cab.h, C.box0);
+    R(cab.x, cab.y + cab.h - 3, cab.w, 3, C.box2); R(cab.x, cab.y + cab.h - 3, cab.w, 1, C.box3);
+    R(cab.x + (cab.w >> 1) - 3, cab.y, 6, 6, B.color);
+  }
+  // Deckelklappe beim Auf- und Zuklappen (u = wie weit sie das Fach zudeckt, 0..1)
+  function drawFlap(b, u) {
+    const { cab } = L, h = Math.round((cab.h + 2) * u);
+    if (h <= 0) return;
+    R(cab.x - 2, cab.y, cab.w + 4, h, C.box2);
+    R(cab.x - 2, cab.y, cab.w + 4, Math.min(h, 2), C.box1);
+    R(cab.x + (cab.w >> 1) - 4, cab.y, 8, h, BOXES[b].color);
+    if (h > 16) text(BOXES[b].name, cab.x + cab.w / 2 - 50, cab.y + h - 13, L.fs, C.ink, 'center');
+    R(cab.x - 2, cab.y + h - 2, cab.w + 4, 2, C.box4);
+    R(cab.x - 2, cab.y + h, cab.w + 4, 1, C.box0);
+  }
+
+  // Einzelne Kassette/Box erst auf ein kleines Bild malen, dann (pixelgenau, ohne Weichzeichnen) schief hinlegen
+  const sprites = [];
+  function scratch(k, w, h) {
+    const c = sprites[k] || (sprites[k] = document.createElement('canvas'));
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } else c.getContext('2d').clearRect(0, 0, w, h);
+    return c;
+  }
+  function blit(cv, x, y, ang, shadow) {
+    x = Math.round(x); y = Math.round(y);
+    if (!ang && !shadow) { g.drawImage(cv, x, y); return; }
+    const w = cv.width, h = cv.height, src = cv.getContext('2d').getImageData(0, 0, w, h).data;
+    const co = Math.cos(ang), si = Math.sin(ang);
+    const W2 = Math.ceil(Math.abs(w * co) + Math.abs(h * si)) + 2, H2 = Math.ceil(Math.abs(w * si) + Math.abs(h * co)) + 2;
+    const out = new ImageData(W2, H2), o = out.data, sh = shadow ? new ImageData(W2, H2) : null;
+    const ox = W2 / 2, oy = H2 / 2;
+    for (let j = 0; j < H2; j++) for (let i = 0; i < W2; i++) {
+      const dx = i + .5 - ox, dy = j + .5 - oy;
+      const sx = Math.floor(dx * co + dy * si + w / 2), sy = Math.floor(-dx * si + dy * co + h / 2);
+      if (sx < 0 || sy < 0 || sx >= w || sy >= h) continue;
+      const a = (sy * w + sx) * 4;
+      if (!src[a + 3]) continue;
+      const q = (j * W2 + i) * 4;
+      o[q] = src[a]; o[q + 1] = src[a + 1]; o[q + 2] = src[a + 2]; o[q + 3] = src[a + 3];
+      if (sh) { sh.data[q] = 4; sh.data[q + 1] = 2; sh.data[q + 2] = 10; sh.data[q + 3] = 150; }
+    }
+    const px = Math.round(x + w / 2 - ox), py = Math.round(y + h / 2 - oy);
+    if (sh) { const t = scratch(2, W2, H2); t.getContext('2d').putImageData(sh, 0, 0); g.drawImage(t, px + 1, py + 2); }
+    const t = scratch(1, W2, H2); t.getContext('2d').putImageData(out, 0, 0); g.drawImage(t, px, py);
+  }
+  const PAD = 4;
+  function drawItem(it) {
+    const s = it.id === sel && (state === 'shelf' || state === 'playing');
+    const pull = s && it.where === 'cab' ? 7 : 0, lift = s && it.where !== 'cab' && it.where !== 'tv' ? 2 : 0;
+    const cv = scratch(0, it.w + PAD * 2, it.h + PAD * 2);
+    g = cv.getContext('2d');
+    if (it.id === LID) drawLid(PAD, PAD, it.w, it.h, s);
+    else if (isBox(it.id)) drawBox(it.id - BOX0, PAD, PAD, it.w, it.h, s, it.top);
+    else drawTape(it.id, PAD, PAD, it.w, it.h, s, it.top);
+    g = g0;
+    blit(cv, it.x - PAD - pull, it.y - PAD - lift, it.ang, it.where === 'boden');
+  }
+  // Was gerade sichtbar ist, in Malreihenfolge (die ausgewählte Kassette zuletzt, damit sie obenauf liegt)
+  function itemGroups(vb) {
+    const cabI = vb >= 0 ? L.boxView[vb] : L.main.concat(L.shelfL);
+    const front = L.tvL.concat(L.floorL, secretOn ? [L.secretIt] : []);
+    const selLast = a => { const k = a.findIndex(it => it.id === sel); return k < 0 ? a : a.filter((_, j) => j !== k).concat(a[k]); };
+    return [selLast(cabI), selLast(front)];
+  }
+  const visibleItems = () => { const [a, b] = itemGroups(openBox); return a.concat(b); };
 
   // Farbversatz wie bei einem alten Band: Rot nach links, Blau nach rechts (halb gemischt)
   function aberrate(shift, mix) {
@@ -722,7 +984,19 @@
     g.putImageData(bgCache, 0, 0);
     drawPower();
     drawRemote();
-    for (let i = 0; i < TAPES.length; i++) drawTape(i);
+    // Box auf- oder zuklappen: Deckel fährt hoch bzw. runter
+    let vb = openBox, flap = 0;
+    if (boxAnim) {
+      const u = Math.min(1, (performance.now() - boxAnim.t0) / 320), e = (1 - Math.cos(Math.PI * u)) / 2;
+      if (boxAnim.dir === 'open') flap = 1 - e; else { vb = boxAnim.b; flap = e; }
+      if (u >= 1) { boxAnim = null; if (vb !== openBox) { vb = openBox; flap = 0; } }
+      else if (!render.raf) render.raf = requestAnimationFrame(() => { render.raf = 0; render(); });
+    }
+    const [cabI, front] = itemGroups(vb);
+    if (vb >= 0) drawTray(vb);
+    cabI.forEach(drawItem);
+    if (flap > 0) drawFlap(vb, flap);
+    front.forEach(drawItem);
     aberrate(1, .45);
   }
   // Einzelbild-Glitch: Streifen verschieben, Farben auseinanderziehen
@@ -761,6 +1035,7 @@
     const portrait = VH() > VW() * 1.15;
     if (L && L.portrait === portrait) return;
     L = makeLayout(portrait);
+    placeAll(L);
     art.width = L.W; art.height = L.H;
     art.style.width = L.W + 'px'; art.style.height = L.H + 'px';
     scene.style.width = L.W + 'px'; scene.style.height = L.H + 'px';
@@ -909,12 +1184,13 @@
   dateEl.textContent = `${M[now.getMonth()]}. ${String(now.getDate()).padStart(2,'0')} ${now.getFullYear()}`;
   let t0 = 0, timer = null;
   const tick = () => {
-    if ((state === 'shelf' || state === 'playing') && sel >= 0) { timeEl.textContent = 'SP ' + fmtCount(td(sel).c); return; }
+    if ((state === 'shelf' || state === 'playing') && isTape(sel)) { timeEl.textContent = 'SP ' + fmtCount(td(sel).c); return; }
     const s = Math.floor((performance.now() - t0) / 1000);
     timeEl.textContent = `SP ${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
   };
 
   let state = 'off', sel = -1, ledOn = false, irBlink = false;
+  let openBox = -1, boxAnim = null, lastPlayed = -1;
   const timers = [];
   const later = (fn, ms) => timers.push(setTimeout(fn, ms));
   const touch = matchMedia('(hover: none)').matches;
@@ -989,29 +1265,77 @@
 
   function select(i) {
     if (i === sel || (rewinding && sel >= 0)) return;
+    if (!(isTape(i) || isBox(i) || (i === LID && openBox >= 0))) return;
     sel = i;
-    const t = TAPES[i];
-    document.getElementById('pNum').textContent = `TAPE ${String(i + 1).padStart(2, '0')}`;
-    document.getElementById('pName').textContent = t.name;
-    document.getElementById('pTag').textContent = t.tag;
-    document.getElementById('pDesc').textContent = t.desc;
-    document.getElementById('pPlay').textContent = t.secret ? (touch ? '▶ WIRKLICH? NOCHMAL TIPPEN' : '▶ WIRKLICH? ENTER') : t.url ? (touch ? '▶ NOCHMAL TIPPEN' : '▶ ENTER / KLICK') : '■ BALD VERFÜGBAR';
-    screen.classList.toggle('evil', !!t.secret);
-    updateWear(); tick(); applyTracking();
-    const box = document.getElementById('pImgBox'), prev = document.getElementById('preview');
-    if (t.secret) setGlow([255, 40, 70]);
-    if (t.url && !t.secret) {
-      const src = 'previews/' + t.url.split('/').pop().replace('.html', '.jpg');
-      if (!pPic.src.endsWith(src)) pPic.src = src; else glowFromPic();
-      box.classList.add('has'); prev.classList.add('img');
-    } else { box.classList.remove('has'); prev.classList.remove('img'); }
+    // Kassette steckt in einer Box: Box klappt auf. Kassette aus dem Regal gewählt: offene Box klappt zu.
+    if (isTape(i)) {
+      if (BOX_OF[i] >= 0) setBox(BOX_OF[i]);
+      else if (openBox >= 0 && (L.where[i] === 'cab' || L.where[i] === 'regal')) setBox(-1);
+    }
+    const $ = id => document.getElementById(id);
+    const box = $('pImgBox'), prev = $('preview');
+    if (!isTape(i)) {
+      const b = isBox(i) ? i - BOX0 : openBox, B = BOXES[b];
+      if (isBox(i)) {
+        $('pNum').textContent = 'BOX · ' + BOXN[b].length + ' KASSETTEN';
+        $('pName').textContent = B.name;
+        $('pTag').textContent = B.tag || 'SAMMELBOX';
+        $('pDesc').textContent = (B.desc ? B.desc + ' ' : '') + 'Drin: ' + BOXN[b].map(k => TAPES[k].name).join(', ') + '.';
+        $('pPlay').textContent = touch ? '▶ NOCHMAL TIPPEN = AUFKLAPPEN' : '▶ ENTER / KLICK = AUFKLAPPEN';
+      } else {
+        $('pNum').textContent = 'BOX OFFEN';
+        $('pName').textContent = '◀ ZURÜCK';
+        $('pTag').textContent = B.name;
+        $('pDesc').textContent = 'Box zuklappen und zurück zum Regal.';
+        $('pPlay').textContent = touch ? '▶ NOCHMAL TIPPEN' : '▶ ENTER / ESC';
+      }
+      screen.classList.remove('evil');
+      box.classList.remove('has'); prev.classList.remove('img');
+      setGlow(B.color.match(/\w\w/g).map(h => Math.round(parseInt(h, 16) * .7 + 255 * .3)));
+      updateWear(); tick(); applyTracking();
+    } else {
+      const t = TAPES[i];
+      $('pNum').textContent = t.leer ? 'TAPE --' : `TAPE ${String(chNum(i)).padStart(2, '0')}` + (BOX_OF[i] >= 0 ? ' · ' + BOXES[BOX_OF[i]].name : '');
+      $('pName').textContent = t.leer ? 'LEER' : t.name;
+      $('pTag').textContent = t.tag;
+      $('pDesc').textContent = t.desc;
+      $('pPlay').textContent = t.secret ? (touch ? '▶ WIRKLICH? NOCHMAL TIPPEN' : '▶ WIRKLICH? ENTER') : t.url ? (touch ? '▶ NOCHMAL TIPPEN' : '▶ ENTER / KLICK') : (t.leer ? '■ NOCH NICHTS DRAUF' : '■ BALD VERFÜGBAR');
+      screen.classList.toggle('evil', !!t.secret);
+      updateWear(); tick(); applyTracking();
+      if (t.secret) setGlow([255, 40, 70]);
+      if (t.url && !t.secret) {
+        const src = 'previews/' + t.url.split('/').pop().replace('.html', '.jpg');
+        if (!pPic.src.endsWith(src)) pPic.src = src; else glowFromPic();
+        box.classList.add('has'); prev.classList.add('img');
+      } else { box.classList.remove('has'); prev.classList.remove('img'); }
+    }
     screen.classList.add('flash');
     clearTimeout(select.f); select.f = setTimeout(() => screen.classList.remove('flash'), 140);
     render();
   }
 
+  // Box auf- (b = Nummer) oder zuklappen (b = -1)
+  function setBox(b) {
+    if (b === openBox) return;
+    const was = openBox;
+    openBox = b;
+    if (b >= 0) boxAnim = { dir: 'open', b, t0: performance.now() };
+    else boxAnim = { dir: 'close', b: was, t0: performance.now() };
+    sfxPlay('box', b >= 0);
+    if (state === 'shelf') hint.textContent = shelfHint();
+    render();
+  }
+  function closeBox() {
+    if (openBox < 0) return;
+    const b = openBox;
+    setBox(-1);
+    select(BOX0 + b);
+  }
+
   function play() {
     if (rewinding || sel < 0) return;
+    if (isBox(sel)) return select(BOXN[sel - BOX0][0]);
+    if (sel === LID) return closeBox();
     const t = TAPES[sel];
     if (!t.url) {
       screen.classList.add('glitch');
@@ -1021,7 +1345,7 @@
     state = 'playing';
     sfxPlay('clack');
     // merken, welche Kassette läuft: beim Zurückkommen zählt das Band weiter und nutzt sich ab
-    if (!t.secret) try { sessionStorage.setItem('vhs-play', JSON.stringify({ i: sel, t: Date.now(), r: td(sel).c === 0 })); } catch (e) {}
+    if (!t.secret) try { sessionStorage.setItem('vhs-play', JSON.stringify({ i: sel, n: t.name, t: Date.now(), r: td(sel).c === 0 })); } catch (e) {}
     document.getElementById('insertSub').textContent = t.name;
     screen.classList.add('glitch', 'inserting');
     setTimeout(() => screen.classList.remove('glitch'), 350);
@@ -1038,20 +1362,33 @@
       screen.classList.remove('glitch', 'static', 'inserting');
       screen.classList.add('shelf-mode');
       hint.textContent = shelfHint();
-      const keep = sel; sel = -1; select(keep < 0 ? 0 : keep);
+      const keep = sel >= 0 ? sel : lastPlayed >= 0 ? lastPlayed : L.main.length ? L.main[0].id : 0;
+      sel = -1; select(keep);
     };
     // erst ganz herausfahren, dann schaltet der Fernseher auf die Spielvorschau um
     applyView(fast, 3000, fast ? null : () => setTimeout(show, 150));
     if (fast) show();
   }
 
+  // Pfeiltasten: zur nächsten Kassette in dieser Richtung springen (egal ob Regal, Box oder Boden)
   function move(dx, dy) {
-    const n = NT;
-    if (sel >= NT) return select(0);
-    if (L.cols === 1) { select((sel + (dx || dy) + n) % n); return; }
-    let c = Math.floor(sel / 3), r = sel % 3;
-    c = (c + dx + 3) % 3; r = (r + dy + 3) % 3;
-    select(c * 3 + r);
+    const its = visibleItems().filter(it => it.id !== SECRET || secretOn);
+    if (!its.length) return;
+    const cur = its.find(it => it.id === sel);
+    if (!cur) return select(its[0].id);
+    const mid = it => [it.x + it.w / 2, it.y + it.h / 2];
+    const [cx, cy] = mid(cur);
+    let best = null, bs = Infinity, far = null, fs = Infinity;
+    for (const it of its) {
+      if (it === cur) continue;
+      const [x, y] = mid(it);
+      const along = (x - cx) * dx + (y - cy) * dy, side = Math.abs((x - cx) * dy) + Math.abs((y - cy) * dx);
+      if (along > 2) { const sc = along + side * 2.5; if (sc < bs) { bs = sc; best = it; } }
+      else { const sc = along + side * 2.5; if (sc < fs) { fs = sc; far = it; } }
+    }
+    // nichts mehr in der Richtung: auf der anderen Seite weitermachen
+    const to = best || far;
+    if (to) select(to.id);
   }
 
   // ================= Eingabe =================
@@ -1078,10 +1415,15 @@
     if (lg && x >= lg.x && x <= lg.x + lg.w && y >= lg.y && y <= lg.y + lg.h) return 'logo';
     const sl = L.slot;
     if (state === 'shelf' && sl && x >= sl.x - 2 && x <= sl.x + sl.w + 2 && y >= sl.y - 3 && y <= sl.y + sl.h + 3) return 'slot';
-    if (state === 'shelf') for (let i = 0; i < L.tapes.length; i++) {
-      if (TAPES[i].secret && !secretOn) continue;
-      const t = L.tapes[i];
-      if (x >= t.x - 8 && x <= t.x + t.w && y >= t.y && y <= t.y + t.h) return i;
+    if (state === 'shelf') {
+      const its = visibleItems();
+      for (let k = its.length - 1; k >= 0; k--) {
+        const it = its[k], co = Math.cos(it.ang), si = Math.sin(it.ang);
+        const dx = x - (it.x + it.w / 2), dy = y - (it.y + it.h / 2);
+        const lx = dx * co + dy * si, ly = -dx * si + dy * co;
+        const padL = it.where === 'cab' ? 8 : 1;
+        if (lx >= -it.w / 2 - padL && lx <= it.w / 2 + 1 && ly >= -it.h / 2 - 1 && ly <= it.h / 2 + 1) return it.id;
+      }
     }
     return null;
   }
@@ -1238,9 +1580,10 @@
     else if (k === 'Enter' || k === ' ') { e.preventDefault(); play(); }
     else if (k === 'PageUp') { e.preventDefault(); chBlink = 1; irPulse(); zap(1); }
     else if (k === 'PageDown') { e.preventDefault(); chBlink = -1; irPulse(); zap(-1); }
-    else if (k >= '1' && k <= '9') zapTo(+k - 1);
+    else if (k >= '1' && k <= '9') { if (CHANS[+k - 1] !== undefined) zapTo(CHANS[+k - 1]); }
     else if (k === '0' && secretOn) zapTo(SECRET);
     else if (k === 'r' || k === 'R') rewind();
+    else if ((k === 'Escape' || k === 'Backspace') && openBox >= 0) { e.preventDefault(); closeBox(); }
   });
   addEventListener('pageshow', e => {
     if (e.persisted && state === 'playing') { settlePlay(); screen.classList.remove('inserting'); state = 'shelf'; zoomed = false; applyView(true); render(); updateWear(); tick(); applyTracking(); }
@@ -1375,6 +1718,8 @@
     },
     degauss(t) { tone(t, .6, 95, 40, 'sine', .45); nz(t, .45, 'lowpass', 500, .7, .25); nz(t + .05, .35, 'highpass', 5000, .5, .06); },
     off(t) { tone(t, .2, 500, 70, 'sine', .15); },
+    // Pappdeckel: dumpfes Rascheln, beim Zuklappen ein Plopp
+    box(t, open) { nz(t, .12, 'bandpass', open ? 900 : 600, 1.2, .35); nz(t + .05, .08, 'lowpass', 400, .7, .4); if (!open) tone(t + .1, .1, 110, 55, 'sine', .35); },
     evil(t) { tone(t, 2.6, 55, 41, 'sawtooth', .1); tone(t, 2.6, 58, 39, 'sawtooth', .1); nz(t, 1.2, 'lowpass', 300, 1, .4); },
   };
   function sfxPlay(name, ...a) {
@@ -1442,7 +1787,7 @@
   // Farbe des Lichtscheins = mittlere Farbe der Spielvorschau, etwas aufgehellt
   const colorCache = {};
   function glowFromPic() {
-    if (!pPic.complete || !pPic.naturalWidth || sel < 0 || TAPES[sel].secret) return;
+    if (!pPic.complete || !pPic.naturalWidth || !isTape(sel) || TAPES[sel].secret) return;
     if (!colorCache[pPic.src]) {
       try {
         const c = document.createElement('canvas'); c.width = c.height = 8;
@@ -1476,8 +1821,8 @@
     chOsd.classList.add('show');
     clearTimeout(chT); chT = setTimeout(() => chOsd.classList.remove('show'), ms);
   }
-  const chName = i => 'CH ' + (TAPES[i].secret ? '00' : String(i + 1).padStart(2, '0'));
-  const chans = () => secretOn ? [SECRET, 0, 1, 2, 3, 4, 5, 6, 7, 8] : [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  const chName = i => 'CH ' + String(chNum(i)).padStart(2, '0');
+  const chans = () => secretOn ? [SECRET, ...CHANS] : CHANS;
   function zapTo(i) {
     if (rewinding || !TAPES[i] || (TAPES[i].secret && !secretOn)) return;
     if (state === 'title') return enterShelf(false);
@@ -1490,15 +1835,20 @@
     osdMsg(chName(i));
   }
   function zap(dir) {
-    const c = chans(), k = c.indexOf(sel);
-    zapTo(c[((k < 0 ? 0 : k) + dir + c.length) % c.length]);
+    const c = chans();
+    let k = c.indexOf(sel);
+    // von einer Box aus geht es bei ihrer ersten Kassette weiter
+    const b = isBox(sel) ? sel - BOX0 : sel === LID ? openBox : -1;
+    if (b >= 0) { k = c.indexOf(BOXN[b][0]); if (dir > 0) k--; }
+    zapTo(c[((k < 0 && b < 0 ? 0 : k) + dir + c.length) % c.length]);
   }
 
   // ================= Zählerstand, Abnutzung, Zurückspulen =================
   const modeEl = document.querySelector('.osd.mode');
   const pWear = document.getElementById('pWear');
   function updateWear() {
-    if (sel < 0 || TAPES[sel].secret) { pWear.textContent = sel >= 0 ? '■■■■■ ??? · NICHT ZURÜCKGESPULT' : ''; return; }
+    if (isTape(sel) && TAPES[sel].leer) { pWear.textContent = ''; return; }
+    if (!isTape(sel) || TAPES[sel].secret) { pWear.textContent = isTape(sel) ? '■■■■■ ??? · NICHT ZURÜCKGESPULT' : ''; return; }
     const w = wear(sel), n = 5 - Math.ceil(w / 2);
     const lab = w === 0 ? 'NEU' : w <= 3 ? 'GUT' : w <= 6 ? 'ABGENUTZT' : w <= 9 ? 'MITGENOMMEN' : 'HINÜBER';
     const cls = w <= 3 ? '' : w <= 6 ? 'mid' : 'bad';
@@ -1508,14 +1858,18 @@
   function settlePlay() {
     let p = null;
     try { p = JSON.parse(sessionStorage.getItem('vhs-play')); sessionStorage.removeItem('vhs-play'); } catch (e) {}
-    if (!p || !(p.i >= 0 && p.i < NT)) return;
-    const d = td(p.i);
+    if (!p) return;
+    let i = TAPES.findIndex(t => t.name === p.n && !t.secret);
+    if (i < 0 && !p.n && isTape(p.i) && !TAPES[p.i].secret) i = p.i;
+    if (i < 0) return;
+    lastPlayed = i;
+    const d = td(i);
     d.p += p.r ? 1 : 2;   // nicht zurückgespult abgespielt nutzt das Band stärker ab
     d.c = Math.min(99 * 3600, d.c + Math.max(20, Math.min(3 * 3600, (Date.now() - p.t) / 1000 | 0)));
     saveTapes();
   }
   function rewind() {
-    if (state !== 'shelf' || sel < 0 || rewinding) return;
+    if (state !== 'shelf' || !isTape(sel) || TAPES[sel].leer || rewinding) return;
     const d = td(sel);
     if (TAPES[sel].secret) { sfxPlay('zap'); return osdMsg('KLEMMT'); }
     if (d.c <= 0) return osdMsg('■ SCHON AM ANFANG');
@@ -1606,6 +1960,7 @@
     }
   }
   function shelfHint() {
+    if (openBox >= 0) return touch ? 'ANTIPPEN · ZURÜCK = BOX ZU' : '↑↓←→ WÄHLEN · ENTER START · ESC BOX ZU · BILD↑↓ KANAL';
     return touch ? 'ANTIPPEN · WISCHEN = KANAL' : '↑↓←→ WÄHLEN · ENTER START · BILD↑↓ KANAL · R SPULEN · T TRACKING';
   }
 

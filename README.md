@@ -42,6 +42,10 @@ Auf dem Regal stehen die Kassetten. Wer eine auswählt, sieht auf dem Fernseher 
 | 08 | **ABGABE-TRAINER** | Übt das Abgabegespräch, eine KI spielt die Lehrkraft |
 | 09 | **NAUTO-MOD** | Infoseite zur Naruto-Mod für Minecraft 1.21.1 |
 
+Ein paar Kassetten liegen einfach herum: oben auf dem Fernseher oder auf dem Boden neben dem Regal.
+
+**Neue Kassette hinzufügen:** in `index.html` einen Eintrag unten in `TAPES` anhängen. Mit `lose: true` (oder genau `'fernseher'`, `'boden'`, `'regal'`) liegt sie herum statt im Regal. Freie Plätze sind mit leeren Kassetten belegt (ohne Etikett, eine liegt zusätzlich auf dem Boden). Kommt eine echte Kassette dazu, verschwindet eine leere aus dem Regal. Ist das Regal voll, landet der Rest automatisch auf dem Boden. Für später gibt es auch Sammelboxen zum Aufklappen (`BOXES`, Kassette mit `box: 'id'`), sind gerade aber nicht in Benutzung.
+
 Die Spiele in `games/` sind Kopien aus [Shittty-ahh-AI-games](https://github.com/Michi3445/Shittty-ahh-AI-games). Ändert sich dort ein Spiel, die Datei hier einfach neu hineinkopieren.
 
 ## ♪ Musik und Fernbedienung
