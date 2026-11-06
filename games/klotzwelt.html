@@ -353,6 +353,7 @@ blk('lily_pad',{n:'Seerose',cls:'box',tex:'lily_pad',texf:(f,m)=>[f===2||f===3?'
 blk('carrots',{n:'Karotten',cls:'crop',tex:'carrots_0',op:0,coll:0,h:0,snd:'grass',plant:1,noItem:1,drop:[]});
 blk('stone_bricks_mossy',{n:'Moosige Steinziegel',tex:'stone_bricks_mossy',h:1.5,tool:'pick',tier:0});
 blk('stone_bricks_cracked',{n:'Rissige Steinziegel',tex:'stone_bricks_cracked',h:1.5,tool:'pick',tier:0});
+blk('berry_bush',{n:'Beerenbusch',cls:'cross',tex:'berry_bush',texf:(f,m)=>[m?'berry_bush_ripe':'berry_bush',0],op:0,coll:0,h:0,snd:'grass',plant:1,use:'berry',noItem:1,drop:[['berries',1,1]],cat:'nature'});
 // ===== classification tables =====
 const NB=BD.length;
 const OP=new Uint8Array(256),LUM=new Uint8Array(256),CLS=new Uint8Array(256),OPQ=new Uint8Array(256),COLL=new Uint8Array(256),CULLSAME=new Uint8Array(256),REPL=new Uint8Array(256),FALL=new Uint8Array(256),LIQ=new Uint8Array(256);
@@ -389,6 +390,7 @@ itm('door',{n:'Holztür',place:'door_block',cat:'deco'});itm('bed',{n:'Bett',pla
 itm('carrot',{n:'Karotte',food:3,cat:'food',plantSeed:1,crop:'carrots'});
 itm('fishing_rod',{n:'Angel',st:1,dur:64,cat:'tool'});
 itm('fish_raw',{n:'Roher Fisch',food:2,cat:'food'});itm('fish_cooked',{n:'Gebratener Fisch',food:6,cat:'food'});
+itm('berries',{n:'Waldbeeren',food:2,cat:'food'});itm('compass',{n:'Kompass',st:1,cat:'tool'});itm('berry_pie',{n:'Beerenkuchen',food:8,cat:'food'});
 // resolve name -> id (block first, then item)
 function nid(name){if(name in I)return I[name];if(name in B)return B[name];throw new Error('unknown item '+name)}
 function dropList(def){return def.drop}
@@ -444,6 +446,8 @@ function defRecipes(){
  for(const[k]of WOOLS)R_shaped(['WW'],{W:'wool_'+k},'carpet_'+k,3);
  R_shaped(['  S',' SX','S X'],{S:'stick',X:'string'},'fishing_rod');
  R_shapeless(['stone_bricks','mossy_cobble'],'stone_bricks_mossy',2);
+ R_shaped([' I ','ICI',' I '],{I:'iron_ingot',C:'#coal'},'compass');
+ R_shapeless(['berries','berries','berries','wheat'],'berry_pie');
 }
 
 /* ==== 03_atlas.js ==== */
@@ -622,6 +626,9 @@ for(let s2=0;s2<4;s2++)T('carrots_'+s2,(t,r)=>{clr(t);const g1=[70,150,46],g2=[1
   if(s2===3){t.rect(x-1,14,3,2,[236,120,30]);t.set(x,13,[250,150,50])}}});
 T('stone_bricks_mossy',(t,r)=>{TP[TI.stone_bricks][0](t,r);const m=TPAL('#2f5a24 #3f7330 #548c3c #6aa448'),f=fbm(r,[8,4],[.5,.5]);
  for(let y=0;y<16;y++)for(let x=0;x<16;x++){const v=f(x,y)+((y&7)===7||y<3?.12:0);if(v>.6)t.set(x,y,rmp(m,stretch(v,.6,.85),x,y,.3))}});
+const berryBush=(t,r,ripe)=>{clr(t);const L=[[44,96,40],[60,124,50],[84,150,64]];for(let i=0;i<70;i++){const x=1+((r()*14)|0),y=3+((r()*13)|0);if(Math.hypot(x+.5-8,(y+.5-10)*1.25)>7)continue;t.set(x,y,L[(r()*3)|0])}
+ for(const x of[6,9])for(let y=11;y<16;y++)t.set(x,y,[96,70,40]);if(ripe)for(let i=0;i<9;i++){const x=2+((r()*12)|0),y=4+((r()*9)|0);t.set(x,y,[196,30,60]);t.set(x+1,y,[150,20,44]);t.set(x,y-1,[240,90,110])}};
+T('berry_bush',(t,r)=>berryBush(t,r,0));T('berry_bush_ripe',(t,r)=>berryBush(t,r,1));
 T('stone_bricks_cracked',(t,r)=>{TP[TI.stone_bricks][0](t,r);const C=[50,52,58];for(let k=0;k<3;k++){let x=(r()*16)|0,y=(r()*16)|0;for(let i=0;i<9;i++){t.set(x,y,C);const d=(r()*4)|0;if(d===0)x++;else if(d===1)x--;else y+=d===2?1:-1}}});
 TN.push('_pad');TP.push([()=>{}]);TI._pad=TN.length-1;
 // Build atlas canvases
@@ -765,6 +772,7 @@ class Gen{
    if(bio===BIO.SWAMP&&h<SEA&&h>=SEA-3){const si=((SEA+1)<<8)|col;if(b[(SEA<<8)|col]===B.water&&b[si]===0&&rnd()<.1)b[si]=B.lily_pad;continue}
    if(h<SEA||h>=WH-3)continue;if(b[above]!==0)continue;const gnd=b[(h<<8)|col],r=rnd();
    if(gnd===B.grass){
+    if(this.gv>=2&&(bio===BIO.TAIGA||bio===BIO.FOREST||bio===BIO.BIRCH)&&r<.006){b[above]=B.berry_bush;ch.m[above]=1;continue}
     if(bio===BIO.TAIGA||bio===BIO.TUNDRA){b[above]=B.snow;continue}
     let pg=0,pf=0,pm=0;if(bio===BIO.SWAMP){pg=.16;pf=.012;pm=.02}else if(bio===BIO.PLAINS){pg=.22;pf=.025}else if(bio===BIO.FOREST||bio===BIO.BIRCH){pg=.09;pf=.008;pm=.004}else if(bio===BIO.MOUNTAINS){pg=.03}
     if(r<pg)b[above]=B.tall_grass;else if(r<pg+pf){const q=rnd();b[above]=bio===BIO.SWAMP?B.blue_orchid:q<.45?B.dandelion:q<.9?B.poppy:B.blue_orchid}else if(r<pg+pf+pm)b[above]=rnd()<.5?B.mushroom_red:B.mushroom_brown}
@@ -774,7 +782,7 @@ class Gen{
    else if(gnd===B.snow_block||(gnd===B.stone&&bio===BIO.MOUNTAINS&&h>SEA+34)){if(gnd===B.stone&&r<.5)b[above]=B.snow}
   }}
  // loot
- loot(rnd,nStacks,rich){const t=[['bread',1,3,10],['apple',1,3,8],['coal',2,6,12],['iron_ingot',1,3,9],['gold_ingot',1,2,5],['string',1,4,9],['bone',1,4,9],['arrow',3,8,8],['seeds',2,6,8],['gunpowder',1,4,8],['feather',1,3,6],['flint',1,3,6],['bucket',1,1,3],['stick',2,6,6],['torch',3,10,8],['pickaxe_iron',1,1,1.2],['sword_iron',1,1,1.2],['diamond',1,2,1.4],['leather',1,3,5],['cobble',6,16,5],['planks',4,10,5],['wheat',2,5,6],['pork_cooked',1,2,3],['bow',1,1,2],['helmet_iron',1,1,1],['chestplate_iron',1,1,.8],['carrot',1,4,7],['fishing_rod',1,1,2],['lantern',1,2,2]];
+ loot(rnd,nStacks,rich){const t=[['bread',1,3,10],['apple',1,3,8],['coal',2,6,12],['iron_ingot',1,3,9],['gold_ingot',1,2,5],['string',1,4,9],['bone',1,4,9],['arrow',3,8,8],['seeds',2,6,8],['gunpowder',1,4,8],['feather',1,3,6],['flint',1,3,6],['bucket',1,1,3],['stick',2,6,6],['torch',3,10,8],['pickaxe_iron',1,1,1.2],['sword_iron',1,1,1.2],['diamond',1,2,1.4],['leather',1,3,5],['cobble',6,16,5],['planks',4,10,5],['wheat',2,5,6],['pork_cooked',1,2,3],['bow',1,1,2],['helmet_iron',1,1,1],['chestplate_iron',1,1,.8],['carrot',1,4,7],['fishing_rod',1,1,2],['lantern',1,2,2],['berries',2,6,6],['compass',1,1,1.5]];
   let tot=0;for(const e of t)tot+=e[3];const items=new Array(27).fill(null);
   for(let k=0;k<nStacks;k++){let r=rnd()*tot,e=t[0];for(const q of t){r-=q[3];if(r<=0){e=q;break}}const n=e[1]+((rnd()*(e[2]-e[1]+1))|0);const slot=(rnd()*27)|0;if(!items[slot])items[slot]={id:nid(e[0]),n};}
   return items}
@@ -1028,6 +1036,7 @@ Object.assign(World.prototype,{
   if(id===B.grass){const above=this.get(x,y+1,z);if(OP[above]>=14||(this.skyAt(x,y+1,z)<4&&this.blAt(x,y+1,z)<4&&OP[above]>=2)){this.setBlock(x,y,z,B.dirt,0,3);return}
    const tx=x+((rnd()*3)|0)-1,ty=y+((rnd()*5)|0)-3,tz=z+((rnd()*3)|0)-1;if(this.get(tx,ty,tz)===B.dirt&&OP[this.get(tx,ty+1,tz)]<2&&this.skyAt(tx,ty+1,tz)>=9)this.setBlock(tx,ty,tz,B.grass,0,3);return}
   if(id===B.leaves||id===B.leaves_spruce||id===B.leaves_birch){const m=this.getM(x,y,z);if(m&1)return;if(!this.leafConnected(x,y,z)){const dl=dropsFor(id,m,rnd);for(const[i2,n]of dl)this.hooks.drop(x+.5,y+.5,z+.5,{id:i2,n});this.setBlock(x,y,z,0,0,3)}return}
+  if(id===B.berry_bush){if(!this.getM(x,y,z)&&rnd()<.12)this.setMeta(x,y,z,1);return}
   if(id===B.wheat||id===B.carrots){const m=this.getM(x,y,z);if(m>=7)return;if(this.skyAt(x,y,z)<8&&this.blAt(x,y,z)<8)return;const moist=(this.getM(x,y-1,z)&7)>0;if(rnd()<(moist?.3:.15))this.setBlock(x,y,z,id,m+1,3);return}
   if(id===B.farmland){const m=this.getM(x,y,z);let wet=false;for(let dz=-4;dz<=4&&!wet;dz++)for(let dx=-4;dx<=4&&!wet;dx++)for(let dy=0;dy<=1;dy++)if(this.get(x+dx,y+dy,z+dz)===B.water){wet=true;break}
    if(wet){if((m&7)<7)this.setMeta(x,y,z,7)}else if((m&7)>0)this.setMeta(x,y,z,(m&7)-1);else if(this.get(x,y+1,z)!==B.wheat&&this.get(x,y+1,z)!==B.carrots)this.setBlock(x,y,z,B.dirt,0,3);return}
@@ -1593,6 +1602,8 @@ function foodSprite(k){const s=new Sp();const P=(x,y,c)=>s.put(x,y,c);const ell=
   case'fish_raw':case'fish_cooked':{const ck=k==='fish_cooked',f=(x,y)=>ell(7.5,8,5.2,3.2)(x,y)||(x>=12&&x<=14&&Math.abs(y+.5-8)<=(x-11)*1.1);
    meatSp(s,f,ck?[[110,64,30],[150,94,44],[186,128,66],[222,170,104]]:[[60,92,120],[84,124,156],[120,160,190],[176,206,226]],{rim:ck?null:(x,y)=>y>=9,rimC:[226,232,236]});
    P(4,7,ck?[40,24,14]:[20,20,24]);if(ck){P(7,7,[96,50,20]);P(9,8,[96,50,20])}else{P(8,6,[200,220,236])}break}
+  case'berries':for(const[x,y]of[[5,8],[9,7],[7,11],[11,10],[4,12]]){meatSp(s,ell(x+1,y+1,1.7,1.7),[[110,14,36],[160,24,52],[200,44,72],[240,120,140]])}s.line(8,3,9,6,[70,120,40]);s.put(10,3,[90,160,60]);s.put(7,3,[90,160,60]);break;
+  case'berry_pie':{meatSp(s,(x,y)=>ell(8,9,6.6,4.4)(x,y),[[140,90,40],[184,126,60],[214,160,86],[238,196,124]]);for(const[x,y]of[[5,8],[8,7],[11,8],[6,10],[10,10],[8,9]])P(x,y,[170,26,56]);for(let x=3;x<14;x+=2)P(x,12,[120,76,34]);break}
   case'rotten_flesh':{const rt=(x,y)=>ell(8,8.5,6,5)(x,y)&&!(x<4&&y<6)&&!(x>12&&y>10)&&!(x===9&&y<5);meatSp(s,rt,[[70,84,40],[98,112,52],[126,134,66],[156,160,88]]);for(const[x,y]of[[6,7],[10,9],[7,11],[11,6]]){P(x,y,[86,48,40]);P(x+1,y,[110,64,52])}P(5,9,[190,60,60]);break}}
  s.outline(OUTC);return s}
 function matSprite(k){const s=new Sp();const P=(x,y,c)=>s.put(x,y,c);
@@ -1625,6 +1636,7 @@ function matSprite(k){const s=new Sp();const P=(x,y,c)=>s.put(x,y,c);
   case'bed':s.rect(2,7,12,5,[176,40,40]);s.rect(2,7,4,5,[240,240,240]);s.rect(2,6,12,1,[206,66,66]);s.rect(2,12,12,2,[150,110,60]);s.rect(2,14,2,1,[110,80,40]);s.rect(12,14,2,1,[110,80,40]);break;
   case'sugar_cane':s.line(5,14,6,2,[120,190,90]);s.line(6,14,7,2,[100,170,70]);s.line(10,14,11,4,[130,200,100]);s.line(11,14,12,4,[104,176,76]);for(const y of[5,9,12]){s.put(5,y,[70,130,50]);s.put(10,y+1,[70,130,50])}break;
   case'flint_steel':s.rect(3,8,9,5,[150,150,160]);s.rect(4,7,7,1,[190,190,200]);s.rect(3,12,9,1,[100,100,110]);s.rect(5,9,3,3,[40,40,44]);s.line(10,3,12,6,[70,70,76]);s.rect(9,2,4,2,[90,90,96]);s.put(12,2,[255,170,40]);s.put(11,1,[255,230,120]);break;
+  case'compass':{const C=[150,150,160],D=[90,90,100];for(let y=0;y<16;y++)for(let x=0;x<16;x++){const d=Math.hypot(x+.5-8,y+.5-8);if(d<6.2)P(x,y,d>5.2?C:d>4.6?D:[220,214,196])}s.line(8,4,8,8,[200,40,40]);s.line(8,8,8,12,[60,60,70]);P(8,8,[30,30,30]);break}
   case'fishing_rod':{s.line(2,14,12,2,HDL[0]);s.line(3,14,13,2,HDL[1]);s.line(13,2,13,11,[226,226,226]);s.put(13,12,[200,40,40]);s.put(12,12,[240,240,240]);s.put(13,13,[200,40,40]);s.rect(3,12,2,2,[60,60,66]);break}
   case'door':{const u=ATLAS.tiles[TI.door_upper],lw=ATLAS.tiles[TI.door_lower];for(let y=0;y<16;y++)for(let x=3;x<13;x++){const src=y<8?u.get(x,y*2):lw.get(x,(y-8)*2);s.put(x,y,src,src[3])}break}
  }
@@ -3139,6 +3151,7 @@ const Play={
     case'chest':{let be=w.beAt(T.x,T.y,T.z);if(!be||!be.items){be={t:'chest',items:new Array(27).fill(null)};w.setBE(T.x,T.y,T.z,be)}G.ach('chest');if([B.stone_bricks,B.stone_bricks_mossy,B.stone_bricks_cracked,B.gravel].includes(w.get(T.x,T.y-1,T.z)))G.ach('ruin');UI.show('chest',{be});return}
     case'door':if(w.toggleDoor(T.x,T.y,T.z)){Hand.swingT=.3;this.placeCd=.25}return;
     case'bed':this.trySleep(T.x,T.y,T.z);return;
+    case'berry':{const m=w.getM(T.x,T.y,T.z);if(!m)break;w.setBlock(T.x,T.y,T.z,B.berry_bush,0,1|4);Ents.spawnItem(T.x+.5,T.y+.6,T.z+.5,{id:I.berries,n:1+((Math.random()*3)|0),d:0},0,2,0);Aud.play('place',.7,T.x+.5,T.y+.5,T.z+.5,'grass');Hand.swingT=.3;this.placeCd=.3;return}
     case'trapdoor':{const m=w.getM(T.x,T.y,T.z)^4;w.setBlock(T.x,T.y,T.z,B.trapdoor,m,1|4);w.hooks.sound((m&4)?'door_open':'door_close',T.x,T.y,T.z);Hand.swingT=.3;this.placeCd=.25;return}
     case'tnt':if(held&&held.id===I.flint_steel){this.igniteTNT(T.x,T.y,T.z);return}break}}
   if(!held){return}
@@ -3149,6 +3162,7 @@ const Play={
    if(r.hit&&r.id===B.water&&w.get(r.x,r.y+1,r.z)===0){w.setBlock(r.x,r.y+1,r.z,B.lily_pad,0,3|4);Aud.play('place',.8,r.x+.5,r.y+1,r.z+.5,'grass');Hand.swingT=.3;this.placeCd=.25;if(G.mode==='survival')Inv.useHeld()}return}
   // 2) the held item
   if(hd.plantSeed&&hd.food&&T.hit&&T.id===B.farmland&&T.f===2){this.plantSeed();return}
+  if(held.id===I.berries&&first&&T.hit&&T.f===2&&(T.id===B.grass||T.id===B.dirt)&&w.get(T.x,T.y+1,T.z)===0){w.setBlock(T.x,T.y+1,T.z,B.berry_bush,0,3|4);Aud.play('place',.6,T.x+.5,T.y+1,T.z+.5,'grass');Hand.swingT=.3;this.placeCd=.25;if(G.mode==='survival')Inv.useHeld();return}
   if(hd.food&&!hd.place&&first){const f=foodOf(held.id);if(f&&(P.food<20||held.id===I.rotten_flesh&&false)){this.eating=true;this.eat=0;this.digT=0;return}if(f&&G.mode==='creative'){this.eating=true;this.eat=0;this.digT=0;return}return}
   if(held.id===I.bow&&first){if(G.mode==='creative'||Inv.count(I.arrow)>0){this.drawing=true;this.draw=0;Aud.play('bow_draw',.6)}else if(first)UI.msg('Du hast keine Pfeile.','#ffb0a0');return}
   if(hd.cat==='armor'&&first){const s=hd.slot,cur=Inv.armor[s];Inv.armor[s]=held;Inv.main[Inv.sel]=cur;Inv.ver++;Aud.play('click',.7);return}
@@ -3504,6 +3518,7 @@ Object.assign(DEATHMSG,{cactus:'Du wurdest von einem Kaktus gestochen.'});
 </script>
 <script src="../firebase-config.js"></script>
 <script src="klotzwelt-skins.js"></script>
+<script src="klotzwelt-map.js"></script>
 <script src="klotzwelt-online.js"></script>
 
 </body></html>

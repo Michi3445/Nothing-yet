@@ -616,6 +616,13 @@
       a.legL.rotation.x = sw + .35 * a.sneakK; a.legR.rotation.x = -sw + .35 * a.sneakK; a.armL.rotation.x = -sw * .8;
       if (a.swingT > 0) { a.swingT = Math.max(0, a.swingT - dt); const q = 1 - a.swingT / .3; a.armR.rotation.x = -Math.sin(q * Math.PI) * 1.5 - .3; }
       else a.armR.rotation.x = a.item.visible ? -.35 + sw * .4 : sw * .8;
+      const em = p ? +p.em || 0 : 0, tt = now / 1000;
+      a.armR.rotation.z = 0; a.armL.rotation.z = 0; a.body.rotation.y = 0;
+      if (em === 1) { a.armR.rotation.x = -2.9; a.armR.rotation.z = Math.sin(tt * 9) * .45; }
+      else if (em === 2) { a.body.rotation.y = Math.sin(tt * 5) * .5; a.armR.rotation.x = -2.6 + Math.sin(tt * 10) * .5; a.armL.rotation.x = -2.6 - Math.sin(tt * 10) * .5; a.body.position.y = Math.abs(Math.sin(tt * 10)) * .08; a.head.rotation.z = Math.sin(tt * 5) * .2; }
+      else if (em === 3) { a.body.position.y = -.65; a.legL.rotation.x = a.legR.rotation.x = -1.5; a.armL.rotation.x = a.armR.rotation.x = -.4; }
+      else if (em === 4) { const j = Math.abs(Math.sin(tt * 7)); a.body.position.y = j * .3; a.armR.rotation.x = a.armL.rotation.x = -3; a.armR.rotation.z = .3; a.armL.rotation.z = -.3; }
+      if (em !== 2) a.head.rotation.z = 0;
       if (a.hurtT > 0) a.hurtT = Math.max(0, a.hurtT - dt);
       for (const m of a.mats) { m.color.copy(m.userData.base); if (a.hurtT > 0) m.color.lerp(RED, .6); m.color.multiplyScalar(light); }
     }
@@ -639,10 +646,18 @@
       }
     }
   }
+  // emotes: /winken, /tanzen, /sitzen (sitting ends when you move)
+  const EMOTES = { winken: 1, tanzen: 2, sitzen: 3, jubeln: 4 };
+  function emoteNow() {
+    const e = N.emote; if (!e) return 0;
+    const P = G.player, moved = P && Math.hypot(P.x - e.x, P.z - e.z) > .3;
+    if (performance.now() > e.until || moved) { N.emote = null; return 0; }
+    return e.k;
+  }
   function posOf(P) {
     const r = v => Math.round(v * 100) / 100, held = Inv.held();
     return { x: r(P.x), y: r(P.y), z: r(P.z), yaw: r(P.yaw), pitch: r(P.pitch), dd: P.dead ? 1 : 0, cr: P.creative ? 1 : 0,
-      h: held ? held.id : 0, sn: P.sneak ? 1 : 0, sw: N.swings, hp: Math.max(0, Math.ceil(P.hp)) };
+      h: held ? held.id : 0, sn: P.sneak ? 1 : 0, sw: N.swings, hp: Math.max(0, Math.ceil(P.hp)), em: emoteNow() };
   }
   requestAnimationFrame(tick);
 
@@ -803,6 +818,11 @@
     UI.msg(had ? 'Online kann man nicht schlafen – die Zeit läuft für alle gleich.' : 'Spawnpunkt gesetzt. (Online kann man nicht schlafen.)', '#bfe6ff');
   };
   G.chatSubmit = function (t) {
+    const em = /^\/(winken|tanzen|sitzen|jubeln)\s*$/i.exec(t.trim());
+    if (em && on() && G.player) {
+      const k = EMOTES[em[1].toLowerCase()]; N.emote = { k, until: performance.now() + (k === 3 ? 600000 : k === 2 ? 8000 : 3000), x: G.player.x, z: G.player.z };
+      UI.msg(['', 'Du winkst.', 'Du tanzt.', 'Du setzt dich hin.', 'Du jubelst!'][k], '#bfe6ff'); return;
+    }
     if (!on() || t[0] === '/') return oChat.apply(this, arguments);
     kw('chat/' + N.wid).push({ u: N.uid, n: N.name, t: t.slice(0, 200), ts: firebase.database.ServerValue.TIMESTAMP }).catch(e => UI.msg('Nachricht nicht gesendet: ' + errText(e), '#ff7a6a'));
   };
@@ -879,6 +899,7 @@
     listen(pl, 'child_removed', s => { const p = N.players.get(s.key); N.players.delete(s.key); N.tgts.delete(s.key); dropAvatar(s.key); if (p && s.key !== N.uid) UI.msg((p.name || 'Jemand') + ' hat die Welt verlassen.', '#ffe9a8'); });
     listen(kw('chat/' + wid).limitToLast(30), 'child_added', s => { const c = s.val(); if (!c || (c.ts && c.ts < N.joinedAt - 60000)) return; UI.msg('<' + (c.u === N.uid ? 'Du' : c.n) + '> ' + c.t, c.u === N.uid ? '#ffffff' : '#bfe6ff'); });
     UI.msg('Online-Welt · Code ' + N.code + ' · Lade Freunde über Pause → „Einladen“ ein.', '#ffe9a8');
+    UI.msg('Tab = Spielerliste · N = Karte · Emotes: /winken /tanzen /sitzen /jubeln', '#bfe6ff');
     try { history.replaceState(null, '', location.pathname + '?welt=' + N.code); } catch (e) { }
   }
   function disconnect() {
