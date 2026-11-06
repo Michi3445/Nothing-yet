@@ -309,6 +309,68 @@
     pointer-events: none;
   }
 
+  /* ===== Zimmer links/rechts ===== */
+  .room { position: absolute; top: 0; image-rendering: pixelated; }
+  .room.hot { cursor: pointer; }
+  .panb {
+    position: fixed; top: 50%; z-index: 9; transform: translateY(-50%);
+    display: none; flex-direction: column; align-items: center; gap: 2px;
+    font: 26px 'VT323', monospace; line-height: 1; color: var(--text);
+    background: rgba(11,6,18,.72); border: 2px solid #4a3f5c; padding: 12px 5px 9px; cursor: pointer;
+  }
+  .panb small { font-size: 13px; letter-spacing: .12em; writing-mode: vertical-rl; }
+  .panb:hover { border-color: var(--pink); color: #fff; }
+  .panb.show { display: flex; }
+  #panL { left: 6px; } #panR { right: 6px; }
+  .panb.ring { color: var(--pink); border-color: var(--pink); animation: blink .5s steps(1) infinite; }
+  /* Untertitel-Box */
+  .cap {
+    position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%); z-index: 16;
+    width: min(600px, calc(100vw - 24px)); padding: 8px 14px 10px;
+    background: rgba(11,6,18,.9); border: 2px solid var(--pink);
+    box-shadow: 0 0 0 2px #000, 0 0 18px rgba(255,46,136,.35);
+    font-size: 22px; letter-spacing: .06em; line-height: 1.15; color: var(--text);
+  }
+  .cap[hidden] { display: none; }
+  .cap-h { font-size: 16px; color: var(--cyan); letter-spacing: .15em; margin-bottom: 3px; }
+  .cap.evil { border-color: #ff3048; }
+  .cap.evil .cap-h { color: #ff5a6e; }
+  .cap-t { min-height: 1.15em; }
+  .cap-t span.wd { display: inline-block; white-space: nowrap; }
+  .cap-t span.wb { display: inline-block; animation: wob 1.7s ease-in-out infinite, shiver 1.3s steps(2) infinite; }
+  .cap-t span.ernst { color: #ff3048; text-shadow: 0 0 6px rgba(255,48,72,.7); animation: wob .9s ease-in-out infinite, redflick .23s steps(1) infinite; }
+  @keyframes wob { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-2px) rotate(-2deg); } 50% { transform: translateY(1px) rotate(1deg); } 75% { transform: translateY(2px) rotate(2deg); } }
+  @keyframes shiver { 0%, 90% { translate: 0 0; } 95% { translate: 1px 0; } }
+  @keyframes redflick { 0% { opacity: 1; } 30% { opacity: .55; color: #ff8a9a; } 55% { opacity: 1; } 80% { opacity: .3; translate: 1px 0; } }
+  .cap-b { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+  .cap-b:empty { display: none; }
+  .cap-b button, .holo-ui button { font: 20px 'VT323', monospace; letter-spacing: .1em; color: var(--text); background: rgba(11,6,18,.85); border: 2px solid #4a3f5c; padding: 2px 12px 0; cursor: pointer; }
+  .cap-b button:hover, .holo-ui button:hover { border-color: var(--pink); color: #fff; }
+  /* 3D-Kassette */
+  .holo { position: fixed; inset: 0; z-index: 14; touch-action: none; }
+  .holo[hidden] { display: none; }
+  .holo-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at var(--hx, 50%) var(--hy, 50%), rgba(11,6,18,.15), rgba(11,6,18,.7) 70%); opacity: 0; transition: opacity .35s; }
+  .holo.on .holo-bg { opacity: 1; }
+  .holo-3d { position: absolute; inset: 0; perspective: 1300px; pointer-events: none; }
+  .t3 { position: absolute; left: 0; top: 0; transform-style: preserve-3d; pointer-events: auto; cursor: grab; }
+  .t3.drag { cursor: grabbing; }
+  .cube { position: absolute; transform-style: preserve-3d; }
+  .cube .face { position: absolute; image-rendering: pixelated; backface-visibility: hidden; }
+  .holo-ui { position: absolute; display: flex; gap: 8px; transform: translateX(-50%); opacity: 0; pointer-events: none; transition: opacity .3s; flex-wrap: wrap; justify-content: center; width: max-content; max-width: 96vw; }
+  .holo.ready .holo-ui { opacity: 1; pointer-events: auto; }
+  .holo-ui #hIns { color: var(--pink); border-color: var(--pink); }
+  .holo-ui #hIns.evil { color: #ff3048; border-color: #ff3048; }
+  .holo-tip { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font-size: 17px; color: #8a7fa3; letter-spacing: .12em; padding: 0 10px; pointer-events: none; }
+  .drop-ring { position: fixed; z-index: 13; border: 3px dashed var(--pink); box-shadow: 0 0 24px rgba(255,46,136,.6); pointer-events: none; display: none; }
+  .drop-ring.show { display: block; animation: blink .5s steps(1) infinite; }
+  /* Sticker-Animation */
+  .stk { position: fixed; left: 0; top: 0; z-index: 17; pointer-events: none; display: none; }
+  .stk canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; filter: drop-shadow(0 4px 0 rgba(0,0,0,.5)); }
+  .stk-t { position: fixed; left: 0; right: 0; top: 16%; z-index: 17; text-align: center; pointer-events: none; opacity: 0; transition: opacity .3s;
+    font-size: 30px; letter-spacing: .12em; color: #fff; text-shadow: 2px 0 var(--pink), -2px 0 var(--cyan); }
+  .stk-t small { display: block; font-size: 22px; color: var(--cyan); text-shadow: none; }
+  .stk-t.show { opacity: 1; }
+
 </style>
 </head>
 <body>
@@ -325,6 +387,8 @@
   </svg>
   <div class="stage" id="stage">
   <div class="scene" id="scene">
+    <canvas id="roomL" class="room" aria-label="Linke Zimmerwand mit Fenster, Schreibtisch und Telefon"></canvas>
+    <canvas id="roomR" class="room" aria-label="Rechte Zimmerwand mit Postern, Katze und Sticker-Pinnwand"></canvas>
     <canvas id="art" aria-label="Fernseher auf einem Regal mit Videokassetten"></canvas>
     <canvas id="dark"></canvas>
     <canvas id="glow"></canvas>
@@ -386,6 +450,18 @@
     <button class="sound" id="amb" aria-label="Raumgeräusche (Regen, Röhrenbrummen) an oder aus">☂ RAUM</button>
     <button class="sound" id="sound" aria-label="Ton an oder aus">♪ AN</button>
   </div>
+  <button class="panb" id="panL" aria-label="Nach links umsehen">◄</button>
+  <button class="panb" id="panR" aria-label="Nach rechts umsehen">►</button>
+  <div class="cap" id="cap" hidden aria-live="polite"><div class="cap-h" id="capH"></div><div class="cap-t" id="capT"></div><div class="cap-b" id="capB"></div></div>
+  <div class="holo" id="holo" hidden>
+    <div class="holo-bg"></div>
+    <div class="holo-3d"><div class="t3" id="t3"></div></div>
+    <div class="holo-ui" id="holoUi"><button id="hBack">✕ ZURÜCK</button><button id="hFlip">↻ DREHEN</button><button id="hIns">▶ EINLEGEN</button></div>
+    <div class="holo-tip" id="holoTip"></div>
+  </div>
+  <div class="drop-ring" id="dropRing"></div>
+  <div class="stk" id="stk"><canvas width="13" height="11"></canvas></div>
+  <div class="stk-t" id="stkT"></div>
   <audio id="music" src="audio/intro.m4a" preload="auto" loop></audio>
   <div class="hint" id="hint"></div>
   <div class="vhs" aria-hidden="true"><canvas id="vhsNoise" width="160" height="90"></canvas><div class="lines"></div><div class="vig"></div><div class="roll"></div><div class="bars" id="vhsBars"></div></div>
@@ -397,19 +473,21 @@
   //   box: 'retro'      → liegt in dieser Sammelbox (Boxen stehen weiter unten in BOXES, max. 8 Kassetten pro Box)
   //   lose: true        → liegt irgendwo lose herum: auf dem Fernseher, auf dem Boden oder schief auf einem Stapel im Regal
   //   lose: 'fernseher' / 'boden' / 'regal' → liegt genau dort
+  //   ab: 12, grund: '...'  → Altersfreigabe auf der Rückseite der 3D-Hülle (0, 6, 12, 16 oder 18) mit Begründung (kurz, max. 11 Zeichen pro Wort)
+  //   farbe: '#ff2e88'      → Farbe der Hülle (sonst automatisch)
   // Ist im Regal kein Platz mehr, landet der Rest automatisch lose auf dem Boden.
   // Vorschaubild: previews/<name der html-datei>.jpg
   const TAPES = [
-    { name: 'KLOTZWELT',      tag: 'VOXEL · SURVIVAL',      url: 'games/klotzwelt.html',      desc: 'Eigene Klötzchenwelt mit Überleben- und Kreativmodus, Crafting, Monstern und Wetter.' },
-    { name: 'ASCII ARCADE',   tag: '5 RETRO-SPIELE',        url: 'games/ascii-arcade.html',   desc: 'Doom, Pong, Tetris, Pacman und Nachtschicht, alles aus Textzeichen.' },
-    { name: 'PULSE GRID',     tag: 'RHYTHMUS',              url: 'games/pulse-grid.html',     desc: 'Triff die Noten im 3×3-Raster. Eigene Songs laden, Maps importieren, Mods an.' },
-    { name: 'SOLITAIRE',      tag: 'KARTEN',                url: 'games/solitaire.html',      desc: 'Klassisches Klondike im Retro-Fenster. Doppelklick legt Karten ab.' },
-    { name: 'RETRO 98',       tag: 'DESKTOP',               url: 'games/retro98.html',        desc: 'Ein ganzer Retro-Desktop mit Startmenü, Paint, Minesweeper und mehr.' },
-    { name: 'LERNWERK',       tag: 'SCHULE',                url: 'games/lernwerk.html',       desc: 'Aufgaben, Noten-Schnitt, Stundenplan, Karteikarten, Formeln und 3D-Labor.' },
-    { name: 'WICHTEL',        tag: 'PARTY',                 url: 'games/wichtel.html',        desc: 'Sieht aus wie ein Weihnachts-Countdown. Dahinter steckt eine ganze Spielhalle.', lose: 'fernseher' },
-    { name: 'ABGABE-TRAINER', tag: 'KI · EIGENER API-KEY',  url: 'games/abgabe-trainer.html', desc: 'Übt das Abgabegespräch. Eine KI spielt die Lehrkraft.', lose: 'boden' },
-    { name: 'NAUTO-MOD',      tag: 'MINECRAFT-MOD',         url: 'nauto-mod.html',            desc: 'Naruto-Mod für Minecraft 1.21.1, portiert von AHZNBs Original.' },
-    { name: 'GÄSTEBUCH',      tag: 'BAND FÜR ALLE',         url: 'gaestebuch.html',           desc: 'Eine Kassette für Grüße. Zurückspulen, lesen und selbst etwas draufsprechen.' },
+    { name: 'KLOTZWELT',      tag: 'VOXEL · SURVIVAL',      url: 'games/klotzwelt.html',      desc: 'Eigene Klötzchenwelt mit Überleben- und Kreativmodus, Crafting, Monstern und Wetter.', ab: 6, grund: 'Explosive Monster.' },
+    { name: 'ASCII ARCADE',   tag: '5 RETRO-SPIELE',        url: 'games/ascii-arcade.html',   desc: 'Doom, Pong, Tetris, Pacman und Nachtschicht, alles aus Textzeichen.', ab: 12, grund: 'Gewalt aus Buchstaben.' },
+    { name: 'PULSE GRID',     tag: 'RHYTHMUS',              url: 'games/pulse-grid.html',     desc: 'Triff die Noten im 3×3-Raster. Eigene Songs laden, Maps importieren, Mods an.', ab: 0, grund: 'Gefahr für die Finger.' },
+    { name: 'SOLITAIRE',      tag: 'KARTEN',                url: 'games/solitaire.html',      desc: 'Klassisches Klondike im Retro-Fenster. Doppelklick legt Karten ab.', ab: 0, grund: 'Macht süchtig.' },
+    { name: 'RETRO 98',       tag: 'DESKTOP',               url: 'games/retro98.html',        desc: 'Ein ganzer Retro-Desktop mit Startmenü, Paint, Minesweeper und mehr.', ab: 6, grund: 'Stürzt gern ab.' },
+    { name: 'LERNWERK',       tag: 'SCHULE',                url: 'games/lernwerk.html',       desc: 'Aufgaben, Noten-Schnitt, Stundenplan, Karteikarten, Formeln und 3D-Labor.', ab: 0, grund: 'Enthält Schule.' },
+    { name: 'WICHTEL',        tag: 'PARTY',                 url: 'games/wichtel.html',        desc: 'Sieht aus wie ein Weihnachts-Countdown. Dahinter steckt eine ganze Spielhalle.', ab: 6, grund: 'Harmlos? Nein.', lose: 'fernseher' },
+    { name: 'ABGABE-TRAINER', tag: 'KI · EIGENER API-KEY',  url: 'games/abgabe-trainer.html', desc: 'Übt das Abgabegespräch. Eine KI spielt die Lehrkraft.', ab: 12, grund: 'Macht Angst vor Prüfungen.', lose: 'boden' },
+    { name: 'NAUTO-MOD',      tag: 'MINECRAFT-MOD',         url: 'nauto-mod.html',            desc: 'Naruto-Mod für Minecraft 1.21.1, portiert von AHZNBs Original.', ab: 12, grund: 'Ninjas kämpfen.' },
+    { name: 'GÄSTEBUCH',      tag: 'BAND FÜR ALLE',         url: 'gaestebuch.html',           desc: 'Eine Kassette für Grüße. Zurückspulen, lesen und selbst etwas draufsprechen.', ab: 0, grund: 'Sei nett.' },
     // Geheimkassette: erscheint erst nach dem Konami-Code oder 5x Tippen auf das VHS-VISION-Schild
     { name: '???',            tag: 'NICHT ABSPIELEN',       url: 'geheim.html', secret: true, desc: 'Lag hinter dem Regal. Kein Etikett, nur ein Datum: 13.03.1987.' },
   ];
@@ -681,7 +759,8 @@
     for (let x = 0; x < W; x++) {
       const v = (Math.sin(x / (portrait ? 9 : 11)) + 1) / 2 * 3;
       const lo = Math.floor(v), fr = v - lo;
-      for (let y = 0; y < shelfY; y++) {
+      // Vorhang reicht an den Seiten bis zum Boden (dort geht es ins Zimmer weiter)
+      for (let y = 0; y < cab.y + cab.h + 6; y++) {
         g.fillStyle = shades[Math.min(3, lo + (bay(x, y) < fr ? 1 : 0))];
         g.fillRect(x, y, 1, 1);
       }
@@ -715,7 +794,7 @@
     g.fillStyle = C.void;
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
       const dx = (x / W - .5) * 2, dy = (y / H - .45) * 2;
-      const v = Math.max(0, Math.sqrt(dx * dx * .9 + dy * dy * .7) - .55) * 1.4;
+      const v = Math.max(0, Math.sqrt(dx * dx * 0 + dy * dy * .7) - .55) * 1.4;   // links/rechts geht das Zimmer weiter
       if (bay(x, y) < v) g.fillRect(x, y, 1, 1);
     }
 
@@ -986,6 +1065,7 @@
   }
   const PAD = 4;
   function drawItem(it) {
+    if (it.id === hiddenTape) return;   // fliegt gerade als 3D-Kassette herum
     const s = it.id === sel && (state === 'shelf' || state === 'playing');
     const pull = s && it.where === 'cab' ? 7 : 0, lift = s && it.where !== 'cab' && it.where !== 'tv' ? 2 : 0;
     const cv = scratch(0, it.w + PAD * 2, it.h + PAD * 2);
@@ -1024,6 +1104,7 @@
     g.putImageData(bgCache, 0, 0);
     drawPower();
     drawRemote();
+    drawStickers();
     // Box auf- oder zuklappen: Deckel fährt hoch bzw. runter
     let vb = openBox, flap = 0;
     if (boxAnim) {
@@ -1099,13 +1180,17 @@
     drawBackground();
     render();
     drawDark(); drawGlow(); applyTracking();
+    buildRooms();
   }
 
   // Kamera: Zoomfaktor k und Bildmitte (cx, cy) in Szenen-Pixeln
   function fitView() {
     // unten Platz für die Hinweiszeile lassen, sonst liegt sie quer auf dem Handy über den Kassetten
     const pad = 28, k = Math.min(VW() / L.W, (VH() - pad) / L.H);
-    return { k, cx: L.W / 2, cy: L.H / 2 + pad / 2 / k };
+    // nach links/rechts gedreht: die Seitenwand füllt das Bild, ein Stück Regal bleibt sichtbar
+    let cx = L.W / 2;
+    if (pan) { const half = VW() / k / 2, sw = sideW(); cx = pan < 0 ? Math.min(cx, -sw + half - 6) : Math.max(cx, L.W + sw - half + 6); }
+    return { k, cx, cy: L.H / 2 + pad / 2 / k };
   }
   function zoomView() {
     const b = L.bezel;
@@ -1301,6 +1386,7 @@
     ledOn = false; state = 'off'; render();
     drawDark(); sfxPlay('off'); updateAudio();
     chOsd.classList.remove('show'); rewinding = false;
+    ringStop(); hangup(); closeHolo(true);
     hint.textContent = 'POWER-KNOPF ODER TASTE ZUM EINSCHALTEN';
     setTimeout(() => screen.classList.remove('off-dot'), 1500);
   }
@@ -1341,7 +1427,7 @@
       $('pName').textContent = t.leer ? 'LEER' : t.name;
       $('pTag').textContent = t.tag;
       $('pDesc').textContent = t.desc;
-      $('pPlay').textContent = t.secret ? (touch ? '▶ WIRKLICH? NOCHMAL TIPPEN' : '▶ WIRKLICH? ENTER') : t.url ? (touch ? '▶ NOCHMAL TIPPEN' : '▶ ENTER / KLICK') : (t.leer ? '■ NOCH NICHTS DRAUF' : '■ BALD VERFÜGBAR');
+      $('pPlay').textContent = t.secret ? (touch ? '▶ WIRKLICH? ANTIPPEN' : '▶ WIRKLICH? KLICK') : t.url ? (touch ? '▶ ANTIPPEN = ANSEHEN' : '▶ KLICK / ENTER = ANSEHEN') : (t.leer ? '■ NOCH NICHTS DRAUF' : '■ BALD VERFÜGBAR');
       screen.classList.toggle('evil', !!t.secret);
       updateWear(); tick(); applyTracking();
       if (t.secret) setGlow([255, 40, 70]);
@@ -1398,6 +1484,9 @@
 
   function enterShelf(fast) {
     state = 'shelf';
+    pan = 0;
+    if (!phone.timer) schedulePhone(qs.has('klingeln') ? 4000 : 50000 + Math.random() * 40000);
+    setTimeout(flushAwards, fast ? 800 : 4000);
     try { sessionStorage.setItem('vhs-seen', '1'); } catch (e) {}
     zoomed = false;
     const show = () => {
@@ -1453,6 +1542,8 @@
       if (rx < KNOB + 10) return 'knob';
       return null;
     }
+    const sh = stickerHit(x, y);
+    if (sh) return sh;
     const lg = L.logo;
     if (lg && x >= lg.x && x <= lg.x + lg.w && y >= lg.y && y <= lg.y + lg.h) return 'logo';
     const sl = L.slot;
@@ -1537,7 +1628,7 @@
     const h = hit(ev);
     if (typeof h === 'string' && h.startsWith('seg')) { volDrag = true; try { art.setPointerCapture(ev.pointerId); } catch (e) {} }
     else if (h === 'knob') { knobDrag = { x: ev.clientX, y: ev.clientY, v: trk, moved: false }; try { art.setPointerCapture(ev.pointerId); } catch (e) {} }
-    else swipe = { x: ev.clientX, y: ev.clientY };
+    else swipe = { x: ev.clientX, y: ev.clientY, tv: onTV(ev) };
   });
   art.addEventListener('pointerup', ev => {
     if (knobDrag) {
@@ -1551,7 +1642,8 @@
     }
     if (swipe && !volDrag && state === 'shelf') {
       const dx = ev.clientX - swipe.x, dy = ev.clientY - swipe.y;
-      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) { zap(dx < 0 ? 1 : -1); swallowClick = true; }
+      // auf dem Fernseher wischen = Kanal, daneben = im Zimmer umsehen
+      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) { if (swipe.tv && !pan) zap(dx < 0 ? 1 : -1); else panTo(pan + (dx < 0 ? 1 : -1)); swallowClick = true; }
     }
     swipe = null;
   });
@@ -1580,7 +1672,10 @@
 
   document.addEventListener('click', ev => {
     if (swallowClick) { swallowClick = false; return; }
+    if (holo || ev.target.closest('.cap, .holo, .panb')) return;
+    if (!cap.hidden && !phone.call) hideCap();
     const h = ev.target === art ? hit(ev) : null;
+    if (typeof h === 'string' && h.startsWith('stk:')) return stickerInfo(h.slice(4));
     if (h === 'power') return state === 'off' ? powerOn() : powerOff();
     if (h === 'chdown' || h === 'chup') {
       const dir = h === 'chup' ? 1 : -1;
@@ -1601,10 +1696,16 @@
     if (typeof h === 'string' && h.startsWith('seg')) return setLevel(+h.slice(3));
     if (state === 'off') return powerOn();
     if (state === 'title') return enterShelf(false);
-    if (state === 'shelf' && typeof h === 'number') { if (h === sel) play(); else select(h); }
+    if (state === 'shelf' && typeof h === 'number') {
+      if (pan) return panTo(0);
+      // Kassette anklicken: sie fliegt als 3D-Hülle nach vorne
+      if (isTape(h)) { select(h); openHolo(h); } else if (h === sel) play(); else select(h);
+    }
   });
   document.addEventListener('keydown', e => {
     audioInit();
+    if (holo) return holoKey(e);
+    if (phone.call && e.key === 'Escape') return hangup();
     if (konami(e)) return;
     if (e.key === 'm' || e.key === 'M') { toggleSound(); return remoteFeedback(); }
     if (e.key === '[' || e.key === ',') return setTrk(trk - .03);
@@ -1618,11 +1719,19 @@
     if (state === 'title') return enterShelf(false);
     if (state !== 'shelf') return;
     const k = e.key;
+    if (k === 'q' || k === 'Q') return panTo(pan - 1);
+    if (k === 'e' || k === 'E') return panTo(pan + 1);
+    if (pan) {
+      if (k === 'ArrowLeft') { e.preventDefault(); panTo(pan - 1); }
+      else if (k === 'ArrowRight') { e.preventDefault(); panTo(pan + 1); }
+      else if (k === 'Escape' || k === 'Backspace' || k === 'ArrowDown') { e.preventDefault(); panTo(0); }
+      return;
+    }
     if (k === 'ArrowUp') { e.preventDefault(); move(0, -1); }
     else if (k === 'ArrowDown') { e.preventDefault(); move(0, 1); }
     else if (k === 'ArrowLeft') { e.preventDefault(); move(-1, 0); }
     else if (k === 'ArrowRight') { e.preventDefault(); move(1, 0); }
-    else if (k === 'Enter' || k === ' ') { e.preventDefault(); play(); }
+    else if (k === 'Enter' || k === ' ') { e.preventDefault(); if (isTape(sel)) openHolo(sel); else play(); }
     else if (k === 'PageUp') { e.preventDefault(); chBlink = 1; irPulse(); zap(1); }
     else if (k === 'PageDown') { e.preventDefault(); chBlink = -1; irPulse(); zap(-1); }
     else if (k >= '1' && k <= '9') { if (CHANS[+k - 1] !== undefined) zapTo(CHANS[+k - 1]); }
@@ -1631,7 +1740,7 @@
     else if ((k === 'Escape' || k === 'Backspace') && openBox >= 0) { e.preventDefault(); closeBox(); }
   });
   addEventListener('pageshow', e => {
-    if (e.persisted && state === 'playing') { settlePlay(); screen.classList.remove('inserting'); state = 'shelf'; zoomed = false; applyView(true); render(); updateWear(); tick(); applyTracking(); }
+    if (e.persisted && state === 'playing') { hiddenTape = -1; pan = 0; checkPlays(); settlePlay(); screen.classList.remove('inserting'); state = 'shelf'; zoomed = false; applyView(true); render(); updateWear(); tick(); applyTracking(); }
   });
 
   // Linkliste für Screenreader und Suchmaschinen
@@ -1916,6 +2025,9 @@
     d.p += p.r ? 1 : 2;   // nicht zurückgespult abgespielt nutzt das Band stärker ab
     d.c = Math.min(99 * 3600, d.c + Math.max(20, Math.min(3 * 3600, (Date.now() - p.t) / 1000 | 0)));
     saveTapes();
+    checkPlays();
+    store('vhs-plays', String((parseInt(store('vhs-plays'), 10) || 0) + 1));
+    checkPlays();
   }
   function rewind() {
     if (state !== 'shelf' || !isTape(sel) || TAPES[sel].leer || rewinding) return;
@@ -1934,6 +2046,7 @@
       d.c = 0; saveTapes(); rewinding = false;
       screen.classList.remove('rew'); modeEl.textContent = 'PLAY ▶';
       osdMsg('■ STOP'); updateWear(); tick(); render();
+      award('spulen');
     })(start);
   }
 
@@ -1956,6 +2069,8 @@
     const n = 21, p = Math.round(trk * (n - 1));
     const bar = Array.from({ length: n }, (_, k) => k === p ? '█' : k === (n - 1) / 2 ? '|' : '-').join('');
     trkOsd.textContent = `${label}${trkErr() < .035 ? ' OK' : ''}\n◄${bar}►`;
+    // von Hand aus einem schlechten Bild genau eingestellt
+    if (label === 'TRACKING' && trkErr() < .035 && Math.abs(old - sweet(sel)) > .035 && isTape(sel) && !TAPES[sel].leer) award('tracking');
     trkOsd.classList.add('show');
     clearTimeout(trkT); trkT = setTimeout(() => trkOsd.classList.remove('show'), 1600);
   }
@@ -2000,6 +2115,7 @@
     const first = !secretOn;
     secretOn = true;
     try { localStorage.setItem('vhs-secret', '1'); } catch (e) {}
+    award('geheim');
     sfxPlay('evil');
     bigGlitch(); setTimeout(bigGlitch, 200); setTimeout(bigGlitch, 420);
     if (state === 'shelf') setTimeout(() => zapTo(SECRET, true), 300); else render();
@@ -2009,8 +2125,9 @@
     }
   }
   function shelfHint() {
+    if (pan) return touch ? 'ANTIPPEN = ANSCHAUEN · WISCHEN = DREHEN' : 'KLICKEN = ANSCHAUEN · Q/E ODER ←→ DREHEN · ESC = ZURÜCK ZUM REGAL';
     if (openBox >= 0) return touch ? 'ANTIPPEN · ZURÜCK = BOX ZU' : '↑↓←→ WÄHLEN · ENTER START · ESC BOX ZU · BILD↑↓ KANAL';
-    return touch ? 'ANTIPPEN · WISCHEN = KANAL' : '↑↓←→ WÄHLEN · ENTER START · BILD↑↓ KANAL · R SPULEN · T TRACKING';
+    return touch ? 'ANTIPPEN = ANSEHEN · WISCHEN = KANAL / ZIMMER' : '↑↓←→ WÄHLEN · ENTER ANSEHEN · BILD↑↓ KANAL · R SPULEN · T TRACKING · Q/E ZIMMER';
   }
 
   // ================= Werbepause =================
@@ -2187,15 +2304,1282 @@
     if (saverOn) stopSaver();
   }, true);
   setInterval(() => {
-    if (saverOn || adOn || rewinding || camMoving || !(state === 'shelf' || state === 'title')) return;
+    if (saverOn || adOn || rewinding || camMoving || holo || phone.call || phone.ringing || !(state === 'shelf' || state === 'title')) return;
     if (performance.now() - idleAt > SAVER_IDLE) startSaver();
   }, 1000);
+  // ================= Extra-Zeichen für die Pixelschrift (Umlaute, Satzzeichen, Pfeile) =================
+  Object.assign(GLYPHS, {
+    'Ä':'01010011101000110001111111000110001', 'Ö':'01010011101000110001100011000101110', 'ß':'01110100011001010110100011000110110',
+    ',':'00000000000000000000001100010001000', '!':'00100001000010000100001000000000100', ':':'00000011000110000000011000110000000',
+    '/':'00001000100001000100010000100010000', "'":'00100001000100000000000000000000000', '(':'00010001000100001000010000010000010',
+    ')':'01000001000001000010000100010001000', '+':'00000001000010011111001000010000000', '×':'00000100010101000100010101000100000',
+    '&':'01100100101010001000101011001001101', '%':'11000110010001000100010001001100011', '>':'01000001000001000001000100010001000',
+    '*':'00000001001010101110101010010000000', '#':'01010010101111101010111110101001010', '=':'00000000001111100000111110000000000',
+    '↑':'00100011101010100100001000010000100', '↓':'00100001000010000100101010111000100', '←':'00000001000100011111010000010000000',
+    '→':'00000001000001011111000100010000000', '"':'01010010100000000000000000000000000',
+  });
+  const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } };
+  const hex = c => c.match(/\w\w/g).map(h => parseInt(h, 16));
+  const mixC = (a, b, t) => { const A = hex(a), B = hex(b); return '#' + A.map((v, k) => Math.round(v + (B[k] - v) * Math.max(0, Math.min(1, t))).toString(16).padStart(2, '0')).join(''); };
+  function disc(cx, cy, r, c) { g.fillStyle = c; for (let j = -r; j <= r; j++) { const w = Math.round(Math.sqrt(Math.max(0, r * r - j * j))); g.fillRect(Math.round(cx - w), Math.round(cy + j), w * 2 + 1, 1); } }
+  // Text in doppelter (oder mehrfacher) Pixelgröße
+  function textS(str, x, y, sc, color, align = 'left') {
+    str = str.toUpperCase();
+    const w = (str.length * 6 - 1) * sc;
+    let ox = Math.round(align === 'center' ? x - w / 2 : align === 'right' ? x - w : x);
+    g.fillStyle = color;
+    for (const ch of str) {
+      const gl = GLYPHS[ch] || GLYPHS[' '];
+      for (let i = 0; i < 35; i++) if (gl[i] === '1') g.fillRect(ox + (i % 5) * sc, Math.round(y) + ((i / 5) | 0) * sc, sc, sc);
+      ox += 6 * sc;
+    }
+  }
+  // Zeilenumbruch nach Zeichen (Pixelschrift: 6 px pro Zeichen)
+  function wrapT(str, n) {
+    const out = []; let line = '';
+    for (const w of String(str).toUpperCase().split(/\s+/)) {
+      if (!line) line = w; else if ((line + ' ' + w).length <= n) line += ' ' + w; else { out.push(line); line = w; }
+      while (line.length > n) { out.push(line.slice(0, n - 1) + '-'); line = line.slice(n - 1); }
+    }
+    if (line) out.push(line);
+    return out;
+  }
+  // Malt mit allen Pixel-Helfern auf ein eigenes kleines Bild
+  function paint(w, h, fn) {
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const keep = g; g = cv.getContext('2d');
+    try { fn(); } finally { g = keep; }
+    return cv;
+  }
+  // Szene-Pixel -> Bildschirm-Pixel
+  const sc2c = (x, y) => [VW() / 2 + (x - cam.cx) * cam.k, VH() / 2 + (y - cam.cy) * cam.k];
+
+  // ================= Zimmer erkunden: links Fenster, Schreibtisch und Telefon, rechts Poster, Katze und Sticker-Pinnwand =================
+  const roomCv = { l: document.getElementById('roomL'), r: document.getElementById('roomR') };
+  const panL = document.getElementById('panL'), panR = document.getElementById('panR');
+  let pan = 0, RM = null, roomHover = null, catWake = 0, peeled = false, skyCv = null, p3Cv = null, hiddenTape = -1;
+  let lampOn = store('vhs-lampe') === '1';
+  let found = {};
+  try { found = JSON.parse(store('vhs-details')) || {}; } catch (e) {}
+  // versteckte Details (alle gefunden = Sticker)
+  const DETAILS = ['fenster', 'lampe', 'zettel', 'kalender', 'tasse', 'poster1', 'poster2', 'ecke', 'uhr', 'lava', 'katze'];
+  const sideW = () => L.portrait ? 270 : 300;
+
+  function roomLayout() {
+    const P = L.portrait, sw = sideW(), H = L.H, fy = L.cab.y + L.cab.h + 6;
+    const dy = P ? fy - 84 : fy - 58;   // Tischplatte
+    const l = P ? {
+      win: { x: 34, y: 64, w: 124, h: 150 }, cal: { x: 186, y: 92, w: 40, h: 52 },
+      desk: { x: 12, y: dy, w: 236 }, lamp: { x: 22 }, zettel: { x: 96, y: dy - 54, w: 28, h: 26 }, tasse: { x: 136, y: dy - 10, w: 12, h: 10 }, phone: { x: 172 },
+    } : {
+      win: { x: 34, y: 34, w: 112, h: 104 }, cal: { x: 178, y: 56, w: 36, h: 46 },
+      desk: { x: 18, y: dy, w: 240 }, lamp: { x: 30 }, zettel: { x: 102, y: dy - 48, w: 28, h: 26 }, tasse: { x: 150, y: dy - 10, w: 12, h: 10 }, phone: { x: 190 },
+    };
+    const r = P ? {
+      p1: { x: 56, y: 44, w: 70, h: 100 }, p2: { x: 150, y: 60, w: 70, h: 84 }, p3: { x: 160, y: 196, w: 56, h: 74 },
+      clock: { cx: 96, cy: 186, r: 12 }, pin: { x: 46, y: 228, w: 46, h: 46 }, bean: { x: 40, y: fy - 42, w: 104, h: 42 }, table: { x: 182, y: fy - 58, w: 50 },
+    } : {
+      p1: { x: 62, y: 30, w: 62, h: 90 }, p2: { x: 140, y: 46, w: 58, h: 70 }, p3: { x: 214, y: 40, w: 48, h: 64 },
+      clock: { cx: 169, cy: 22, r: 10 }, pin: { x: 146, y: 134, w: 46, h: 46 }, bean: { x: 52, y: fy - 36, w: 92, h: 36 }, table: { x: 214, y: fy - 46, w: 46 },
+    };
+    // Klickflächen
+    const hitL = {
+      fenster: l.win, kalender: l.cal, zettel: l.zettel, tasse: l.tasse,
+      lampe: { x: l.lamp.x, y: dy - 40, w: 40, h: 40 }, telefon: { x: l.phone.x - 3, y: dy - 23, w: 52, h: 24 },
+    };
+    const c = r.clock;
+    const hitR = {
+      poster1: r.p1, poster2: r.p2, ecke: r.p3, uhr: { x: c.cx - c.r, y: c.cy - c.r, w: c.r * 2, h: c.r * 2 }, pinnwand: r.pin,
+      katze: { x: r.bean.x + r.bean.w * .45 - 20, y: r.bean.y - 18, w: 48, h: 26 }, lava: { x: r.table.x + 14, y: r.table.y - 36, w: 18, h: 36 },
+    };
+    return { sw, H, fy, dy, l, r, hit: { l: hitL, r: hitR } };
+  }
+
+  // Wand, Vorhang-Ende an der Ecke zum Regal, Fußleiste, Holzboden
+  function wallBase(s) {
+    const { sw, H, fy } = RM, P = L.portrait, off = s === 'l' ? -sw : L.W;
+    R(0, 0, sw, fy, '#1d1128');
+    for (let x = s === 'l' ? sw % 14 : 0; x < sw; x += 14) R(x, 0, 5, fy, '#22152e');
+    g.fillStyle = '#2b1a39';
+    for (let y = 8; y < fy; y += 12) for (let x = ((y / 12) & 1) * 7 + 2; x < sw; x += 14) g.fillRect(x, y, 1, 1);
+    ditherV(0, 0, sw, 30, C.void, '#1d1128', 0, 1);
+    R(0, fy - 5, sw, 5, C.wood1); R(0, fy - 5, sw, 1, C.wood2);
+    // Boden: dieselben Dielen wie vor dem Regal, nur weitergeführt
+    ditherV(0, fy, sw, H - fy, C.in2, C.wood0, .05, .75);
+    g.fillStyle = C.in1;
+    for (let k = -40; k <= 40; k++) for (let y = fy; y < H; y++) {
+      const t = (y - fy) / Math.max(1, H - fy), X = Math.round(L.W / 2 + k * (P ? 30 : 34) * (1 + t * .5)) - off;
+      if (X >= 0 && X < sw) g.fillRect(X, y, 1, 1);
+    }
+    for (let i = 0; i < 14; i++) {
+      const y = fy + 3 + (i * 7) % Math.max(1, H - fy - 4), x = (i * 89 + (s === 'l' ? 11 : 47)) % sw;
+      g.fillStyle = C.in1; g.fillRect(x, y, 1, 3); g.fillStyle = C.wood1; g.fillRect(x + 2, y + 1, 8 + (i * 5) % 12, 1);
+    }
+    R(0, fy, sw, 1, C.in0);
+    // Vorhang läuft vom Regal noch ein Stück weiter und endet hier (mit Schatten auf der Wand)
+    const cw = 40, x0 = s === 'l' ? sw - cw : 0, shades = [C.cur0, C.cur1, C.cur2, C.cur3];
+    for (let i = 0; i < cw; i++) {
+      const x = x0 + i, gx = x + off;
+      const v = (Math.sin(gx / (P ? 9 : 11)) + 1) / 2 * 3, lo = Math.floor(v), fr = v - lo;
+      for (let y = 0; y < fy; y++) { g.fillStyle = shades[Math.min(3, lo + (bay(x, y) < fr ? 1 : 0))]; g.fillRect(x, y, 1, 1); }
+    }
+    const ex = s === 'l' ? sw - cw - 1 : cw;
+    R(ex, 0, 1, fy, C.cur4); R(s === 'l' ? ex - 3 : ex + 1, 0, 3, fy, '#120a1a');
+    R(0, 0, sw, 3, C.wood0); R(0, 3, sw, 1, C.wood1);   // Vorhangstange / Deckenleiste
+    // Vignette oben und unten wie im Hauptbild
+    g.fillStyle = C.void;
+    for (let y = 0; y < H; y++) {
+      const dy = (y / H - .45) * 2, v = Math.max(0, Math.sqrt(dy * dy * .7) - .55) * 1.4;
+      if (v > 0) for (let x = 0; x < sw; x++) if (bay(x, y) < v) g.fillRect(x, y, 1, 1);
+    }
+  }
+
+  function staticLeft() {
+    const { l, dy, fy } = RM;
+    // Fensterrahmen + Fensterbank (die Scheibe wird laufend neu gemalt: Regen)
+    const w = l.win;
+    R(w.x - 5, w.y - 5, w.w + 10, w.h + 10, C.wood0); R(w.x - 4, w.y - 4, w.w + 8, w.h + 8, C.wood2); R(w.x - 4, w.y - 4, w.w + 8, 1, C.wood3);
+    R(w.x - 1, w.y - 1, w.w + 2, w.h + 2, C.wood1);
+    R(w.x - 9, w.y + w.h + 4, w.w + 18, 4, C.wood3); R(w.x - 9, w.y + w.h + 4, w.w + 18, 1, C.wood4); R(w.x - 9, w.y + w.h + 8, w.w + 18, 1, C.wood0);
+    // Kalender
+    const c = l.cal;
+    R(c.x + c.w / 2 - 1, c.y - 4, 2, 4, C.tv5);
+    R(c.x + 1, c.y + 1, c.w, c.h, 'rgba(0,0,0,.45)');
+    R(c.x, c.y, c.w, c.h, C.note); R(c.x, c.y + c.h - 1, c.w, 1, C.noteLo);
+    R(c.x, c.y, c.w, 9, C.red);
+    text('MÄRZ', c.x + c.w / 2, c.y + 1, 7, '#fff', 'center');
+    text('1987', c.x + c.w / 2, c.y + 11, 7, C.ink, 'center');
+    const gx0 = c.x + (c.w - 29) / 2 | 0;
+    for (let j = 0; j < 4; j++) for (let i = 0; i < 5; i++) R(gx0 + i * 6, c.y + 22 + j * 6, 3, 2, '#9a8e78');
+    const rx = gx0 + 2 * 6 - 2, ry = c.y + 22 + 6 - 2;
+    g.fillStyle = C.red; g.fillRect(rx, ry, 7, 1); g.fillRect(rx, ry + 5, 7, 1); g.fillRect(rx - 1, ry + 1, 1, 4); g.fillRect(rx + 7, ry + 1, 1, 4);
+    // Schreibtisch
+    const d = l.desk;
+    R(d.x + 4, dy + 7, 6, fy - 5 - dy - 7, C.wood1); R(d.x + d.w - 10, dy + 7, 6, fy - 5 - dy - 7, C.wood1);
+    R(d.x + d.w - 78, dy + 7, 64, 20, C.wood2); R(d.x + d.w - 78, dy + 7, 64, 1, C.wood3); R(d.x + d.w - 78, dy + 26, 64, 1, C.wood0);
+    R(d.x + d.w - 50, dy + 15, 8, 2, C.wood4);
+    R(d.x, dy, d.w, 4, C.wood3); R(d.x, dy, d.w, 1, C.wood4); R(d.x, dy + 4, d.w, 3, C.wood1); R(d.x, dy + 7, d.w, 1, C.wood0);
+    // Zettel an der Wand: der Rest ist abgerissen
+    const z = l.zettel;
+    R(z.x + 1, z.y + 1, z.w, z.h, 'rgba(0,0,0,.4)');
+    R(z.x, z.y, z.w, z.h, '#ffe27a'); R(z.x, z.y, z.w, 3, '#f0c84a');
+    text('↑↑↓↓', z.x + z.w / 2, z.y + 6, 7, '#3a2a5a', 'center');
+    text('←→', z.x + 9, z.y + 15, 7, '#3a2a5a', 'center');
+    for (let x = 0; x < z.w; x++) { const k = (x * 7) % 5; R(z.x + x, z.y + z.h - k, 1, k, '#1d1128'); }
+    R(z.x + z.w / 2 - 1, z.y - 1, 3, 3, C.pink);
+    // Kaffeetasse
+    const m = l.tasse;
+    rrect(m.x, dy - 10, 9, 10, 2, '#d8ccef'); R(m.x + 1, dy - 10, 7, 1, '#3a2014'); R(m.x + 1, dy - 9, 7, 1, '#a99cc4');
+    R(m.x + 9, dy - 8, 3, 1, '#d8ccef'); R(m.x + 11, dy - 8, 1, 5, '#d8ccef'); R(m.x + 9, dy - 4, 3, 1, '#d8ccef');
+    R(m.x + 3, dy - 6, 3, 2, C.pink);
+  }
+
+  // Poster 1: Nachtschicht (Sonnenuntergang mit Gitterboden)
+  function posterNacht(x, y, w, h) {
+    R(x + 2, y + 2, w, h, 'rgba(0,0,0,.45)');
+    R(x - 1, y - 1, w + 2, h + 2, '#0b0612');
+    const hz = y + Math.round(h * .62);
+    ditherV(x, y, w, hz - y, '#1a0830', '#5a1050', 0, 1);
+    const sx = x + w / 2, sy = hz - 2, sr = Math.round(w * .3);
+    for (let j = -sr; j <= 0; j++) {
+      if (j > -sr * .55 && ((-j) % 4) === 1) continue;
+      const hw = Math.round(Math.sqrt(sr * sr - j * j));
+      R(sx - hw, sy + j, hw * 2, 1, mixC('#ffd23e', '#ff2e88', (j + sr) / sr));
+    }
+    R(x, hz, w, y + h - hz, '#12051e');
+    const gb = y + h - 13;
+    for (let k = 0; k < 6; k++) R(x, hz + Math.round(Math.pow(k / 5, 1.8) * (gb - hz)), w, 1, C.pinkLo);
+    for (let k = -6; k <= 6; k++) for (let yy = hz; yy < gb; yy++) {
+      const tt = (yy - hz) / (gb - hz), xx = Math.round(sx + k * (2 + tt * w * .16));
+      if (xx >= x && xx < x + w) R(xx, yy, 1, 1, C.pinkLo);
+    }
+    text('NACHT', sx + 1, y + 6, 7, C.pinkLo, 'center'); text('NACHT', sx, y + 5, 7, '#fff', 'center');
+    R(x, gb, w, 13, '#0b0612');
+    text('SCHICHT', sx + 1, gb + 4, 7, C.pinkLo, 'center'); text('SCHICHT', sx, gb + 3, 7, C.cyan, 'center');
+    R(x - 3, y - 2, 8, 3, 'rgba(232,221,255,.45)'); R(x + w - 5, y - 2, 8, 3, 'rgba(232,221,255,.45)');
+  }
+  // Poster 2: Klotzwelt (Hügel aus Blöcken, mit einem dazugemalten Klotz)
+  function posterKlotz(x, y, w, h) {
+    R(x + 2, y + 2, w, h, 'rgba(0,0,0,.45)');
+    R(x - 1, y - 1, w + 2, h + 2, '#0b0612');
+    ditherV(x, y, w, h, '#3e7bd6', '#9cc8ff', 0, 1);
+    R(x + w - 15, y + 8, 8, 8, '#fff6a0');
+    const bs = 6;
+    for (let i = 0; i * bs < w; i++) {
+      const hh = 2 + Math.round((Math.sin(i * .9) + 1.2) * 1.4);
+      for (let j = 0; j < hh; j++) {
+        const bx = x + i * bs, by = y + h - (j + 1) * bs, bw = Math.min(bs, x + w - bx), top = j === hh - 1;
+        R(bx, by, bw, bs, top ? '#3fae4a' : '#7a4a2c'); R(bx, by, bw, 1, top ? '#6fd46a' : '#9a6440'); R(bx, by + bs - 1, bw, 1, top ? '#2a7a34' : '#5a321e');
+      }
+    }
+    const tx = x + 10, ty = y + h - 6 * 5;
+    R(tx + 2, ty - 10, 2, 10, '#5a321e'); R(tx - 2, ty - 18, 10, 9, '#2a7a34'); R(tx - 2, ty - 18, 10, 1, '#45a050');
+    text('KLOTZ', x + w / 2 + 1, y + 5, 7, '#1d3b6a', 'center'); text('KLOTZ', x + w / 2, y + 4, 7, '#fff', 'center');
+    text('WELT', x + w / 2 + 1, y + 14, 7, '#1d3b6a', 'center'); text('WELT', x + w / 2, y + 13, 7, '#fff', 'center');
+    // mit Kuli dazugemalter Klotz
+    g.fillStyle = '#231a33';
+    const kx = x + w - 20, ky = y + 28;
+    g.fillRect(kx, ky, 7, 1); g.fillRect(kx, ky + 6, 7, 1); g.fillRect(kx, ky, 1, 7); g.fillRect(kx + 6, ky, 1, 7); g.fillRect(kx + 2, ky + 2, 1, 1); g.fillRect(kx + 4, ky + 4, 1, 1);
+    R(x - 3, y - 2, 8, 3, 'rgba(232,221,255,.45)'); R(x + w - 5, y - 2, 8, 3, 'rgba(232,221,255,.45)');
+  }
+  // Poster 3: Pulse Grid (hängt nur noch an einer Ecke, wenn man dran zieht)
+  function posterPulse(w, h) {
+    return paint(w, h, () => {
+      R(0, 0, w, h, '#0b0612');
+      ditherV(0, 0, w, h, '#0b0612', '#1a0f3a', 0, 1);
+      const cs = Math.floor((w - 12) / 3), gx = (w - cs * 3) / 2 | 0, gy = 16;
+      const lit = [1, 0, 0, 0, 1, 0, 1, 0, 1];
+      for (let k = 0; k < 9; k++) {
+        const x = gx + (k % 3) * cs, y = gy + Math.floor(k / 3) * cs;
+        R(x + 1, y + 1, cs - 2, cs - 2, lit[k] ? (k % 2 ? C.cyan : C.pink) : '#241a3c');
+        if (lit[k]) R(x + 1, y + 1, cs - 2, 1, '#fff');
+      }
+      text('PULSE', w / 2, 4, 7, C.cyan, 'center');
+      text('GRID', w / 2, gy + cs * 3 + 3, 7, C.pink, 'center');
+      R(0, 0, w, 1, '#3a2f5c'); R(0, h - 1, w, 1, '#05030a');
+    });
+  }
+  function staticRight() {
+    const { r } = RM;
+    posterNacht(r.p1.x, r.p1.y, r.p1.w, r.p1.h);
+    posterKlotz(r.p2.x, r.p2.y, r.p2.w, r.p2.h);
+    // Bleistift an der Wand hinter Poster 3 (nur sichtbar, wenn es abgefallen ist)
+    const p = r.p3, pc = '#6a5c80';
+    text('5× AUFS', p.x + p.w / 2, p.y + p.h * .3, 7, pc, 'center');
+    text('SCHILD', p.x + p.w / 2, p.y + p.h * .3 + 10, 7, pc, 'center');
+    text('TIPPEN', p.x + p.w / 2, p.y + p.h * .3 + 20, 7, pc, 'center');
+    // Pinnwand für die Sticker
+    const pn = r.pin;
+    R(pn.x - 2, pn.y - 2, pn.w + 4, pn.h + 4, C.wood1); R(pn.x - 2, pn.y - 2, pn.w + 4, 1, C.wood3);
+    R(pn.x, pn.y, pn.w, pn.h, C.box3);
+    g.fillStyle = C.box2; for (let k = 0; k < pn.w * pn.h / 9; k++) g.fillRect(pn.x + (k * 37) % pn.w, pn.y + (k * 53) % pn.h, 1, 1);
+    // Sitzsack
+    const b = r.bean;
+    for (let j = 0; j < b.h; j++) {
+      const t = j / b.h, hw = b.w / 2 * Math.sqrt(Math.max(0, 1 - Math.pow(1 - t * 1.2, 2))) * (.75 + t * .25);
+      R(b.x + b.w / 2 - hw, b.y + j, hw * 2, 1, t < .2 ? '#c0306c' : t > .85 ? '#5a1034' : '#9a2058');
+    }
+    R(b.x + b.w * .3, b.y + 6, b.w * .25, 1, '#e0508c');
+    // Beistelltisch
+    const tb = r.table;
+    R(tb.x, tb.y, tb.w, 4, C.wood3); R(tb.x, tb.y, tb.w, 1, C.wood4); R(tb.x + 3, tb.y + 4, 4, RM.fy - 5 - tb.y - 4, C.wood1); R(tb.x + tb.w - 7, tb.y + 4, 4, RM.fy - 5 - tb.y - 4, C.wood1);
+    R(tb.x + 2, tb.y + 4, tb.w - 4, 2, C.wood0);
+  }
+
+  // Himmel im Fenster: Tag grau-blau, nachts dunkel mit Mond, dahinter Häuser
+  function buildSky() {
+    const w = RM.l.win, n = Math.min(1, nightAmount() / .66);
+    skyCv = paint(w.w, w.h, () => {
+      ditherV(0, 0, w.w, w.h, mixC('#4a5578', '#060818', n), mixC('#8a8ea6', '#1c1640', n), 0, 1);
+      if (n > .4) {
+        g.fillStyle = '#cfd6ff';
+        for (let k = 0; k < 14; k++) g.fillRect((k * 41) % w.w, (k * 23) % (w.h * .5 | 0), 1, 1);
+        disc(w.w * .72, w.h * .24, 7, '#efe8c8'); R(w.w * .72 - 2, w.h * .24 - 2, 2, 2, '#cfc6a2'); R(w.w * .72 + 2, w.h * .24 + 2, 2, 1, '#cfc6a2');
+      }
+      for (let i = 0, x = 0; x < w.w; i++) {
+        const bw = 10 + (i * 7) % 12, bh = 18 + (i * 13) % 34;
+        R(x, w.h - bh, bw, bh, mixC('#30324a', '#0a0812', n));
+        if (n > .3) for (let wy = w.h - bh + 4; wy < w.h - 3; wy += 6) for (let wx = x + 2; wx < x + bw - 2; wx += 4) if (((wx * 7 + wy * 3 + i) % 5) === 0) R(wx, wy, 2, 2, '#ffd23e');
+        x += bw + 1;
+      }
+    });
+  }
+
+  // Dunkelheit nachts mit Lichtquellen (Lampe, Lavalampe, Mond)
+  const roomDark = {};
+  function buildRoomDark() {
+    const night = nightAmount(), { sw, H, l, r, dy } = RM;
+    for (const s of ['l', 'r']) {
+      const cv = roomDark[s] || (roomDark[s] = document.createElement('canvas'));
+      cv.width = sw; cv.height = H;
+      if (night < .01) continue;
+      const lights = s === 'l'
+        ? [[l.win.x + l.win.w / 2, l.win.y + l.win.h / 2, l.win.w * .9, .5], ...(lampOn ? [[l.lamp.x + 27, dy - 18, 110, 1]] : [])]
+        : [[r.table.x + 23, r.table.y - 16, 60, .85]];
+      const ctx = cv.getContext('2d'), im = ctx.createImageData(sw, H), d = im.data;
+      for (let y = 0; y < H; y++) for (let x = 0; x < sw; x++) {
+        let lit = 0;
+        for (const [lx, ly, lr, ls] of lights) { const q = Math.hypot(x - lx, y - ly) / lr; if (q < 1) lit = Math.max(lit, (1 - q) * ls); }
+        const v = night * (1 - lit * .9) * 6, lo = Math.floor(v), i = (y * sw + x) * 4;
+        d[i] = 4; d[i + 1] = 2; d[i + 2] = 16; d[i + 3] = (lo + (bay(x, y) < v - lo ? 1 : 0)) / 6 * 255;
+      }
+      ctx.putImageData(im, 0, 0);
+    }
+  }
+
+  const roomStatic = {};
+  function buildRooms() {
+    RM = roomLayout();
+    const { sw, H } = RM;
+    for (const s of ['l', 'r']) {
+      const cv = roomCv[s];
+      cv.width = sw; cv.height = H;
+      Object.assign(cv.style, { left: (s === 'l' ? -sw : L.W) + 'px', width: sw + 'px', height: H + 'px' });
+      const ctx = cv.getContext('2d'), keep = g;
+      g = ctx;
+      try { ctx.clearRect(0, 0, sw, H); wallBase(s); if (s === 'l') staticLeft(); else staticRight(); } finally { g = keep; }
+      roomStatic[s] = ctx.getImageData(0, 0, sw, H);
+    }
+    p3Cv = posterPulse(RM.r.p3.w, RM.r.p3.h);
+    buildSky(); buildRoomDark();
+    drawRooms();
+  }
+
+  // Bewegte Teile: Regen, Lampe, Telefon, Uhr, Lavalampe, Katze, Pinnwand, Poster 3
+  function dynLeft(t) {
+    const { l, dy } = RM, w = l.win;
+    g.drawImage(skyCv, w.x, w.y);
+    const n = Math.min(1, nightAmount() / .66);
+    g.fillStyle = n > .5 ? 'rgba(140,160,220,.55)' : 'rgba(215,222,240,.6)';
+    for (let k = 0; k < 28; k++) {
+      const sp = 140 + (k * 37) % 90, x0 = (k * 47 + (k % 3) * 13) % (w.w + 12);
+      const y0 = ((t * sp + k * 71) % (w.h + 16)) - 8;
+      for (let j = 0; j < 5; j++) {
+        const px = w.x + Math.round(x0 - (y0 + j) * .25), py = w.y + Math.round(y0 + j);
+        if (px >= w.x && px < w.x + w.w && py >= w.y && py < w.y + w.h) g.fillRect(px, py, 1, 1);
+      }
+    }
+    g.fillStyle = 'rgba(220,230,255,.35)';
+    for (let k = 0; k < 9; k++) g.fillRect(w.x + (k * 29) % w.w, w.y + (k * 43 + Math.floor(t * (6 + k))) % w.h, 1, 2);
+    R(w.x + w.w / 2 - 1, w.y, 3, w.h, C.wood2); R(w.x, w.y + Math.round(w.h * .45), w.w, 3, C.wood2);
+    R(w.x + w.w / 2 - 1, w.y, 1, w.h, C.wood3);
+    // Schreibtischlampe
+    const lx = l.lamp.x;
+    R(lx, dy - 3, 16, 3, C.tp2); R(lx, dy - 3, 16, 1, C.tp4);
+    for (let k = 0; k < 22; k++) R(lx + 8 + Math.round(k * 6 / 22), dy - 3 - k, 1, 1, C.tp4);
+    for (let k = 0; k < 10; k++) R(lx + 14 + k, dy - 25 - (k >> 1), 1, 1, C.tp4);
+    trap(dy - 38, dy - 28, lx + 22, lx + 31, lx + 17, lx + 37, lampOn ? C.pink : C.pinkLo);
+    R(lx + 22, dy - 38, 9, 1, lampOn ? '#ff8cbc' : C.pink);
+    if (lampOn) {
+      R(lx + 23, dy - 28, 8, 2, '#fff3b0');
+      g.fillStyle = '#ffe9a0';
+      for (let y = dy - 26; y < dy; y++) {
+        const tt = (y - (dy - 26)) / 26, xl = Math.round(lx + 17 - tt * 16), xr = Math.round(lx + 37 + tt * 16);
+        for (let x = xl; x < xr; x++) if (bay(x, y) < .2 * (1 - tt * .4)) g.fillRect(x, y, 1, 1);
+      }
+      R(lx, dy, 70, 1, '#d8a060');
+    }
+    // Wählscheibentelefon (wackelt beim Klingeln, Hörer hüpft)
+    const ring = phone.ringing && (t * 1000 % 3000) < 1300, sh = ring ? ((t * 30 | 0) % 2 ? 1 : -1) : 0;
+    const px = l.phone.x + sh, py = dy;
+    g.fillStyle = '#120a1a';
+    for (let k = 0; k < 24; k++) g.fillRect(px + 44 + Math.round(Math.sin(k * .8) * 1.5), py - 5 + k, 1, 1);
+    trap(py - 12, py, px + 6, px + 38, px + 1, px + 43, '#7a1424');
+    R(px + 6, py - 12, 32, 1, '#b8324a'); R(px + 1, py - 1, 42, 1, '#3a0610');
+    disc(px + 22, py - 6, 5, '#e8ddcc'); disc(px + 22, py - 6, 2, '#7a1424'); R(px + 22, py - 6, 1, 1, '#e8ddcc');
+    for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 1.6 + .6; R(px + 22 + Math.round(Math.cos(a) * 3.6), py - 6 + Math.round(Math.sin(a) * 3.6), 1, 1, '#3a0610'); }
+    if (!phone.offHook) {
+      const hy = py - 17 - (ring && (t * 20 | 0) % 2 ? 2 : 0);
+      R(px + 6, hy, 32, 3, '#5a0e1a'); R(px + 6, hy, 32, 1, '#9a2234');
+      rrect(px, hy - 2, 11, 6, 2, '#7a1424'); rrect(px + 33, hy - 2, 11, 6, 2, '#7a1424');
+      R(px + 2, hy - 2, 6, 1, '#b8324a'); R(px + 35, hy - 2, 6, 1, '#b8324a');
+    } else {
+      // Hörer liegt daneben, Schnur hängt runter
+      rrect(px - 16, py - 5, 12, 5, 2, '#7a1424'); R(px - 14, py - 5, 8, 1, '#b8324a');
+      g.fillStyle = '#120a1a'; for (let k = 0; k < 12; k++) g.fillRect(px - 4 + k, py - 2 + Math.round(Math.sin(k * .9)), 1, 1);
+    }
+    if (ring) {
+      g.fillStyle = C.pink;
+      for (const [ox, dir] of [[-6, -1], [50, 1]]) { g.fillRect(px + ox, py - 20, 1, 5); g.fillRect(px + ox + dir * 2, py - 22, 1, 9); g.fillRect(px + ox + dir * 4, py - 24, 1, 13); }
+    }
+  }
+  function dynRight(t) {
+    const { r } = RM;
+    // Poster 3: hängt normal, oder baumelt an der linken oberen Ecke
+    const p = r.p3;
+    if (!peeled) { R(p.x + 2, p.y + 2, p.w, p.h, 'rgba(0,0,0,.45)'); g.drawImage(p3Cv, p.x, p.y); R(p.x - 2, p.y - 2, 7, 3, 'rgba(232,221,255,.45)'); R(p.x + p.w - 5, p.y - 2, 7, 3, 'rgba(232,221,255,.45)'); }
+    else {
+      const ang = .55 + Math.sin(t * 1.7) * .03, px = p.x + 2, py = p.y + 2;
+      const vx = p.w / 2 - 2, vy = p.h / 2 - 2, cx = px + vx * Math.cos(ang) - vy * Math.sin(ang), cy = py + vx * Math.sin(ang) + vy * Math.cos(ang);
+      blit(p3Cv, cx - p.w / 2, cy - p.h / 2, ang, true);
+      R(px - 2, py - 2, 5, 4, 'rgba(232,221,255,.55)');
+    }
+    // Wanduhr mit echter Uhrzeit
+    const c = r.clock, now = new Date();
+    disc(c.cx, c.cy, c.r, C.tv2); disc(c.cx, c.cy, c.r - 2, C.note);
+    for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; R(c.cx + Math.round(Math.sin(a) * (c.r - 3)), c.cy - Math.round(Math.cos(a) * (c.r - 3)), 1, 1, C.noteLo); }
+    const hand = (a, len, col) => { for (let q = 0; q <= len; q++) R(c.cx + Math.round(Math.sin(a) * q), c.cy - Math.round(Math.cos(a) * q), 1, 1, col); };
+    hand((now.getHours() % 12 + now.getMinutes() / 60) / 12 * Math.PI * 2, c.r - 6, C.ink);
+    hand(now.getMinutes() / 60 * Math.PI * 2, c.r - 3, C.ink);
+    hand(now.getSeconds() / 60 * Math.PI * 2, c.r - 3, C.red);
+    // Pinnwand: gesammelte Sticker, fehlende als Fragezeichen
+    const pn = r.pin;
+    text('STICKER', pn.x + pn.w / 2, pn.y + 1, 7, C.ink, 'center');
+    STICKERS.forEach((S, k) => {
+      const x = pn.x + 2 + (k % 3) * 15, y = pn.y + 10 + Math.floor(k / 3) * 12;
+      if (stk[S.id] !== undefined && !awardQ.includes(S.id)) g.drawImage(stickerCv(S.id), x, y);
+      else { g.fillStyle = C.box1; g.fillRect(x, y, 13, 1); g.fillRect(x, y + 10, 13, 1); g.fillRect(x, y, 1, 11); g.fillRect(x + 12, y, 1, 11); text('?', x + 4, y + 2, 7, C.box1); }
+    });
+    R(pn.x + pn.w / 2 - 1, pn.y - 4, 3, 3, C.cyan);
+    // Lavalampe
+    const tb = r.table, lx = tb.x + 16, ly = tb.y;
+    R(lx + 3, ly - 28, 8, 22, '#3a0d4a'); R(lx + 3, ly - 28, 1, 22, '#5a1d6a');
+    for (let k = 0; k < 3; k++) { const by = ly - 9 - ((Math.sin(t * .45 + k * 2.1) + 1) / 2) * 16; rrect(lx + 4 + (k % 2) * 2, Math.round(by - 2), 5, 4, 2, k === 1 ? '#ff8a3e' : C.pink); }
+    trap(ly - 6, ly, lx + 2, lx + 12, lx, lx + 14, C.tv2); R(lx, ly - 1, 14, 1, C.tv1);
+    trap(ly - 34, ly - 28, lx + 5, lx + 9, lx + 2, lx + 12, C.tv2);
+    // Katze auf dem Sitzsack: schläft (atmet, Zzz), wacht kurz auf, wenn man sie anklickt
+    const b = r.bean, cx = Math.round(b.x + b.w * .45), cy = b.y + 4, awake = performance.now() < catWake;
+    const br = awake ? 0 : (t % 2.4 < 1.2 ? 0 : 1);
+    R(cx - 20, cy - 4, 8, 2, '#2a2534'); R(cx - 22, cy - 6, 3, 3, '#2a2534');
+    rrect(cx - 16, cy - 10 - br, 30, 12 + br, 5, '#2a2534'); R(cx - 12, cy - 10 - br, 20, 1, '#3b3448');
+    rrect(cx + 8, cy - 15, 14, 11, 4, '#2a2534');
+    R(cx + 9, cy - 17, 3, 3, '#2a2534'); R(cx + 18, cy - 17, 3, 3, '#2a2534'); R(cx + 10, cy - 16, 1, 1, '#c0306c'); R(cx + 19, cy - 16, 1, 1, '#c0306c');
+    if (awake) { R(cx + 11, cy - 11, 2, 2, '#39ff6a'); R(cx + 17, cy - 11, 2, 2, '#39ff6a'); R(cx + 12, cy - 11, 1, 1, '#0b0612'); R(cx + 18, cy - 11, 1, 1, '#0b0612'); }
+    else { R(cx + 11, cy - 10, 2, 1, '#120a1a'); R(cx + 17, cy - 10, 2, 1, '#120a1a'); }
+    R(cx + 14, cy - 8, 2, 1, '#c0306c');
+    if (!awake) { const zt = (t % 2.6) / 2.6; text('Z', cx + 22 + zt * 6, cy - 20 - zt * 14, 7, `rgba(232,221,255,${(1 - zt).toFixed(2)})`); }
+    else text('?', cx + 24, cy - 24, 7, C.green);
+  }
+  function drawRooms() {
+    if (!RM || !roomStatic.l) return;
+    const t = performance.now() / 1000;
+    for (const s of ['l', 'r']) {
+      const ctx = roomCv[s].getContext('2d'), keep = g;
+      ctx.putImageData(roomStatic[s], 0, 0);
+      g = ctx;
+      try {
+        if (s === 'l') dynLeft(t); else dynRight(t);
+        ctx.drawImage(roomDark[s], 0, 0);
+        if (s === 'r') { const tb = RM.r.table; R(tb.x + 21, tb.y - 22, 2, 2, '#ff8cbc'); }
+        if (s === 'l' && lampOn) R(RM.l.lamp.x + 24, RM.dy - 28, 6, 1, '#fff9d0');
+        const hv = roomHover && roomHover.s === s ? RM.hit[s][roomHover.id] : null;
+        if (hv && !touch) {
+          g.fillStyle = C.pink;
+          for (let x = hv.x - 2; x < hv.x + hv.w + 2; x += 2) { g.fillRect(x, hv.y - 2, 1, 1); g.fillRect(x, hv.y + hv.h + 1, 1, 1); }
+          for (let y = hv.y - 2; y < hv.y + hv.h + 2; y += 2) { g.fillRect(hv.x - 2, y, 1, 1); g.fillRect(hv.x + hv.w + 1, y, 1, 1); }
+        }
+      } finally { g = keep; }
+    }
+  }
+  setInterval(() => { if (!document.hidden) drawRooms(); }, 110);
+  setInterval(() => { if (RM) { buildSky(); buildRoomDark(); } checkNight(); }, 60000);
+
+  // Kamera drehen: -1 links, 0 Regal, 1 rechts
+  function panTo(p) {
+    p = Math.max(-1, Math.min(1, p));
+    if (p === pan || zoomed || state !== 'shelf' || holo || rewinding) return;
+    pan = p;
+    sfxPlay('step');
+    applyView(false, 1100);
+    hint.textContent = shelfHint();
+    updatePanBtns();
+  }
+  function updatePanBtns() {
+    const on = state === 'shelf' && !holo && !zoomed;
+    panL.classList.toggle('show', on && pan > -1);
+    panR.classList.toggle('show', on && pan < 1);
+    const lh = pan === 1 ? '◄<small>REGAL</small>' : phone.ringing ? '☎<small>LINKS</small>' : '◄';
+    const rh = pan === -1 ? '►<small>REGAL</small>' : '►';
+    if (panL.innerHTML !== lh) panL.innerHTML = lh;
+    if (panR.innerHTML !== rh) panR.innerHTML = rh;
+    panL.classList.toggle('ring', phone.ringing && pan > -1);
+  }
+  setInterval(updatePanBtns, 250);
+  panL.addEventListener('click', e => { e.stopPropagation(); audioInit(); panTo(pan - 1); });
+  panR.addEventListener('click', e => { e.stopPropagation(); audioInit(); panTo(pan + 1); });
+  const onTV = ev => {
+    const b = art.getBoundingClientRect(), x = (ev.clientX - b.left) / b.width * L.W, y = (ev.clientY - b.top) / b.height * L.H, tv = L.tv;
+    return x >= tv.x - 4 && x <= tv.x + tv.w + 4 && y >= tv.y - 10 && y <= tv.y + tv.h + 4;
+  };
+
+  // Klicks und Wischen auf den Seitenwänden
+  function roomHit(s, ev) {
+    if (!RM) return null;
+    const cv = roomCv[s], b = cv.getBoundingClientRect();
+    const x = (ev.clientX - b.left) / b.width * cv.width, y = (ev.clientY - b.top) / b.height * cv.height;
+    const H = RM.hit[s];
+    for (const id in H) { const q = H[id]; if (x >= q.x - 2 && x <= q.x + q.w + 2 && y >= q.y - 2 && y <= q.y + q.h + 2) return id; }
+    return null;
+  }
+  let roomSwipe = null, roomSwiped = false;
+  for (const s of ['l', 'r']) {
+    const cv = roomCv[s];
+    cv.addEventListener('mousemove', ev => {
+      const id = state === 'shelf' ? roomHit(s, ev) : null;
+      cv.classList.toggle('hot', !!id);
+      roomHover = id ? { s, id } : null;
+    });
+    cv.addEventListener('mouseleave', () => { roomHover = null; cv.classList.remove('hot'); });
+    cv.addEventListener('pointerdown', ev => { roomSwipe = { x: ev.clientX, y: ev.clientY }; roomSwiped = false; });
+    cv.addEventListener('pointerup', ev => {
+      if (!roomSwipe || state !== 'shelf') return;
+      const dx = ev.clientX - roomSwipe.x, dy = ev.clientY - roomSwipe.y;
+      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) { panTo(pan + (dx < 0 ? 1 : -1)); roomSwiped = true; swallowClick = true; }
+      roomSwipe = null;
+    });
+    cv.addEventListener('click', ev => {
+      if (roomSwiped) { roomSwiped = false; return; }
+      if (state !== 'shelf' || holo) return;
+      ev.stopPropagation();
+      const id = roomHit(s, ev);
+      if (id) touchDetail(id);
+      // angetipptes Zimmer, das man nur am Rand sieht: dorthin drehen
+      else if ((s === 'l' && pan === 0) || (s === 'r' && pan === 0)) panTo(s === 'l' ? -1 : 1);
+    });
+  }
+  const DTXT = {
+    fenster: () => nightAmount() > .3 ? 'DRAUSSEN IST ES DUNKEL. NUR DER REGEN UND EIN PAAR FENSTER GEGENÜBER.' : 'ES REGNET. ES REGNET HIER EIGENTLICH IMMER.',
+    zettel: () => 'AUF DEM ZETTEL STEHT: ↑ ↑ ↓ ↓ ← → … DER REST IST ABGERISSEN.',
+    kalender: () => 'MÄRZ 1987. DER 13. IST ROT EINGEKREIST.',
+    tasse: () => 'KALTER KAFFEE. SEHR KALT. VERMUTLICH AUCH VON 1987.',
+    poster1: () => 'NACHTSCHICHT. DEN FILM GIBT ES NICHT. DAS SPIEL SCHON: AUF DER ASCII-ARCADE-KASSETTE.',
+    poster2: () => 'KLOTZWELT. JEMAND HAT MIT KULI EINEN EIGENEN KLOTZ DAZUGEMALT.',
+    uhr: () => { const d = new Date(); return `DIE UHR ZEIGT ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}. ALS EINZIGES HIER GEHT SIE RICHTIG.`; },
+    lava: () => 'EINE LAVALAMPE. MAN KANN NICHT WEGSCHAUEN.',
+  };
+  function touchDetail(id) {
+    if (id === 'telefon') return pickup();
+    if (id === 'pinnwand') return stickerBoard();
+    let txt;
+    if (id === 'lampe') { lampOn = !lampOn; store('vhs-lampe', lampOn ? '1' : '0'); buildRoomDark(); sfxPlay('tick'); txt = lampOn ? 'KLICK. LICHT.' : 'KLICK. WIEDER DUNKEL.'; }
+    else if (id === 'ecke') { peeled = !peeled; sfxPlay('peel'); txt = peeled ? 'DIE ECKE LÖST SICH, DAS POSTER KIPPT WEG. DAHINTER STEHT WAS MIT BLEISTIFT AN DER WAND.' : 'WIEDER ANGEKLEBT. HAT KEINER GESEHEN.'; }
+    else if (id === 'katze') { catWake = performance.now() + 3500; sfxPlay('meow'); txt = 'MRRRP? DIE KATZE SCHAUT DICH AN. DANN SCHLÄFT SIE WEITER.'; }
+    else txt = DTXT[id]();
+    const neu = !found[id] && DETAILS.includes(id);
+    if (neu) { found[id] = 1; store('vhs-details', JSON.stringify(found)); }
+    const n = DETAILS.filter(k => found[k]).length;
+    note(txt, neu ? `◆ DETAIL ${n}/${DETAILS.length}` : '');
+    if (n >= DETAILS.length) award('details');
+    drawRooms();
+  }
+
+  // ================= Untertitel-Box (Details im Zimmer, Telefonanrufe) =================
+  const cap = document.getElementById('cap'), capH = document.getElementById('capH'), capT = document.getElementById('capT'), capB = document.getElementById('capB');
+  let capTimer = 0, typeT = 0;
+  function showCap(head, buttons) {
+    clearTimeout(capTimer);
+    capH.textContent = head || ''; capH.style.display = head ? '' : 'none';
+    capB.innerHTML = '';
+    for (const [lbl, fn] of buttons || []) {
+      const b = document.createElement('button'); b.textContent = lbl;
+      b.addEventListener('click', e => { e.stopPropagation(); fn(b); });
+      capB.appendChild(b);
+    }
+    cap.hidden = false;
+    cap.classList.toggle('evil', !!(phone.call && phone.call.evil));
+  }
+  // Untertitel: jeder Buchstabe wackelt einzeln (klingt nach jemandem, der ernst redet).
+  // Ab einem § im Text wird es ernst: der Rest flackert rot.
+  function typeCap(txt) {
+    clearInterval(typeT);
+    capT.innerHTML = '';
+    const cut = txt.indexOf('§'), plain = txt.replace('§', '');
+    // Wörter bleiben zusammen (Umbruch nur zwischen Wörtern), jeder Buchstabe wackelt für sich
+    let word = null;
+    const spans = [...plain].map((ch, k) => {
+      const s = document.createElement('span');
+      s.textContent = ch;
+      if (ch === ' ') { word = null; capT.appendChild(document.createTextNode(' ')); s.textContent = ''; return s; }
+      if (!word) { word = document.createElement('span'); word.className = 'wd'; capT.appendChild(word); }
+      s.className = 'wb' + (cut >= 0 && k >= cut ? ' ernst' : '');
+      s.style.animationDelay = `${(-k * .13) % 1.7}s, ${(-k * .37) % 1.3}s`;
+      s.style.visibility = 'hidden';
+      word.appendChild(s);
+      return s;
+    });
+    let n = 0;
+    typeT = setInterval(() => {
+      const s = spans[n++];
+      if (s) { s.style.visibility = ''; if (s.classList.contains('ernst') && n === cut + 1) { glowKick = performance.now() + 300; } }
+      if (n >= spans.length) clearInterval(typeT);
+    }, 28);
+  }
+  function hideCap() { clearTimeout(capTimer); clearInterval(typeT); cap.hidden = true; }
+  function note(txt, head) {
+    if (phone.call) return;
+    showCap(head, []); typeCap(txt);
+    clearTimeout(capTimer); capTimer = setTimeout(hideCap, 3000 + txt.length * 45);
+  }
+  cap.addEventListener('click', e => { e.stopPropagation(); if (!phone.call) hideCap(); });
+
+  // ================= Telefon: klingelt ab und zu, gibt Hinweise zur Geheimkassette =================
+  // Jede Zeile: t = Untertitel. Optional ton: 'audio/telefon/datei.mp3' = eigenes Geräusch für diese Zeile
+  // (ohne ton spielt ein verzerrtes Platzhalter-Gemurmel, so lang wie der Satz).
+  // Ein § im Satz = ab da wird es ernst: Untertitel flackern rot, das Gemurmel wird tiefer.
+  const CALLS = {
+    start: [
+      { t: '…KNACK… HALLO? IST DA JEMAND?' },
+      { t: 'HINTER DEM REGAL LIEGT NOCH EINE KASSETTE.' },
+      { t: 'SIE HAT KEIN ETIKETT. §UND SIE WARTET.' },
+    ],
+    konami: [
+      { t: 'DIE FERNBEDIENUNG KENNT EINEN ALTEN TRICK.' },
+      { t: '↑ ↑ ↓ ↓ ← → ← → B A' },
+      { t: 'EINFACH AUF DER TASTATUR EINTIPPEN. §GANZ IN RUHE.' },
+    ],
+    schild: [
+      { t: 'KEINE PFEILTASTEN? AUCH EGAL.' },
+      { t: 'KLOPF FÜNFMAL SCHNELL AUF DAS SCHILD VOM FERNSEHER.' },
+      { t: 'DA, WO VHS·VISION STEHT. §SIE HÖRT DAS KLOPFEN.' },
+    ],
+    datum: [
+      { t: 'DREIZEHNTER MÄRZ 1987.' },
+      { t: 'AN DEM TAG WURDE SIE AUFGENOMMEN. §SEITDEM HAT SIE NIEMAND MEHR ABGESPIELT.' },
+      { t: 'WENN DU SIE FINDEST: §SEI NETT ZU IHR.' },
+    ],
+  };
+  const phone = { ringing: false, offHook: false, missed: 0, timer: 0, ringT: 0, call: null, crk: 0 };
+  function hintCall() {
+    const order = touch ? ['start', 'schild', 'datum', 'konami'] : ['start', 'konami', 'datum', 'schild'];
+    const k = (parseInt(store('vhs-telefon'), 10) || 0);
+    store('vhs-telefon', String(k + 1));
+    return CALLS[order[k % order.length]];
+  }
+  // Nach dem Fund ruft die Kassette selbst an
+  function tapeCall() {
+    const name = store('vhs-tape00-name') || '', visits = parseInt(store('vhs-tape00-visits'), 10) || 0, rewound = store('vhs-tape00-rewound') === '1';
+    if (!visits) return [{ t: '…ICH BIN ES. DIE KASSETTE.' }, { t: 'DU HAST MICH GEFUNDEN. §JETZT LEG MICH AUCH EIN.' }, { t: 'ICH LIEGE OBEN AUF DEM FERNSEHER. KANAL NULL.' }];
+    if (rewound) return [{ t: 'DU HAST MICH ZURÜCKGESPULT.' }, { t: 'ALLES IST WIEDER AM ANFANG. §FAST ALLES.' }, { t: 'ICH ERINNERE MICH AN DICH' + (name ? ', ' + name : '') + '.' }];
+    const mid = ['ICH HAB NOCH FRAGEN AN DICH.', 'ES IST SO DUNKEL OBEN AUF DEM FERNSEHER.', 'KOMM VORBEI. ICH ERZÄHL DIR WAS VON 1987.', 'DIE KATZE STARRT MICH SCHON WIEDER AN.'];
+    return [{ t: name ? name + '? BIST DU DAS?' : 'DU SCHON WIEDER?' }, { t: mid[(Math.random() * mid.length) | 0] }, { t: '§LEG MICH EIN. KANAL NULL.' }];
+  }
+  function timeCall() {
+    const d = new Date(Date.now() + 5000);
+    return [{ t: `BEIM NÄCHSTEN TON IST ES ${d.getHours()} UHR, ${d.getMinutes()} MINUTEN UND ${d.getSeconds()} SEKUNDEN.` }, { t: '…PIEP.', beep: true }];
+  }
+  function schedulePhone(ms) {
+    clearTimeout(phone.timer);
+    phone.timer = setTimeout(() => {
+      if (state !== 'shelf' || holo || phone.call || zoomed || document.hidden) return schedulePhone(15000);
+      ringStart();
+    }, ms);
+  }
+  function ringStart() {
+    phone.ringing = true; phone.ringN = 0;
+    updatePanBtns();
+    if (pan > -1) hint.textContent = '☎ DAS TELEFON KLINGELT · LINKS IM ZIMMER';
+    clearTimeout(phone.ringT);
+    (function burst() {
+      if (!phone.ringing) return;
+      if (++phone.ringN > 7) {
+        ringStop(); phone.missed++;
+        if (phone.missed < 3) schedulePhone(180000 + Math.random() * 120000);
+        return;
+      }
+      sfxPlay('ring');
+      phone.ringT = setTimeout(burst, 3000);
+    })();
+  }
+  function ringStop() {
+    if (!phone.ringing) return;
+    phone.ringing = false; clearTimeout(phone.ringT); updatePanBtns();
+    if (state === 'shelf') hint.textContent = shelfHint();
+  }
+  function pickup() {
+    if (phone.call) return hangup();
+    const wasRinging = phone.ringing;
+    ringStop(); audioInit();
+    phone.offHook = true;
+    sfxPlay('pickup');
+    const evil = wasRinging && secretOn;
+    const lines = wasRinging ? (secretOn ? tapeCall() : hintCall()) : timeCall();
+    phone.call = { lines, k: 0, evil, id: Math.random() };
+    showCap(wasRinging ? (evil ? '☎ ANRUF · KANAL 00' : '☎ ANRUF · UNBEKANNT') : '☎ ZEITANSAGE', [['AUFLEGEN', hangup]]);
+    capT.textContent = '';
+    if (wasRinging) award('telefon');
+    clearInterval(phone.crk);
+    phone.crk = setInterval(() => {
+      if (!AU.ctx || muted || !phone.call) return;
+      const t = AU.ctx.currentTime;
+      if (Math.random() < .4) nz(t, .006 + Math.random() * .02, 'highpass', 2500 + Math.random() * 3000, .7, .02 + Math.random() * .06);
+    }, 60);
+    if (!wasRinging) sfxPlay('dial', 1.3);
+    setTimeout(nextLine, wasRinging ? 800 : 1600);
+  }
+  function nextLine() {
+    const c = phone.call;
+    if (!c) return;
+    if (c.k >= c.lines.length) { sfxPlay('busy'); c.end = setTimeout(hangup, 2300); return; }
+    const ln = c.lines[c.k++], id = c.id;
+    typeCap(ln.t);
+    if (ln.beep) sfxPlay('beep');
+    let dur = 1100 + ln.t.length * 55;
+    if (ln.ton && !muted) {
+      try { const a = new Audio(ln.ton); a.volume = vol(); a.play().catch(() => {}); c.audio = a; a.addEventListener('loadedmetadata', () => { dur = Math.max(dur, a.duration * 1000 + 500); }); } catch (e) {}
+    } else if (!ln.beep) sfxPlay('mumble', ln.t.length * .045, c.evil || ln.t.includes('§'));
+    setTimeout(() => { if (phone.call && phone.call.id === id) nextLine(); }, dur);
+  }
+  function hangup() {
+    const c = phone.call;
+    if (!c) return;
+    clearTimeout(c.end); clearInterval(phone.crk);
+    if (c.audio) try { c.audio.pause(); } catch (e) {}
+    phone.call = null; phone.offHook = false;
+    sfxPlay('hangup'); hideCap();
+    if (phone.missed < 3) schedulePhone(240000 + Math.random() * 120000);
+    setTimeout(flushAwards, 300);
+  }
+
+  // ================= Sticker (Achievements) kleben auf dem Fernseher =================
+  const STICKERS = [
+    { id: 'geheim', name: 'GEHEIMKASSETTE GEFUNDEN', how: 'Die Kassette ohne Etikett finden.', c: '#ff3048',
+      ic: ['000000000', '001111100', '011000110', '110111011', '110111011', '011000110', '001111100'] },
+    { id: 'zehn', name: '10 KASSETTEN GESPIELT', how: 'Zehnmal eine Kassette einlegen.', c: '#2ef2ff',
+      ic: ['010001110', '110010001', '010010011', '010010101', '010011001', '010010001', '111001110'] },
+    { id: 'alle', name: 'ALLE SPIELE GESTARTET', how: 'Jede Kassette einmal einlegen.', c: '#ffd23e',
+      ic: ['000010000', '000111000', '111111111', '011111110', '001111100', '011101110', '110000011'] },
+    { id: 'telefon', name: 'TELEFON ABGENOMMEN', how: 'Rangehen, wenn es klingelt.', c: '#39ff6a',
+      ic: ['011000110', '111111111', '110000011', '000111000', '001111100', '011111110', '011111110'] },
+    { id: 'nacht', name: 'NACHTEULE', how: 'Zwischen 0 und 4 Uhr nachts vorbeischauen.', c: '#b98cff',
+      ic: ['001110000', '011100000', '111000000', '111000000', '111000001', '011100011', '001111110'] },
+    { id: 'spulen', name: 'ZURÜCKGESPULT', how: 'Eine Kassette bis zum Anfang zurückspulen.', c: '#ff2e88',
+      ic: ['000100010', '001100110', '011101110', '111111111', '011101110', '001100110', '000100010'] },
+    { id: 'details', name: 'ALLE DETAILS GEFUNDEN', how: 'Im ganzen Zimmer alles anklicken.', c: '#ff8a3e',
+      ic: ['011100000', '100010000', '100010000', '100010000', '011110000', '000011000', '000001100'] },
+    { id: 'tracking', name: 'PERFEKTES BILD', how: 'Das Tracking von Hand genau einstellen.', c: '#9cc8ff',
+      ic: ['000000011', '000000011', '000001111', '000001111', '000111111', '011111111', '111111111'] },
+    { id: 'gesprochen', name: 'MIT DER KASSETTE GEREDET', how: 'Die Geheimkassette einlegen und mit ihr reden.', c: '#d0263f',
+      ic: ['111111111', '100000001', '101101101', '100000001', '111111111', '001100000', '010000000'] },
+  ];
+  let stk = {};
+  try { stk = JSON.parse(store('vhs-sticker')) || {}; } catch (e) {}
+  const awardQ = [];
+  const stkCache = {};
+  function stickerCv(id) {
+    if (stkCache[id]) return stkCache[id];
+    const S = STICKERS.find(s => s.id === id);
+    return (stkCache[id] = paint(13, 11, () => {
+      rrect(0, 0, 13, 11, 3, '#f4ecff');
+      rrect(1, 1, 11, 9, 3, S.c);
+      g.fillStyle = '#120a1c';
+      S.ic.forEach((row, y) => { for (let x = 0; x < 9; x++) if (row[x] === '1') g.fillRect(2 + x, 2 + y, 1, 1); });
+      R(3, 1, 3, 1, 'rgba(255,255,255,.6)');
+    }));
+  }
+  // Plätze auf dem Gehäuse (Reihenfolge = wie die Sticker verdient wurden)
+  function stickerSpots() {
+    const { tv, bezel: bz } = L, lg = L.logo, by = bz.y + bz.h;
+    return [
+      [tv.x + 1, tv.y + 1, -.12], [tv.x + tv.w - 14, tv.y + 1, .1], [tv.x + 3, by + 3, .08],
+      [lg.x + lg.w + 4, by + 3, -.1], [tv.x, Math.round(tv.y + tv.h * .38), -.06], [tv.x + tv.w - 13, Math.round(tv.y + tv.h * .45), .14],
+      [tv.x + 18, tv.y, .05], [tv.x + 19, by + 2, -.15], [lg.x + lg.w + 20, by + 2, .07],
+    ];
+  }
+  const stickerShown = id => stk[id] !== undefined && !awardQ.includes(id) && flushAwards.cur !== id;
+  function drawStickers() {
+    if (!L.logo) return;
+    const sp = stickerSpots();
+    for (const S of STICKERS) if (stickerShown(S.id)) { const [x, y, a] = sp[stk[S.id] % sp.length]; blit(stickerCv(S.id), x, y, a, false); }
+  }
+  function stickerHit(x, y) {
+    if (!L.logo) return null;
+    const sp = stickerSpots();
+    for (const S of STICKERS) if (stickerShown(S.id)) { const [sx, sy] = sp[stk[S.id] % sp.length]; if (x >= sx - 1 && x <= sx + 14 && y >= sy - 1 && y <= sy + 12) return 'stk:' + S.id; }
+    return null;
+  }
+  function stickerInfo(id) {
+    const S = STICKERS.find(s => s.id === id);
+    sfxPlay('tick');
+    note(S.how, '★ ' + S.name);
+  }
+  function stickerBoard() {
+    const have = STICKERS.filter(S => stk[S.id] !== undefined);
+    const miss = STICKERS.filter(S => stk[S.id] === undefined);
+    const txt = have.length === STICKERS.length ? 'ALLE STICKER GESAMMELT! DER FERNSEHER IST VOLL.'
+      : (have.length ? have.map(S => S.name).join(' · ') + '. ' : 'NOCH KEINE STICKER. ') + 'FEHLT NOCH: ' + miss.slice(0, 3).map(S => S.how.toUpperCase().replace(/\.$/, '')).join(' · ') + (miss.length > 3 ? ' · …' : '');
+    note(txt, `★ STICKER ${have.length}/${STICKERS.length}`);
+  }
+  function award(id) {
+    if (stk[id] !== undefined || !STICKERS.some(s => s.id === id)) return;
+    stk[id] = Object.keys(stk).length;
+    store('vhs-sticker', JSON.stringify(stk));
+    awardQ.push(id);
+    flushAwards();
+  }
+  const stkEl = document.getElementById('stk'), stkCan = stkEl.querySelector('canvas'), stkTitle = document.getElementById('stkT');
+  function flushAwards() {
+    if (!awardQ.length || flushAwards.cur || state !== 'shelf' || holo || phone.call || zoomed || !cam) return;
+    const id = awardQ.shift();
+    flushAwards.cur = id;
+    const S = STICKERS.find(s => s.id === id), [sx, sy, sa] = stickerSpots()[stk[id] % 9];
+    const sctx = stkCan.getContext('2d'); sctx.clearRect(0, 0, 13, 11); sctx.drawImage(stickerCv(id), 0, 0);
+    stkTitle.innerHTML = `★ NEUER STICKER ★<small>${S.name}</small>`;
+    stkTitle.classList.add('show');
+    stkEl.style.display = 'block';
+    sfxPlay('peel');
+    const big = Math.min(VW(), VH()) * .28, x0 = VW() / 2, y0 = VH() * .46;
+    const start = performance.now();
+    (function st(now) {
+      const t = now - start;
+      let cx = x0, cy = y0, w = big, a = Math.sin(t / 160) * .08;
+      if (t < 380) { const u = t / 380; w = big * (u < .7 ? u / .7 * 1.15 : 1.15 - (u - .7) / .3 * .15); }
+      else if (t > 1500) {
+        const u = Math.min(1, (t - 1500) / 650), e = u * u * (3 - 2 * u);
+        const [tx, ty] = sc2c(sx + 6.5, sy + 5.5);
+        cx = x0 + (tx - x0) * e; cy = y0 + (ty - y0) * e; w = big + (13 * cam.k - big) * e; a = a * (1 - e) + sa * e;
+        if (t > 1700) stkTitle.classList.remove('show');
+        if (u >= 1) {
+          stkEl.style.display = 'none';
+          flushAwards.cur = null;
+          sfxPlay('slap'); render(); drawRooms();
+          glowKick = performance.now() + 200;
+          setTimeout(flushAwards, 500);
+          return;
+        }
+      }
+      const h = w * 11 / 13;
+      Object.assign(stkEl.style, { width: w + 'px', height: h + 'px', transform: `translate(${cx - w / 2}px, ${cy - h / 2}px) rotate(${a}rad)` });
+      requestAnimationFrame(st);
+    })(start);
+  }
+  function checkNight() { const h = hourNow(); if (h >= 0 && h < 4) award('nacht'); }
+  function checkPlays() {
+    let n = parseInt(store('vhs-plays'), 10);
+    if (!(n >= 0)) { n = CHANS.filter(i => td(i).p > 0).length; store('vhs-plays', String(n)); }
+    if (n >= 10) award('zehn');
+    if (CHANS.every(i => td(i).p > 0)) award('alle');
+  }
+
+  // ================= 3D-Kassette: fliegt aus dem Regal nach vorne, dreht sich, kann in den Fernseher =================
+  const holoEl = document.getElementById('holo'), t3 = document.getElementById('t3'), holoUi = document.getElementById('holoUi');
+  const hFlip = document.getElementById('hFlip'), hIns = document.getElementById('hIns'), hBack = document.getElementById('hBack');
+  const holoTip = document.getElementById('holoTip'), dropRing = document.getElementById('dropRing');
+  // Maße in Hüllen-Pixeln: Hülle 112 × 202 × 27, Kassette darin 104 × 194 × 21
+  const SW3 = 112, SH3 = 202, SD3 = 27, CW3 = 104, CH3 = 194, CD3 = 21;
+  let holo = null;
+  const TCOL = ['#2ef2ff', '#ff2e88', '#39ff6a', '#ffd23e', '#b98cff', '#ff8a3e', '#9cc8ff', '#ff5a6e', '#6fd46a'];
+  const tapeCol = i => TAPES[i].farbe || TCOL[(chNum(i) || 0) % TCOL.length];
+  const AB_COL = { 0: '#2ef2ff', 6: '#39ff6a', 12: '#ffd23e', 16: '#ff2e88', 18: '#ff3048' };
+  const picCache = {};
+  function tapePic(i, cb) {
+    const t = TAPES[i];
+    if (!t.url || t.secret || t.leer) return null;
+    const src = 'previews/' + t.url.split('/').pop().replace('.html', '.jpg');
+    let im = picCache[src];
+    if (!im) { im = picCache[src] = new Image(); im.src = src; }
+    if (im.complete && im.naturalWidth) return im;
+    if (cb) im.addEventListener('load', cb, { once: true });
+    return null;
+  }
+  // eigenes Freigabe-Siegel (rund, Neonfarben), keine Kopie eines echten Logos
+  function badge(x, y, ab, r) {
+    const c = AB_COL[ab] || '#ff3048', cx = x + r, cy = y + r;
+    disc(cx, cy, r, '#0b0612'); disc(cx, cy, r - 1, c); disc(cx, cy, r - 3, '#0b0612');
+    const num = ab === undefined || ab === null ? '?' : String(ab);
+    if (r >= 16) { text('AB', cx, cy - 11, 7, c, 'center'); textS(num, cx, cy - 2, 2, '#fff', 'center'); }
+    else if (r >= 12) { text('AB', cx, cy - 8, 7, c, 'center'); text(num, cx, cy + 1, 7, '#fff', 'center'); }
+    else text(num, cx, cy - 3, 7, '#fff', 'center');
+  }
+  function coverFront(i, im) {
+    const t = TAPES[i], W = SW3, H = SH3, col = tapeCol(i);
+    return paint(W, H, () => {
+      if (t.leer) {
+        ditherV(0, 0, W, H, '#cfc4e0', '#b3a7c9', 0, 1);
+        R(0, 0, W, 1, '#e8ddff'); R(0, H - 1, W, 1, '#8a7fa3');
+        text('VHS·VISION', W / 2, 8, 7, '#8a7fa3', 'center'); text('E-180', W / 2, 18, 7, '#8a7fa3', 'center');
+        R(14, 78, W - 28, 40, C.note); R(14, 117, W - 28, 1, C.noteLo);
+        text(t.label || '???', W / 2, 88, 7, '#4e4760', 'center');
+        text('PLATZ FREI', W / 2, 102, 7, '#8a8598', 'center');
+        return;
+      }
+      if (t.secret) {
+        R(0, 0, W, H, '#0a0508');
+        g.fillStyle = '#1a0c10'; for (let k = 0; k < 260; k++) g.fillRect((k * 37) % W, (k * 61) % H, 1, 1);
+        g.fillStyle = '#3a0d18'; for (let k = 0; k < 7; k++) { const y = 20 + k * 23; g.fillRect(8 + k * 9 % 30, y, 40 + k * 7 % 40, 1); }
+        textS('???', W / 2, 70, 3, '#5a0010', 'center'); textS('???', W / 2 - 1, 69, 3, C.red, 'center');
+        text('13.03.1987', W / 2, 120, 7, '#a01a2a', 'center');
+        text('NICHT', W / 2, 160, 7, '#5a1424', 'center'); text('ABSPIELEN', W / 2, 170, 7, '#5a1424', 'center');
+        return;
+      }
+      R(0, 0, W, H, '#0b0612');
+      if (im) {
+        g.save(); g.beginPath(); g.rect(0, 16, W, 118); g.clip();
+        g.imageSmoothingEnabled = true;
+        const k = Math.max(W / im.naturalWidth, 118 / im.naturalHeight) * 1.05;
+        g.drawImage(im, (W - im.naturalWidth * k) / 2, 16 + (118 - im.naturalHeight * k) / 2, im.naturalWidth * k, im.naturalHeight * k);
+        g.restore();
+      } else ditherV(0, 16, W, 118, '#1a0830', '#4a1050', 0, 1);
+      g.fillStyle = '#0b0612';
+      for (let y = 0; y < 34; y++) for (let x = 0; x < W; x++) if (bay(x, y) < y / 34) g.fillRect(x, 100 + y, 1, 1);
+      R(0, 0, W, 14, col); text('VHS·VISION', W / 2, 4, 7, '#0b0612', 'center'); R(0, 14, W, 2, '#0b0612');
+      // Titel: doppelt groß, wenn er passt, sonst zweizeilig
+      const nm = t.name, parts = nm.length > 9 && /[ -]/.test(nm) ? nm.split(/(?<=-)|\s/).filter(Boolean) : [nm];
+      const big = parts.every(p => (p.length * 6 - 1) * 2 <= W - 6);
+      let y = big ? 138 : 142;
+      for (const p of parts) {
+        const sc = big ? 2 : 1;
+        textS(p, W / 2 + sc, y, sc, C.pinkLo, 'center'); textS(p, W / 2 - sc, y, sc, '#1a6a80', 'center'); textS(p, W / 2, y, sc, '#fff', 'center');
+        y += big ? 16 : 9;
+      }
+      let tg = t.tag; while (textWidth(tg) > W - 6 && tg.length > 3) tg = tg.slice(0, -1);
+      text(tg, W / 2, Math.min(y + 2, H - 33), 7, C.cyan, 'center');
+      R(0, H - 22, W, 22, '#120a1c');
+      for (let k = 0; k < 4; k++) R(0, H - 22 + k * 2, W, 1, [C.pink, C.pinkLo, '#5a1d6a', '#2a1240'][k]);
+      text('CH ' + String(chNum(i)).padStart(2, '0'), 6, H - 11, 7, '#39ff6a');
+      if (t.ab !== undefined) badge(W - 22, H - 21, t.ab, 9);
+    });
+  }
+  function coverBack(i, im) {
+    const t = TAPES[i], W = SW3, H = SH3, col = tapeCol(i);
+    return paint(W, H, () => {
+      R(0, 0, W, H, t.leer ? '#bfb4d2' : t.secret ? '#0a0508' : '#120a1c');
+      if (!t.leer && !t.secret) for (let y = 1; y < H; y += 2) R(0, y, W, 1, '#160d22');
+      if (t.leer) {
+        text('NOCH NICHTS', W / 2, 80, 7, '#6e6782', 'center'); text('DRAUF', W / 2, 90, 7, '#6e6782', 'center');
+        text('E-180 · PAL', W / 2, H - 14, 7, '#8a7fa3', 'center');
+        return;
+      }
+      if (t.secret) {
+        text('KEIN ETIKETT', W / 2, 30, 7, '#5a1424', 'center');
+        wrapT(t.desc, 17).forEach((ln, k) => text(ln, 6, 60 + k * 10, 7, '#a01a2a'));
+        badge(6, H - 46, '?', 17);
+        text('NICHT', 44, H - 40, 7, C.red); text('GEPRÜFT', 44, H - 30, 7, C.red);
+        return;
+      }
+      R(0, 0, 3, H, col);
+      text(t.name, W / 2 + 1, 5, 7, C.pinkLo, 'center'); text(t.name, W / 2, 4, 7, '#fff', 'center');
+      let tg = t.tag; while (textWidth(tg) > W - 8 && tg.length > 3) tg = tg.slice(0, -1);
+      text(tg, W / 2, 14, 7, C.cyan, 'center');
+      // drei Bildausschnitte als "Screenshots"
+      for (let k = 0; k < 3; k++) {
+        const x = 6 + k * 35, y = 25;
+        R(x - 1, y - 1, 33, 23, '#e8ddff');
+        if (im) {
+          g.save(); g.beginPath(); g.rect(x, y, 31, 21); g.clip();
+          const sc = (31 / im.naturalWidth) * (k === 0 ? 1.1 : 2.2);
+          const ox = k === 1 ? -im.naturalWidth * sc * .05 : k === 2 ? -im.naturalWidth * sc * .5 : 0;
+          const oy = k === 2 ? -im.naturalHeight * sc * .45 : k === 1 ? -im.naturalHeight * sc * .1 : 0;
+          g.drawImage(im, x + ox, y + oy, im.naturalWidth * sc, im.naturalHeight * sc);
+          g.restore();
+        } else R(x, y, 31, 21, '#2a1240');
+      }
+      wrapT(t.desc, 17).slice(0, 8).forEach((ln, k) => text(ln, 6, 54 + k * 9, 7, '#e8ddff'));
+      // Zustand vom Band
+      const w = wear(i), lab = w === 0 ? 'NEU' : w <= 3 ? 'GUT' : w <= 6 ? 'ABGENUTZT' : w <= 9 ? 'MITGENOMMEN' : 'HINÜBER';
+      text('ZUSTAND: ' + lab, 6, 132, 7, w <= 3 ? '#39ff6a' : w <= 6 ? '#ffd23e' : C.pink);
+      text('ZÄHLER ' + fmtCount(td(i).c), 6, 141, 7, '#8a7fa3');
+      // Freigabe
+      if (t.ab !== undefined) {
+        badge(5, H - 50, t.ab, 17);
+        text('FREIGEGEBEN', 42, H - 49, 7, AB_COL[t.ab] || C.red);
+        wrapT(t.grund || '', 11).slice(0, 3).forEach((ln, k) => text(ln, 42, H - 39 + k * 9, 7, '#c8bce0'));
+      }
+      text('PAL', 6, H - 10, 7, '#6e6782');
+      let seed = i * 131 + 7; const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+      R(W - 40, H - 12, 36, 10, '#e8ddff');
+      for (let x = W - 38; x < W - 6; x++) if (rnd() < .55) R(x, H - 11, 1, 8, '#120a1c');
+    });
+  }
+  // Rücken: genau wie die Kassette im Regal, nur hochkant
+  function spineCv(i, len, th) {
+    const a = paint(len, th, () => drawTape(i, 0, -3, len, th + 3, false, false));
+    return paint(th, len, () => { g.save(); g.translate(th, 0); g.rotate(Math.PI / 2); g.drawImage(a, 0, 0); g.restore(); });
+  }
+  function plain(w, h, base, fn) { return paint(w, h, () => { R(0, 0, w, h, base); if (fn) fn(w, h); }); }
+  function cassetteFace(i) {
+    const t = TAPES[i], W = CW3, H = CH3;
+    return paint(W, H, () => {
+      R(0, 0, W, H, C.tp1); R(0, 0, W, 1, C.tp3); R(0, 0, 1, H, C.tp2); R(W - 1, 0, 1, H, C.tp0); R(0, H - 1, W, 1, C.tp0);
+      // Etikett
+      R(8, 8, W - 16, 38, t.secret ? '#3a0d18' : t.leer ? C.labDim : C.lab); R(8, 8, W - 16, 1, t.secret ? '#6a1a2c' : C.labHi);
+      let nm = t.leer ? (t.label || '') : t.name; while (nm.length > 3 && textWidth(nm) > W - 22) nm = nm.slice(0, -1);
+      text(nm, W / 2, 22, 7, t.secret ? C.red : C.ink, 'center');
+      // Sichtfenster mit zwei Spulen (die Bandmenge hängt vom Zählerstand ab)
+      R(16, 62, W - 32, 102, '#07060a'); R(16, 62, W - 32, 1, '#000');
+      const used = Math.min(1, (t.secret ? 3600 : td(i).c) / 7200);
+      const r1 = Math.round(10 + 9 * (1 - used)), r2 = Math.round(10 + 9 * used);
+      for (const [cy, rr] of [[89, r1], [137, r2]]) {
+        disc(W / 2, cy, rr, '#3a2414'); disc(W / 2, cy, rr - 1, '#2a180c');
+        disc(W / 2, cy, 7, '#e8ddff'); disc(W / 2, cy, 3, '#2a2534');
+        for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; R(W / 2 + Math.round(Math.cos(a) * 5), cy + Math.round(Math.sin(a) * 5), 1, 1, '#2a2534'); }
+      }
+      g.fillStyle = 'rgba(255,255,255,.12)'; for (let k = 0; k < 30; k++) g.fillRect(18 + k, 64 + k, 1, 1);
+      for (const [x, y] of [[4, 4], [W - 6, 4], [4, H - 6], [W - 6, H - 6], [W / 2 - 1, H - 6]]) R(x, y, 2, 2, C.tp3);
+      for (let y = 172; y < H - 8; y += 3) R(14, y, W - 28, 1, C.tp0);
+    });
+  }
+  function makeCube(w, h, d, f, u) {
+    const el = document.createElement('div'); el.className = 'cube';
+    const W = w * u, H = h * u, D = d * u;
+    Object.assign(el.style, { width: W + 'px', height: H + 'px', left: -W / 2 + 'px', top: -H / 2 + 'px' });
+    const put = (cv, cw, ch, tf) => {
+      cv.className = 'face';
+      Object.assign(cv.style, { width: cw + 'px', height: ch + 'px', left: (W - cw) / 2 + 'px', top: (H - ch) / 2 + 'px', transform: tf });
+      el.appendChild(cv);
+    };
+    put(f.front, W, H, `translateZ(${D / 2}px)`);
+    put(f.back, W, H, `rotateY(180deg) translateZ(${D / 2}px)`);
+    put(f.left, D, H, `rotateY(-90deg) translateZ(${W / 2}px)`);
+    put(f.right, D, H, `rotateY(90deg) translateZ(${W / 2}px)`);
+    put(f.top, W, D, `rotateX(90deg) translateZ(${H / 2}px)`);
+    put(f.bottom, W, D, `rotateX(-90deg) translateZ(${H / 2}px)`);
+    return el;
+  }
+  function holoMetrics() {
+    const P = VH() > VW() * 1.15;
+    const u = P ? Math.min(VH() * .46 / SH3, VW() * .58 / SW3) : Math.min(VH() * .62 / SH3, VW() * .3 / SW3);
+    const x = P ? VW() / 2 : Math.max(VW() * .76, VW() - SW3 * u * .9), y = P ? VH() * .58 : VH() * .46;
+    return { u, x, y, P };
+  }
+  function buildHolo() {
+    const i = holo.i, m = holoMetrics(), u = m.u, col = tapeCol(i);
+    holo.u = u; holo.m = m;
+    t3.innerHTML = '';
+    const draw = () => {
+      if (!holo || holo.i !== i) return;
+      const im = tapePic(i);
+      const f = holo.sleeve.querySelectorAll('.face');
+      const nf = coverFront(i, im), nb = coverBack(i, im);
+      f[0].getContext('2d').drawImage(nf, 0, 0); f[1].getContext('2d').drawImage(nb, 0, 0);
+    };
+    const im = tapePic(i, draw);
+    const t = TAPES[i], edge = t.leer ? '#b3a7c9' : t.secret ? '#0a0508' : '#1b1822';
+    holo.sleeve = makeCube(SW3, SH3, SD3, {
+      front: coverFront(i, im), back: coverBack(i, im), left: spineCv(i, SH3, SD3),
+      right: plain(SD3, SH3, '#050308', (w, h) => { R(0, 0, 2, h, edge); R(w - 2, 0, 2, h, edge); R(4, 4, w - 8, h - 8, C.tp1); R(4, 4, w - 8, 1, C.tp3); }),
+      top: plain(SW3, SD3, edge, (w, h) => { R(0, h / 2 - 1, w, 2, t.leer || t.secret ? edge : col); }),
+      bottom: plain(SW3, SD3, edge, (w, h) => { R(0, h / 2 - 1, w, 2, t.leer || t.secret ? edge : col); }),
+    }, u);
+    holo.cas = makeCube(CW3, CH3, CD3, {
+      front: cassetteFace(i), back: cassetteFace(i), left: spineCv(i, CH3, CD3),
+      right: plain(CD3, CH3, C.tp0, (w, h) => { R(w / 2, 0, 1, h, C.tp2); R(0, 8, w, 1, C.tp2); R(0, h - 9, w, 1, C.tp2); }),
+      top: plain(CW3, CD3, C.tp1, (w, h) => { for (let x = 6; x < w - 6; x += 4) R(x, 3, 2, h - 6, C.tp0); }),
+      bottom: plain(CW3, CD3, C.tp1, (w, h) => { R(10, h / 2, w - 20, 1, C.tp0); }),
+    }, u);
+    t3.appendChild(holo.cas); t3.appendChild(holo.sleeve);
+    holoEl.style.setProperty('--hx', m.x + 'px'); holoEl.style.setProperty('--hy', m.y + 'px');
+    holoEl.querySelector('.holo-3d').style.perspectiveOrigin = `${m.x}px ${m.y}px`;
+    const bh = SH3 * u;
+    Object.assign(holoUi.style, { left: m.x + 'px', top: Math.min(VH() - 46, m.y + bh / 2 + 14) + 'px' });
+    const can = !!t.url && !t.leer;
+    hIns.disabled = false;
+    hIns.textContent = t.leer ? '■ LEER' : !t.url ? '■ BALD' : t.secret ? '▶ WIRKLICH EINLEGEN?' : '▶ EINLEGEN';
+    hIns.classList.toggle('evil', !!t.secret);
+    holoTip.textContent = can ? (touch ? 'KASSETTE IN DEN FERNSEHER ZIEHEN · DANEBEN WISCHEN = DREHEN' : 'ENTER = EINLEGEN · ←→ DREHEN · ESC ZURÜCK · ODER IN DEN FERNSEHER ZIEHEN')
+      : (touch ? 'DANEBEN WISCHEN = DREHEN' : '←→ DREHEN · ESC ZURÜCK');
+  }
+  function applyHolo() {
+    const p = holo.p;
+    t3.style.transform = `translate3d(${p.x}px, ${p.y}px, ${p.z || 0}px) scale(${p.s}) rotateZ(${p.rz}deg) rotateX(${p.rx}deg) rotateY(${p.ry}deg)`;
+    holo.cas.style.transform = `translateX(${(p.cx || 0) * holo.u}px)`;
+    if (holo.sleeve.style.opacity !== String(p.so ?? 1)) holo.sleeve.querySelectorAll('.face').forEach(f => { f.style.opacity = p.so ?? 1; });
+    holo.sleeve.style.opacity = String(p.so ?? 1);
+    if (p.co !== undefined) holo.cas.querySelectorAll('.face').forEach(f => { f.style.opacity = p.co; });
+  }
+  const easeOut = u => 1 - Math.pow(1 - u, 3), easeIO = u => u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+  function tween(to, dur, ease, done) {
+    holo.tw = { from: { ...holo.p }, to, t0: performance.now(), dur, ease: ease || easeIO, done };
+  }
+  function holoLoop(now) {
+    if (!holo) return;
+    holo.raf = requestAnimationFrame(holoLoop);
+    const tw = holo.tw;
+    if (tw) {
+      const u = Math.min(1, (now - tw.t0) / tw.dur), e = tw.ease(u);
+      for (const k in tw.to) holo.p[k] = tw.from[k] + (tw.to[k] - tw.from[k]) * e;
+      if (u >= 1) { holo.tw = null; if (tw.done) tw.done(); if (!holo) return; }
+    } else if (holo.mode === 'idle' && !(holo.drag && holo.drag.mode === 'move')) {
+      // sanft zur Wunschdrehung, dazu leichtes Schweben
+      const tt = now / 1000, still = holo.drag ? 0 : 1;
+      holo.yaw += (holo.yawT - holo.yaw) * .14; holo.pitch += (holo.pitchT - holo.pitch) * .14;
+      holo.p.ry = holo.yaw + Math.sin(tt * .9) * 9 * still; holo.p.rx = holo.pitch + Math.sin(tt * .63) * 4 * still;
+      holo.p.rz = holo.p.rz * .85; holo.p.x += (holo.m.x - holo.p.x) * .2; holo.p.y += (holo.m.y + Math.sin(tt * 1.3) * 5 - holo.p.y) * .2;
+    }
+    applyHolo();
+  }
+  function openHolo(i) {
+    if (holo || state !== 'shelf' || rewinding || !isTape(i) || pan) return;
+    ringStop();
+    const it = visibleItems().find(o => o.id === i) || (i === SECRET ? L.secretIt : null);
+    holo = { i, mode: 'in', p: {}, yaw: 0, yawT: 0, pitch: 0, pitchT: 0 };
+    buildHolo();
+    hiddenTape = i;
+    const m = holo.m;
+    let sx = m.x, sy = VH() + 200, s0 = .3, rz0 = -90;
+    if (it) { [sx, sy] = sc2c(it.x + it.w / 2, it.y + it.h / 2); s0 = it.w * cam.k / (SH3 * m.u); rz0 = -90 + (it.ang || 0) * 180 / Math.PI; }
+    holo.home = { x: sx, y: sy, s: s0, rz: rz0 };
+    holo.p = { x: sx, y: sy, z: 0, s: s0, rx: 0, ry: 90, rz: rz0, cx: 0, so: 1, co: 1 };
+    holoEl.hidden = false; holoEl.classList.remove('ready');
+    requestAnimationFrame(() => holoEl.classList.add('on'));
+    hint.textContent = '';
+    render();
+    sfxPlay('whoosh', .5);
+    applyHolo();
+    holo.raf = requestAnimationFrame(holoLoop);
+    tween({ x: m.x, y: m.y, s: 1, rz: 0, ry: -360 * 0 + 0, rx: 0 }, 750, easeOut, () => {
+      holo.mode = 'idle'; holo.yaw = holo.yawT = 0;
+      holoEl.classList.add('ready');
+      // kurz die Vorderseite zeigen, dann umdrehen: Rückseite mit Beschreibung
+      holo.flipT = setTimeout(() => { if (holo && holo.mode === 'idle' && holo.yawT === 0) { holo.yawT = 180; sfxPlay('whoosh', .3); } }, 900);
+    });
+  }
+  function closeHolo(instant) {
+    if (!holo) return;
+    const h = holo;
+    clearTimeout(h.flipT);
+    const fin = () => {
+      cancelAnimationFrame(h.raf);
+      holoEl.hidden = true; holoEl.classList.remove('on', 'ready');
+      t3.innerHTML = ''; dropRing.classList.remove('show');
+      if (holo === h) holo = null;
+      hiddenTape = -1;
+      render();
+      if (state === 'shelf') hint.textContent = shelfHint();
+      setTimeout(flushAwards, 200);
+    };
+    if (instant || h.mode === 'out') return fin();
+    h.mode = 'out';
+    holoEl.classList.remove('on', 'ready');
+    sfxPlay('whoosh', .4);
+    const back = Math.round(h.yaw / 360) * 360;
+    h.yaw = h.p.ry - back;
+    tween({ x: h.home.x, y: h.home.y, s: h.home.s, rz: h.home.rz, ry: 90 + back, rx: 0 }, 520, easeIO, fin);
+  }
+  function flipHolo() {
+    if (!holo || holo.mode !== 'idle') return;
+    clearTimeout(holo.flipT);
+    holo.yawT = Math.round((holo.yawT + 180) / 180) * 180;
+    sfxPlay('whoosh', .3);
+  }
+  function screenTvRect() {
+    const tv = L.tv, [x0, y0] = sc2c(tv.x, tv.y - 8), [x1, y1] = sc2c(tv.x + tv.w, tv.y + tv.h);
+    return { x0, y0, x1, y1 };
+  }
+  function insertHolo() {
+    if (!holo || holo.mode !== 'idle') return;
+    const t = TAPES[holo.i];
+    if (!t.url || t.leer) {
+      // nichts drauf: Kassette schüttelt sich
+      sfxPlay('zap');
+      holoTip.textContent = t.leer ? '■ AUF DIESER KASSETTE IST NOCH NICHTS DRAUF' : '■ BALD VERFÜGBAR';
+      const x = holo.p.x; holo.mode = 'shake';
+      tween({ x: x + 12 }, 70, null, () => tween({ x: x - 12 }, 110, null, () => tween({ x }, 80, null, () => { holo.mode = 'idle'; })));
+      return;
+    }
+    clearTimeout(holo.flipT);
+    holo.mode = 'insert';
+    holoEl.classList.remove('ready');
+    dropRing.classList.remove('show');
+    const h = holo, u = h.u, base = Math.round(h.p.ry / 360) * 360;
+    h.p.ry = h.p.ry - base; h.p.rx = h.p.rx % 360;
+    if (t.secret) sfxPlay('evil');
+    sfxPlay('slide');
+    // 1) Kassette rutscht aus der Hülle  2) Hülle verschwindet  3) Kassette dreht sich flach und fliegt zum Schacht  4) rein damit
+    tween({ ry: 0, rx: 0, rz: 0, cx: CW3 + 14 }, 650, easeIO, () => {
+      const off = (CW3 + 14) * u * h.p.s;
+      tween({ so: 0 }, 220, null, () => {
+        h.sleeve.style.display = 'none';
+        h.p.x += off; h.p.cx = 0; applyHolo();
+        const sl = L.slot, [tx, ty] = sc2c(sl.x + sl.w / 2, sl.y + sl.h / 2);
+        const sEnd = Math.max(.02, sl.w * cam.k / (CH3 * u));
+        tween({ x: tx, y: ty - CD3 * u * sEnd * .6, s: sEnd, rz: -90, ry: 90, rx: 0 }, 700, easeIO, () => {
+          tween({ y: ty, z: -40, co: 0 }, 260, null, () => {
+            closeHolo(true);
+            hiddenTape = h.i;
+            if (sel !== h.i) select(h.i);
+            play();
+          });
+        });
+      });
+    });
+  }
+  // Ziehen: Kassette anfassen = verschieben (über dem Fernseher loslassen = einlegen), daneben wischen = drehen
+  t3.addEventListener('pointerdown', e => {
+    if (!holo || holo.mode !== 'idle') return;
+    e.stopPropagation();
+    holo.drag = { mode: 'move', x0: e.clientX, y0: e.clientY, px: holo.p.x, py: holo.p.y, lx: e.clientX, moved: false };
+    try { t3.setPointerCapture(e.pointerId); } catch (e2) {}
+    t3.classList.add('drag');
+  });
+  holoEl.addEventListener('pointerdown', e => {
+    if (!holo || holo.mode !== 'idle' || e.target.closest('button')) return;
+    holo.drag = { mode: 'spin', x0: e.clientX, y0: e.clientY, yaw0: holo.yawT, pitch0: holo.pitchT, moved: false };
+    try { holoEl.setPointerCapture(e.pointerId); } catch (e2) {}
+  });
+  const overTV = (x, y) => { const r = screenTvRect(); return x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1; };
+  addEventListener('pointermove', e => {
+    const d = holo && holo.drag;
+    if (!d) return;
+    const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
+    if (Math.hypot(dx, dy) > 6) d.moved = true;
+    if (!d.moved) return;
+    clearTimeout(holo.flipT);
+    if (d.mode === 'move') {
+      holo.p.x = d.px + dx; holo.p.y = d.py + dy;
+      holo.p.rz = Math.max(-25, Math.min(25, (e.clientX - d.lx) * 1.2));
+      d.lx = e.clientX;
+      const over = TAPES[holo.i].url && !TAPES[holo.i].leer && overTV(e.clientX, e.clientY);
+      if (over !== d.over) {
+        d.over = over;
+        if (over) { const r = screenTvRect(); Object.assign(dropRing.style, { left: r.x0 + 'px', top: r.y0 + 'px', width: r.x1 - r.x0 + 'px', height: r.y1 - r.y0 + 'px' }); }
+        dropRing.classList.toggle('show', !!over);
+      }
+    } else {
+      holo.yawT = holo.yaw = d.yaw0 + dx * .6;
+      holo.pitchT = holo.pitch = Math.max(-45, Math.min(45, d.pitch0 - dy * .35));
+    }
+  });
+  addEventListener('pointerup', e => {
+    const d = holo && holo.drag;
+    if (!d) return;
+    holo.drag = null; t3.classList.remove('drag');
+    if (d.mode === 'move') {
+      if (!d.moved) return flipHolo();
+      if (d.over) return insertHolo();
+      dropRing.classList.remove('show');
+    } else if (!d.moved) closeHolo();
+    else holo.yawT = Math.round(holo.yawT / 30) * 30;
+  });
+  hFlip.addEventListener('click', e => { e.stopPropagation(); flipHolo(); });
+  hIns.addEventListener('click', e => { e.stopPropagation(); insertHolo(); });
+  hBack.addEventListener('click', e => { e.stopPropagation(); closeHolo(); });
+  function holoKey(e) {
+    const k = e.key;
+    if (k === 'Escape' || k === 'Backspace') { e.preventDefault(); closeHolo(); }
+    else if (k === 'Enter') { e.preventDefault(); insertHolo(); }
+    else if (k === ' ') { e.preventDefault(); flipHolo(); }
+    else if (k === 'ArrowLeft' && holo.mode === 'idle') { e.preventDefault(); clearTimeout(holo.flipT); holo.yawT -= 30; }
+    else if (k === 'ArrowRight' && holo.mode === 'idle') { e.preventDefault(); clearTimeout(holo.flipT); holo.yawT += 30; }
+    else if (k === 'ArrowUp' && holo.mode === 'idle') { e.preventDefault(); holo.pitchT = Math.min(45, holo.pitchT + 15); }
+    else if (k === 'ArrowDown' && holo.mode === 'idle') { e.preventDefault(); holo.pitchT = Math.max(-45, holo.pitchT - 15); }
+  }
+  addEventListener('resize', () => { if (holo) closeHolo(true); });
+
+  // ================= Neue Geräusche: Telefon, Sticker, Kassette =================
+  Object.assign(SFX, {
+    // altes Klingelwerk: zwei Glocken, ganz schnell angeschlagen
+    ring(t) {
+      const c = AU.ctx, gg = c.createGain(), f = c.createBiquadFilter();
+      f.type = 'bandpass'; f.frequency.value = 1400; f.Q.value = 1.5;
+      gg.gain.setValueAtTime(.0001, t);
+      for (let k = 0; k < 26; k++) { const tt = t + k / 22; gg.gain.setValueAtTime(.16, tt); gg.gain.exponentialRampToValueAtTime(.02, tt + .04); }
+      gg.gain.setValueAtTime(.0001, t + 26 / 22 + .02);
+      for (const fr of [1150, 1420, 2310]) { const o = c.createOscillator(); o.type = 'square'; o.frequency.value = fr; o.connect(f); o.start(t); o.stop(t + 1.3); }
+      f.connect(gg); gg.connect(AU.sfx);
+    },
+    pickup(t) { nz(t, .05, 'bandpass', 1800, 2, .5); tone(t, .12, 160, 60, 'sine', .5); nz(t + .08, .04, 'bandpass', 900, 2, .3); },
+    hangup(t) { nz(t, .05, 'bandpass', 1200, 2, .6); tone(t, .14, 140, 50, 'sine', .55); },
+    dial(t, dur) { const o = tone(t, dur, 425, 425, 'sine', .07); o.frequency.cancelScheduledValues(t); o.frequency.value = 425; },
+    beep(t) { const o = tone(t, .5, 1000, 1000, 'sine', .12); o.frequency.cancelScheduledValues(t); o.frequency.value = 1000; },
+    busy(t) { for (let k = 0; k < 3; k++) { const o = tone(t + k * .48, .24, 425, 425, 'sine', .07); o.frequency.cancelScheduledValues(t); o.frequency.value = 425; } },
+    // Platzhalter-Gemurmel: verzerrte Silben durch eine Telefonleitung (wird später durch eigene Geräusche ersetzt)
+    mumble(t, dur, evil) {
+      const n = Math.max(3, Math.round(dur / .11));
+      for (let k = 0; k < n; k++) {
+        const tt = t + k * (dur / n) + Math.random() * .03;
+        if (Math.random() < .15) continue;
+        const f0 = (evil ? 70 : 130) + Math.random() * (evil ? 30 : 70);
+        const o = tone(tt, .09, f0, f0 * (.85 + Math.random() * .3), 'sawtooth', evil ? .05 : .035);
+        nz(tt, .07, 'bandpass', 700 + Math.random() * 1400, 4, .05);
+        void o;
+      }
+    },
+    peel(t) { const s = nz(t, .25, 'highpass', 2500, .7, .12); s.frequency.exponentialRampToValueAtTime(6000, t + .25); },
+    slap(t) { nz(t, .05, 'bandpass', 2200, 1.5, .5); tone(t, .09, 320, 110, 'sine', .35); },
+    whoosh(t, len = .4) { const f = nz(t, len, 'bandpass', 400, 1.4, .25); f.frequency.exponentialRampToValueAtTime(1800, t + len); },
+    slide(t) { const f = nz(t, .55, 'bandpass', 900, 3, .18); f.frequency.linearRampToValueAtTime(1500, t + .5); nz(t + .55, .03, 'bandpass', 2600, 3, .3); },
+    step(t) { const f = nz(t, .5, 'lowpass', 300, .7, .12); f.frequency.exponentialRampToValueAtTime(700, t + .45); },
+    meow(t) { const o = tone(t, .45, 520, 760, 'triangle', .1); o.frequency.setValueAtTime(520, t); o.frequency.linearRampToValueAtTime(820, t + .15); o.frequency.linearRampToValueAtTime(480, t + .45); },
+  });
 
   // ================= Start =================
   (async () => {
     try { await document.fonts.load('12px VT323'); } catch (e) {}
     settlePlay();
     setupLayout();
+    if (secretOn) award('geheim');
+    if ((parseInt(store('vhs-tape00-visits'), 10) || 0) > 0) award('gesprochen');
+    checkPlays(); checkNight();
     zoomed = !seen();
     applyView(true);
     // Musik schon beim Laden: Browser erlauben Ton erst nach einer Eingabe.
