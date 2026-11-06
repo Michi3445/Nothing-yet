@@ -1219,7 +1219,7 @@
   });
   document.addEventListener('keydown', e => {
     audioInit();
-    if (konami(e.key)) return;
+    if (konami(e)) return;
     if (e.key === 'm' || e.key === 'M') { toggleSound(); return remoteFeedback(); }
     if (e.key === '[' || e.key === ',') return setTrk(trk - .03);
     if (e.key === ']' || e.key === '.') return setTrk(trk + .03);
@@ -1568,10 +1568,17 @@
   // ================= Geheimkassette =================
   const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
   let kIdx = 0, logoTaps = [];
-  function konami(key) {
-    const k = key && key.length === 1 ? key.toLowerCase() : key;
-    if (k === KONAMI[kIdx]) { if (++kIdx === KONAMI.length) { kIdx = 0; unlockSecret(); return true; } }
-    else kIdx = k === KONAMI[0] ? 1 : 0;
+  // e.code als Rückfall, damit B und A auf jedem Tastaturlayout zählen
+  function konami(e) {
+    const c = e.code === 'KeyB' ? 'b' : e.code === 'KeyA' ? 'a' : '';
+    const k = e.key && e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    const want = KONAMI[kIdx], was = kIdx;
+    if (k === want || c === want) {
+      if (++kIdx === KONAMI.length) { kIdx = 0; unlockSecret(); return true; }
+    } else kIdx = (k === KONAMI[0]) ? 1 : 0;
+    // ab der vierten richtigen Taste zeigt der Fernseher, dass etwas passiert
+    if (kIdx >= 4 && state !== 'off') osdMsg('◆'.repeat(kIdx) + '◇'.repeat(KONAMI.length - kIdx), 1200);
+    else if (was >= 4 && kIdx < 4 && state !== 'off') osdMsg('✕', 600);
     return false;
   }
   // 5x schnell auf das VHS·VISION-Schild am Fernseher tippen (für Handys ohne Pfeiltasten)
