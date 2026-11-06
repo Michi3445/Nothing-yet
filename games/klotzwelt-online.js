@@ -529,37 +529,31 @@
     if (!t) { t = new THREE.CanvasTexture(iconFor(id)); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; ITEX.set(id, t); }
     return t;
   }
-  function makeAvatar(uid, name) {
-    const g = new THREE.Group(), body = new THREE.Group(), col = hashCol(uid), skin = new THREE.Color(0xe0b48c), dark = col.clone().multiplyScalar(.55);
+  function makeAvatar(uid, name, ref, slim) {
+    const g = new THREE.Group(), body = new THREE.Group();
     g.add(body);
-    const mats = [];
-    const box = (w, h, d, c, x, y, z, pivotTop) => {
-      const m = new THREE.MeshBasicMaterial({ color: c.clone() }); m.userData.base = c.clone(); mats.push(m);
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
-      if (pivotTop) { const p = new THREE.Group(); p.position.set(x, y, z); mesh.position.y = -h / 2; p.add(mesh); body.add(p); return p; }
-      mesh.position.set(x, y, z); body.add(mesh); return mesh;
-    };
-    const head = new THREE.Group(); head.position.set(0, 1.32, 0); body.add(head);
-    const hm = new THREE.MeshBasicMaterial({ color: skin.clone() }); hm.userData.base = skin.clone(); mats.push(hm);
-    const hmesh = new THREE.Mesh(new THREE.BoxGeometry(.5, .5, .5), hm); hmesh.position.y = .25; head.add(hmesh);
-    const eyes = new THREE.Mesh(new THREE.BoxGeometry(.3, .06, .02), new THREE.MeshBasicMaterial({ color: 0x222222 })); eyes.position.set(0, .3, -.26); head.add(eyes);
-    box(.5, .7, .26, col, 0, .97, 0);
-    const armL = box(.2, .7, .2, col, -.36, 1.3, 0, true), armR = box(.2, .7, .2, col, .36, 1.3, 0, true);
-    const legL = box(.22, .62, .22, dark, -.12, .62, 0, true), legR = box(.22, .62, .22, dark, .12, .62, 0, true);
+    const fig = KWSkin.buildFigure(body, KWSkin.preset(ref && ref[0] === 'b' ? ref : 'b0'), slim);
+    const mats = fig.mats.slice(), P = fig.P;
     // the item in the right hand: two crossed pictures, so it can be seen from every side
     const im = new THREE.MeshBasicMaterial({ transparent: true, alphaTest: .4, side: THREE.DoubleSide }); im.userData.base = new THREE.Color(1, 1, 1); mats.push(im);
-    const item = new THREE.Group(); item.position.set(0, -.7, -.12); item.rotation.x = -.5;
+    const item = new THREE.Group(); item.position.set(0, -.62, -.12); item.rotation.x = -.5;
     for (const ry of [Math.PI / 4, -Math.PI / 4]) { const q = new THREE.Mesh(new THREE.PlaneGeometry(.42, .42), im); q.rotation.y = ry; item.add(q); }
-    item.visible = false; armR.add(item);
+    item.visible = false; P.armR.add(item);
     const tag = nameSprite(name); tag.position.y = 2.15; g.add(tag);
     R.scene.add(g);
-    return { g, body, head, armL, armR, legL, legR, tag, mats, item, im, itemId: 0, name, x: 0, y: 0, z: 0, yaw: 0, pitch: 0, buf: [], phase: 0,
-      sw: -1, swingT: 0, sneakK: 0, hp: 20, hurtT: 0 };
+    const a = { g, body, head: P.head, armL: P.armL, armR: P.armR, legL: P.legL, legR: P.legR, tag, mats, item, im, itemId: 0, name, skin: (ref || '') + '|' + (slim ? 1 : 0), x: 0, y: 0, z: 0, yaw: 0, pitch: 0, buf: [], phase: 0,
+      sw: -1, swingT: 0, sneakK: 0, hp: 20, hurtT: 0, tex: fig.tex };
+    if (ref && ref[0] !== 'b') KWSkin.canvasFor(ref).then(c => {
+      if (N.avatars.get(uid) !== a) return;
+      const t = new THREE.CanvasTexture(c); t.magFilter = t.minFilter = THREE.NearestFilter; t.generateMipmaps = false;
+      for (const m of fig.mats) { m.map = t; m.needsUpdate = true; } a.tex.dispose(); a.tex = t;
+    });
+    return a;
   }
   function dropAvatar(uid) {
     const a = N.avatars.get(uid); if (!a) return;
-    R.scene.remove(a.g); a.g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material !== a.im) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
-    a.im.dispose();
+    R.scene.remove(a.g); a.g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material !== a.im && !o.material.userData.gone) { o.material.userData.gone = 1; if (o.material.map && o.material.map !== a.tex) o.material.map.dispose(); o.material.dispose(); } });
+    a.im.dispose(); if (a.tex) a.tex.dispose();
     N.avatars.delete(uid);
   }
   function onPlayer(uid, p, isNew) {
@@ -567,7 +561,12 @@
     const known = N.players.has(uid);
     N.players.set(uid, p);
     let a = N.avatars.get(uid);
-    if (!a || a.name !== (p.name || '?')) { dropAvatar(uid); a = makeAvatar(uid, p.name || '?'); N.avatars.set(uid, a); }
+    const ref = typeof p.sk === 'string' && p.sk ? p.sk : KWSkin.PRESETS[Math.abs([...uid].reduce((q, c) => q * 31 + c.charCodeAt(0) | 0, 7)) % KWSkin.PRESETS.length].id;
+    const skey = ref + '|' + (p.sl ? 1 : 0);
+    if (!a || a.name !== (p.name || '?') || a.skin !== skey) {
+      const old = a; dropAvatar(uid); a = makeAvatar(uid, p.name || '?', ref, !!p.sl); N.avatars.set(uid, a);
+      if (old) { a.buf = old.buf; a.x = old.x; a.y = old.y; a.z = old.z; a.yaw = old.yaw; a.sw = old.sw; a.hp = old.hp; }
+    }
     const tg = targetOf(uid); tg.x = +p.x || 0; tg.y = +p.y || 0; tg.z = +p.z || 0; tg.eye = tg.y + 1.62; tg.dead = !!p.dd || tg.y < -50; tg.creative = !!p.cr;
     // positions go into a small buffer and are shown ~0.14 s late, so movement stays smooth even when updates arrive unevenly
     const now = performance.now(), last = a.buf[a.buf.length - 1];
@@ -675,7 +674,7 @@
     if (!on() || !G.player) return;
     const wid = N.wid, me = kw('players/' + wid + '/' + N.uid);
     me.onDisconnect().remove();
-    me.update(Object.assign(posOf(G.player), { name: N.name, t: firebase.database.ServerValue.TIMESTAMP })).catch(() => { });
+    me.update(Object.assign(posOf(G.player), { name: N.name, t: firebase.database.ServerValue.TIMESTAMP }, mySkin())).catch(() => { });
     for (const p of ['mobs/', 'achunks/']) kw(p + wid + '/' + N.uid).onDisconnect().remove();
     if (N.myClaims.size) { const o = {}; for (const k of N.myClaims) o[k] = 1; kw('achunks/' + wid + '/' + N.uid).update(o).catch(() => { }); }
     N.mobSig = ''; N.lastPos = '';
@@ -686,6 +685,9 @@
       });
     }
   }
+
+  function mySkin() { const s = window.KWSkin ? KWSkin.mine() : null; return s ? { sk: String(s.ref).slice(0, 20000), sl: s.slim ? 1 : 0 } : {}; }
+  function skinChanged() { if (on()) kw('players/' + N.wid + '/' + N.uid).update(mySkin()).catch(e => UI.msg('Skin nicht geteilt: ' + errText(e), '#ff7a6a')); }
 
   /* ---------- player list (Tab) and managing players ---------- */
   const tabEl = h('div', { style: 'position:fixed;top:12%;left:50%;transform:translateX(-50%);z-index:40;min-width:300px;max-width:92vw;background:rgba(0,0,0,.75);border:2px solid #555;color:#fff;font:14px monospace;padding:10px 14px;display:none;pointer-events:none' });
@@ -840,7 +842,7 @@
     if (sv && sv.p) { meta.player = sv.p; meta.inv = parse(sv.inv, null); meta.bed = sv.bed || null; }
     // presence
     const me = kw('players/' + wid + '/' + N.uid);
-    await me.set({ name: N.name, x: 0, y: -100, z: 0, yaw: 0, pitch: 0, t: firebase.database.ServerValue.TIMESTAMP });
+    await me.set(Object.assign({ name: N.name, x: 0, y: -100, z: 0, yaw: 0, pitch: 0, t: firebase.database.ServerValue.TIMESTAMP }, mySkin()));
     me.onDisconnect().remove();
     N.joinedAt = serverNow();
     await G.startWorld(meta, !sv);
@@ -1002,5 +1004,5 @@
   const inv = new URLSearchParams(location.search).get('welt');
   if (inv) { const t0 = Date.now(); const wait = () => { if (G.state === 'title') UI.show('online', { code: inv.toUpperCase().slice(0, 4) }); else if (Date.now() - t0 < 20000) setTimeout(wait, 200); }; wait(); }
 
-  window.KWNet = { N, on };
+  window.KWNet = { N, on, skinChanged };
 })();

@@ -61,7 +61,10 @@
           ".read": "auth != null",
           "$uid": {
             ".write": "auth != null && auth.uid === $uid && root.child('kw/worlds/' + $wid + '/owner').exists() && (!newData.exists() || (!root.child('kw/bans/' + $wid + '/' + auth.uid).exists() || root.child('kw/bans/' + $wid + '/' + auth.uid).val() < now))",
-            ".validate": "newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 16"
+            ".validate": "newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 16",
+            "sk": {
+              ".validate": "newData.isString() && newData.val().length <= 20000"
+            }
           }
         }
       },
