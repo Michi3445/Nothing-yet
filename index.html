@@ -384,7 +384,7 @@
     const used = TAPES.filter(t => !t.secret && !t.lose && !t.box).length;
     const LEER = ['', '', '', '', '', '', '', '', ''].slice(0, Math.max(0, 9 - used)).map(() => null);
     LEER.push('boden');
-    LEER.forEach((lose, k) => TAPES.push({ name: '', key: 'LEER ' + k, leer: true, tag: 'PLATZ FREI', desc: 'Noch leer. Hier kommt bald etwas Neues drauf.', ...(lose ? { lose } : {}) }));
+    LEER.forEach((lose, k) => TAPES.push({ name: '', label: ['???', 'BALD', '? ? ?', 'NEU?'][k % 4], key: 'LEER ' + k, leer: true, tag: 'PLATZ FREI', desc: 'Noch leer. Hier kommt bald etwas Neues drauf.', ...(lose ? { lose } : {}) }));
   }
   const NT = TAPES.length, SECRET = TAPES.findIndex(t => t.secret);
   // Auswahl-Nummern: 0..NT-1 = Kassette, BOX0+b = geschlossene Box, LID = Deckel einer offenen Box (zurück)
@@ -508,7 +508,10 @@
       for (const { id, s } of list) {
         r -= s;
         const lo = L.slot(c, r), hi = L.slot(c, r + s - 1);
-        main.push({ id, x: lo.x, y: hi.y, w: lo.w, h: lo.y + lo.h - hi.y, ang: 0, where: 'cab', c, r: r + s });
+        // leere Kassetten liegen schlampig reingeschoben: etwas versetzt und schief
+        const lz = isTape(id) && TAPES[id].leer, hz = lz ? hashS(TAPES[id].key) : 0;
+        const la = lz ? ((hz & 255) / 255 * 2 - 1) * (L.portrait ? 1.2 : 2.2) * DEG : 0;
+        main.push({ id, x: lo.x + (lz ? ((hz >>> 8) & 15) - 4 : 0), y: hi.y - (lz ? Math.abs(Math.sin(la)) * lo.w / 2 : 0), w: lo.w, h: lo.y + lo.h - hi.y, ang: la, where: 'cab', c, r: r + s });
       }
     });
     // Deckfläche nur bei der obersten Kassette eines Stapels sichtbar
@@ -835,6 +838,7 @@
     if (wv >= 6 && !d.secret) { R(lx + lw - 3, y + th + 2, 3, 1, C.tp2); R(lx + lw - 1, y + th + 3, 1, 1, C.tp2); }
     if (!d.leer) { R(lx + 3, y + th + 4, 1, fh - 8, C.ink); R(lx + 5, y + th + 4, 1, fh - 8, C.ink); }
     // zu lange Namen werden gekürzt, damit nichts übers Etikett hinausläuft
+    if (d.leer) text(d.label, lx + lw / 2 + 3, y + th + 1 + (fh - 2 - L.fs) / 2, L.fs, '#4e4760', 'center', 1);
     let nm = d.name; while (nm.length > 3 && textWidth(nm) > lw - 10) nm = nm.slice(0, -1);
     text(nm, lx + lw / 2 + 3, y + th + 1 + (fh - 2 - L.fs) / 2, L.fs, d.secret ? C.red : C.ink, 'center', 1);
     if (s) outline(x, y, w, h, d.secret ? C.red : C.pink);
