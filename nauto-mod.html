@@ -27,7 +27,7 @@
     --pink: #ff2e88; --cyan: #2ef2ff; --green: #39ff6a; --orange: #ff8a2e;
   }
   * { box-sizing: border-box; margin: 0; }
-  html { background: var(--bg); }
+  html { background: var(--bg); overflow-x: hidden; }
   body {
     min-height: 100vh; color: var(--text); background: var(--bg);
     font: 22px/1.35 'VT323', ui-monospace, monospace; letter-spacing: .03em;
@@ -45,7 +45,7 @@
   main { max-width: 880px; margin: 0 auto; padding: 22px 16px 60px; animation: on .7s cubic-bezier(.2,.8,.2,1) both; }
   @keyframes on { 0% { transform: scaleY(.01); filter: brightness(5); } 60% { transform: scaleY(1.03); filter: brightness(1.6); } 100% { transform: none; filter: none; } }
 
-  .osd { display: flex; justify-content: space-between; color: var(--dim); font-size: 18px; margin-bottom: 18px; }
+  .osd { display: flex; flex-wrap: wrap; gap: 4px 16px; justify-content: space-between; color: var(--dim); font-size: 18px; margin-bottom: 18px; }
   .osd .rec { color: var(--pink); }
   .osd .rec::before { content: '● '; animation: blink 1s steps(1) infinite; }
   @keyframes blink { 50% { opacity: 0; } }
@@ -53,7 +53,8 @@
   .back:hover, .back:focus-visible { color: #fff; text-shadow: 0 0 8px var(--cyan); outline: none; }
 
   pre.logo {
-    font: 15px/1.05 ui-monospace, 'Courier New', monospace; color: var(--orange);
+    /* skaliert mit der Breite, damit das ASCII-Logo auf schmalen Handys ganz drauf passt */
+    font: clamp(6px, calc((100vw - 34px) / 40), 15px)/1.05 ui-monospace, 'Courier New', monospace; color: var(--orange);
     text-shadow: 2px 0 rgba(255,46,136,.75), -2px 0 rgba(46,242,255,.55), 0 0 14px rgba(255,138,46,.45);
     overflow: hidden; white-space: pre; margin: 6px 0 4px;
   }
@@ -79,7 +80,7 @@
   .card .ico { float: right; color: var(--orange); font-size: 26px; }
 
   ul.keys { list-style: none; padding: 0; display: grid; gap: 6px; }
-  ul.keys li { display: flex; gap: 12px; align-items: baseline; }
+  ul.keys li { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: baseline; }
   kbd { font: inherit; min-width: 70px; text-align: center; padding: 0 8px; border: 2px solid var(--text);
         border-bottom-width: 4px; color: #fff; background: #1f1530; }
 
@@ -87,6 +88,7 @@
   .box.green { border-color: var(--green); background: rgba(57,255,106,.05); }
   .box p + p { margin-top: 8px; }
   .box a, .credit a { color: var(--cyan); }
+  code, .credit a { overflow-wrap: anywhere; }
   .bar { font-family: ui-monospace, monospace; font-size: 15px; color: var(--green); margin-top: 6px; }
 
   footer { margin-top: 40px; color: var(--dim); font-size: 18px; text-align: center; }
@@ -94,7 +96,6 @@
   @media (max-width: 560px) {
     body { font-size: 20px; }
     h1 { font-size: 46px; }
-    pre.logo { font-size: 9px; }
     kbd { min-width: 56px; }
   }
 </style>
@@ -135,12 +136,12 @@
 
   <h2>STEUERUNG</h2>
   <ul class="keys">
-    <li><kbd>B</kbd> Auswahlrad mit allen ausgerüsteten Rollen</li>
-    <li><kbd>J</kbd> Jutsu-Menü und Lernziel</li>
-    <li><kbd>H</kbd> Übersicht für Klone und Beschwörungen</li>
-    <li><kbd>R</kbd> Augen anlegen, <kbd>⇧ R</kbd> ablegen</li>
-    <li><kbd>Z / Y</kbd> erste Augen-Fähigkeit</li>
-    <li><kbd>RAD</kbd> Jutsu wechseln, mit Schleichen das Element</li>
+    <li><kbd>B</kbd><span>Auswahlrad mit allen ausgerüsteten Rollen</span></li>
+    <li><kbd>J</kbd><span>Jutsu-Menü und Lernziel</span></li>
+    <li><kbd>H</kbd><span>Übersicht für Klone und Beschwörungen</span></li>
+    <li><kbd>R</kbd><span>Augen anlegen, <kbd>⇧ R</kbd> ablegen</span></li>
+    <li><kbd>Z / Y</kbd><span>erste Augen-Fähigkeit</span></li>
+    <li><kbd>RAD</kbd><span>Jutsu wechseln, mit Schleichen das Element</span></li>
   </ul>
 
   <h2>FÜR DEN HOST</h2>
