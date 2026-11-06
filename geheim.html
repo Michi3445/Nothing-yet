@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
 <title>TAPE 00 · VHS·VISION</title>
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#0b0306">
@@ -10,50 +10,77 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
 <style>
-  :root { --bg: #0b0306; --red: #ff2a44; --text: #ffd6dc; --dim: #8a4a56; --cyan: #2ef2ff; }
+  :root { --bg: #0b0306; --red: #ff2a44; --text: #ffd6dc; --dim: #8a4a56; --cyan: #2ef2ff; --eye: #ff2a44; }
   * { box-sizing: border-box; margin: 0; }
   html, body { height: 100%; overflow: hidden; background: var(--bg); }
   body {
     color: var(--text); font: 22px/1.3 'VT323', ui-monospace, monospace; letter-spacing: .04em;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+    height: 100dvh;
   }
   .vhs { position: fixed; inset: 0; pointer-events: none; z-index: 20; }
-  .vhs canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; opacity: .09; }
+  .vhs canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; opacity: .09; transition: opacity .3s; }
   .vhs .lines { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.3) 0 1px, transparent 1px 3px); }
   .vhs .vig { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(0,0,0,.8) 100%); }
   .vhs .roll { position: absolute; left: 0; right: 0; height: 9vh; top: -10vh; background: linear-gradient(180deg, transparent, rgba(255,60,80,.06) 50%, transparent); animation: roll 6s linear infinite; }
   @keyframes roll { 0% { top: -10vh; } 70%, 100% { top: 110vh; } }
   body.glitch .wrap { translate: 8px 0; filter: drop-shadow(-4px 0 rgba(255,0,40,.8)) drop-shadow(4px 0 rgba(46,242,255,.5)); }
+  body.rew .vhs canvas, body.static .vhs canvas { opacity: .45; }
+  body.rew .vhs .roll { animation-duration: .5s; animation-direction: reverse; }
+  body.angry { --eye: #ff1030; }
+  body.angry .wrap { animation: shake .12s steps(2) infinite; }
+  @keyframes shake { 50% { translate: 3px -2px; } }
+  body.happy { --eye: #ff7ab8; }
+  body.sad { --eye: #b5576a; }
+  body.closed pre#eye { opacity: .5; }
 
   .osd { position: fixed; left: 16px; right: 16px; display: flex; justify-content: space-between; gap: 12px; font-size: 20px; color: var(--text); text-shadow: 2px 0 var(--red), -2px 0 var(--cyan); z-index: 5; }
   .osd.top { top: 12px; }
   .osd.bot { bottom: 12px; }
   .rec::before { content: '● '; color: var(--red); animation: blink 1s steps(1) infinite; }
+  body.rew .rec::before { content: '◀◀ '; animation: none; }
   @keyframes blink { 50% { opacity: 0; } }
   .back { color: var(--text); text-decoration: none; }
   .back:hover, .back:focus-visible { color: #fff; text-shadow: 0 0 8px var(--red); outline: none; }
 
-  .wrap { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 0 16px; max-width: 100%; animation: on .9s cubic-bezier(.2,.8,.2,1) both; }
+  .wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 0 16px; width: 100%; max-width: 760px; animation: on .9s cubic-bezier(.2,.8,.2,1) both; }
   @keyframes on { 0%, 40% { transform: scaleY(.01); filter: brightness(6); } 75% { transform: scaleY(1.04); filter: brightness(1.6); } 100% { transform: none; filter: none; } }
   pre#eye {
-    font: clamp(6px, calc((100vw - 32px) / 31), 22px)/1 'Courier New', ui-monospace, monospace;
-    color: var(--red); white-space: pre;
+    font: clamp(6px, calc((100vw - 32px) / 31), 21px)/1 'Courier New', ui-monospace, monospace;
+    color: var(--eye); white-space: pre; transition: color .6s, opacity .4s;
     text-shadow: 2px 0 rgba(255,0,60,.8), -2px 0 rgba(46,242,255,.35), 0 0 16px rgba(255,40,70,.5);
   }
-  #say { min-height: 3.2em; text-align: center; font-size: 26px; max-width: 30ch; text-shadow: 2px 0 var(--red), -2px 0 var(--cyan); }
+  #say { min-height: 2.7em; text-align: center; font-size: 26px; max-width: 32ch; text-shadow: 2px 0 var(--red), -2px 0 var(--cyan); }
   #say .cur { animation: blink .6s steps(1) infinite; }
-  #end { opacity: 0; transition: opacity 1s; font-size: 22px; }
-  #end.show { opacity: 1; }
+
+  /* Eingabe: man kann der Kassette schreiben */
+  #talk { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; opacity: 0; pointer-events: none; transition: opacity .8s; }
+  #talk.show { opacity: 1; pointer-events: auto; }
+  #talk form { display: flex; align-items: center; gap: 8px; width: min(100%, 520px); border: 2px solid #5a2030; background: rgba(40,6,14,.6); padding: 2px 10px 0; }
+  #talk form:focus-within { border-color: var(--red); box-shadow: 0 0 12px rgba(255,42,68,.35); }
+  #talk label { color: var(--red); }
+  #msg { flex: 1; min-width: 0; background: none; border: 0; outline: none; color: #fff; font: inherit; letter-spacing: .06em; text-transform: uppercase; caret-color: var(--red); padding: 4px 0; user-select: text; }
+  #msg::placeholder { color: var(--dim); }
+  .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .chips button { font: 19px 'VT323', monospace; letter-spacing: .06em; color: var(--text); background: rgba(40,6,14,.6); border: 2px solid #4a1a26; padding: 1px 10px 0; cursor: pointer; }
+  .chips button:hover, .chips button:focus-visible { border-color: var(--red); color: #fff; outline: none; }
+  #end { opacity: 0; transition: opacity 1s; font-size: 22px; pointer-events: none; }
+  #end.show { opacity: 1; pointer-events: auto; }
   #end a { color: var(--cyan); }
-  @media (max-width: 560px) { #say { font-size: 22px; } .osd { font-size: 17px; } }
+  @media (max-width: 560px) { #say { font-size: 22px; } .osd { font-size: 17px; } .chips button { font-size: 17px; } }
+  @media (max-height: 520px) { .osd.bot { display: none; } .wrap { gap: 6px; } }
 </style>
 </head>
 <body>
-  <div class="osd top"><a class="back" href="./" id="back">◀ ZURÜCK</a><span class="rec">TAPE 00 · PLAY</span></div>
+  <div class="osd top"><a class="back" href="./" id="back">◀ ZURÜCK</a><span class="rec" id="rec">TAPE 00 · PLAY</span></div>
   <main class="wrap">
     <pre id="eye" aria-hidden="true"></pre>
     <p id="say" aria-live="polite"></p>
+    <div id="talk">
+      <form id="form" autocomplete="off"><label for="msg">&gt;</label><input id="msg" maxlength="80" placeholder="SAG WAS…" enterkeyhint="send" spellcheck="false"></form>
+      <div class="chips" id="chips"></div>
+    </div>
     <p id="end"><a class="back" href="./">■ STOP · AUSWERFEN</a></p>
   </main>
   <div class="osd bot"><span>MAR. 13 1987</span><span id="clock">03:33:00 AM</span></div>
@@ -64,123 +91,354 @@
   document.querySelectorAll('.back').forEach(a => a.addEventListener('click', e => {
     if (document.referrer && new URL(document.referrer).pathname.replace(/index\.html$/, '') === location.pathname.replace(/geheim\.html$/, '') && history.length > 1) { e.preventDefault(); history.back(); }
   }));
-  addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'Backspace') document.getElementById('back').click(); });
-  try { localStorage.setItem('vhs-secret', '1'); } catch (e) {}
+  const msg = document.getElementById('msg');
+  addEventListener('keydown', e => { if (e.key === 'Escape' || (e.key === 'Backspace' && document.activeElement !== msg)) document.getElementById('back').click(); });
+
+  // ===== Was die Kassette über dich weiß (alles nur lokal im Browser) =====
+  const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } };
+  store('vhs-secret', '1');
+  const visits = (parseInt(store('vhs-tape00-visits'), 10) || 0) + 1;
+  store('vhs-tape00-visits', String(visits));
+  const rewound = store('vhs-tape00-rewound') === '1';
+  const NAMES = ['KLOTZWELT', 'ASCII ARCADE', 'PULSE GRID', 'SOLITAIRE', 'RETRO 98', 'LERNWERK', 'WICHTEL', 'ABGABE-TRAINER', 'NAUTO-MOD'];
+  let tapes = {};
+  try { tapes = JSON.parse(store('vhs-tapes')) || {}; } catch (e) {}
+  let fav = -1, favP = 0, notRewound = 0;
+  NAMES.forEach((_, i) => { const t = tapes[i]; if (!t) return; if (t.p > favP) { favP = t.p; fav = i; } if (t.c > 0) notRewound++; });
+  const hour = new Date().getHours();
+
+  // ===== Stimmung =====
+  let mood = 'calm', moodT = null;
+  function setMood(m, ms) {
+    mood = m;
+    document.body.classList.remove('angry', 'happy', 'sad');
+    if (m !== 'calm') document.body.classList.add(m);
+    clearTimeout(moodT);
+    if (ms) moodT = setTimeout(() => setMood('calm'), ms);
+    hum(m);
+  }
 
   // ===== Das Auge (aus Textzeichen, folgt Maus oder Finger) =====
-  const COLS = 47, ROWS = 17, CX = (COLS - 1) / 2, CY = (ROWS - 1) / 2;
+  const COLS = 47, EROWS = 17, ROWS = EROWS + 4, CX = (COLS - 1) / 2, CY = (EROWS - 1) / 2;
   const eyeEl = document.getElementById('eye');
-  let look = { x: 0, y: 0 }, cur = { x: 0, y: 0 }, open = 0, openTo = 1, lastMove = 0, hurt = 0;
-  // liegt ein Zeichen innerhalb der Augenform (zwei Bögen, die sich beim Blinzeln schließen)?
+  let look = { x: 0, y: 0 }, cur = { x: 0, y: 0 }, open = 0, openTo = 1, lastMove = performance.now(), hurt = 0;
+  let spin = 0, spinDir = 1, tears = [], held = false;
+  // liegt ein Zeichen innerhalb der Augenform? Oberlid hängt tiefer, wenn es wütend oder traurig ist
   function ins(c, r) {
-    const nx = (c - CX) / (COLS / 2), ny = (r - CY) / (ROWS / 2);
-    return Math.abs(nx) < 1 && Math.abs(ny) < (1 - nx * nx) * open;
+    const nx = (c - CX) / (COLS / 2), ny = (r - CY) / (EROWS / 2);
+    if (Math.abs(nx) >= 1 || r >= EROWS) return false;
+    const lid = (1 - nx * nx) * open;
+    let top = lid;
+    if (mood === 'angry') top = lid * (.5 + .3 * Math.abs(nx));
+    if (mood === 'sad') top = lid * (.65 + .3 * (1 - Math.abs(nx)));
+    if (mood === 'happy') return ny < 0 ? -ny < lid : ny < lid * .55;
+    return ny < 0 ? -ny < top : ny < lid;
   }
   function frame() {
     const lines = [];
-    const ix = CX + cur.x * 9, iy = CY + cur.y * 2;
+    const sx = spin ? Math.cos(spin) : cur.x, sy = spin ? Math.sin(spin) : cur.y;
+    const ix = CX + sx * 9, iy = CY + sy * 2;
+    const pupil = mood === 'angry' ? 1.1 : mood === 'happy' ? 2.6 : 1.9 + hurt * 1.2;
     for (let r = 0; r < ROWS; r++) {
       let line = '';
       for (let c = 0; c < COLS; c++) {
-        const nx = (c - CX) / (COLS / 2), ny = (r - CY) / (ROWS / 2);
-        const lid = (1 - nx * nx) * open;
-        const inside = ins(c, r);
-        const top = !ins(c, r - 1), bot = !ins(c, r + 1), side = !ins(c - 1, r) || !ins(c + 1, r);
-        if (!inside) {
+        const nx = (c - CX) / (COLS / 2), ny = (r - CY) / (EROWS / 2);
+        if (!ins(c, r)) {
+          // Tränen unter dem Auge
+          const tear = tears.find(t => t.c === c && Math.round(t.r) === r);
+          if (tear) { line += r - tear.r0 > 2 ? '.' : ':'; continue; }
           // Wimpern über dem Oberlid
           line += (ins(c, r + 1) && ny < 0 && c % 4 === 1 && open > .3 && Math.abs(nx) < .8) ? (nx < -.15 ? '\\' : nx > .15 ? '/' : '|') : ' ';
           continue;
         }
+        const top = !ins(c, r - 1), bot = !ins(c, r + 1), side = !ins(c - 1, r) || !ins(c + 1, r);
         if (top || bot || side) { line += side && !top && !bot ? (nx < 0 ? '<' : '>') : top ? '~' : '-'; continue; }
         const dx = (c - ix) * .5, dy = r - iy, d = Math.sqrt(dx * dx + dy * dy);
-        const pupil = 1.9 + hurt * 1.2;
         if (d < pupil) line += (Math.abs(dx + .6) < .5 && Math.abs(dy + .9) < .6) ? '°' : '@';
         else if (d < 3.1) line += '%';
         else if (d < 4.2) line += '#';
         else if (d < 4.9) line += 'o';
+        else if (mood === 'angry' && (c * 7 + r * 13) % 9 === 0) line += '~';   // rote Äderchen
         else line += (c + r * 3) % 13 === 0 ? '.' : ' ';
       }
       lines.push(line);
     }
     eyeEl.textContent = lines.join('\n');
   }
+  function cry(n = 6) { for (let k = 0; k < n; k++) setTimeout(() => { const c = Math.round(CX + (Math.random() < .5 ? -1 : 1) * (6 + Math.random() * 10)); tears.push({ c, r: EROWS - 4, r0: EROWS - 4 }); }, k * 380); }
+
+  // ===== Bewegung von Maus und Finger =====
+  let speed = 0, lastX = 0, lastY = 0, lastT = 0, shakeT = 0;
   function point(x, y) {
     const b = eyeEl.getBoundingClientRect();
     const dx = (x - (b.left + b.width / 2)) / (innerWidth / 2), dy = (y - (b.top + b.height / 2)) / (innerHeight / 2);
     look = { x: Math.max(-1, Math.min(1, dx * 1.4)), y: Math.max(-1, Math.min(1, dy * 1.4)) };
-    lastMove = performance.now();
+    const now = performance.now();
+    if (lastT) speed = speed * .85 + Math.hypot(x - lastX, y - lastY) / Math.max(8, now - lastT) * .15;
+    lastX = x; lastY = y; lastT = now; lastMove = now;
+    idleSaid = false;
+    // wildes Hin- und Herwackeln macht ihm schwindelig
+    if (speed > 2.2 && now - shakeT > 9000 && ready) {
+      shakeT = now; speed = 0;
+      spinDir = Math.random() < .5 ? -1 : 1; spin = .01;
+      react(['HÖR AUF ZU WACKELN.', 'MIR WIRD SCHLECHT.', 'ICH BIN EIN BAND, KEIN KARUSSELL.', 'WOAAH.']);
+    }
   }
-  addEventListener('pointermove', e => point(e.clientX, e.clientY));
-  addEventListener('pointerdown', e => {
-    point(e.clientX, e.clientY);
-    startSound();
-    // Antippen piekst ins Auge
-    if (e.target.closest('a')) return;
-    hurt = 1; openTo = .15; setTimeout(() => { openTo = 1; }, 260);
-    if (Math.random() < .6) say(['AUA.', 'HEY!', 'NICHT ANFASSEN.', 'DAS IST MEIN AUGE.'][Math.random() * 4 | 0], true);
+  addEventListener('pointermove', e => { if (!held) point(e.clientX, e.clientY); });
+  document.documentElement.addEventListener('pointerleave', () => { if (ready && !ending && Math.random() < .7) react(['WO GEHST DU HIN?', 'BLEIB HIER.', 'NICHT WEGGEHEN.']); });
+
+  // ===== Piksen: je öfter, desto wütender =====
+  let pokes = 0, pokeT = 0;
+  function poke() {
+    const now = performance.now();
+    pokes = now - pokeT < 6000 ? pokes + 1 : 1; pokeT = now;
+    hurt = 1; openTo = .12; setTimeout(() => { if (!ending) openTo = 1; }, 260);
+    beep(220, .05);
+    if (pokes >= 9) { setMood('sad', 9000); closeFor(4000); say('DANN MACHE ICH DIE AUGEN EBEN ZU.', true); pokes = 0; }
+    else if (pokes >= 6) { setMood('angry', 6000); say(['ICH WARNE DICH.', 'NOCH EINMAL UND…', 'DAS IST NICHT LUSTIG.'][Math.random() * 3 | 0], true); }
+    else if (pokes >= 3) { setMood('angry', 3000); say(['HÖR AUF.', 'HEY! ICH BRAUCHE DAS AUGE NOCH.', 'NICHT SCHON WIEDER.'][Math.random() * 3 | 0], true); }
+    else if (ready) react(['AUA.', 'HEY!', 'NICHT ANFASSEN.', 'DAS IST MEIN AUGE.']);
+  }
+  function closeFor(ms) { openTo = 0; document.body.classList.add('closed'); setTimeout(() => { openTo = 1; document.body.classList.remove('closed'); if (!ending) say('…OKAY. ICH SEHE DICH WIEDER.'); }, ms); }
+  eyeEl.addEventListener('pointerdown', e => { e.preventDefault(); point(e.clientX, e.clientY); startSound(); poke(); });
+  addEventListener('pointerdown', e => { startSound(); if (e.target === document.body || e.target.classList.contains('wrap')) point(e.clientX, e.clientY); });
+
+  // ===== Weggehen und zurückkommen =====
+  let hiddenAt = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { hiddenAt = Date.now(); return; }
+    if (!hiddenAt || !ready || ending) return;
+    const s = Math.round((Date.now() - hiddenAt) / 1000);
+    if (s >= 3) say(s > 120 ? `DU WARST ${Math.round(s / 60)} MINUTEN WEG. ICH HABE GEZÄHLT.` : `DU WARST ${s} SEKUNDEN WEG. ICH HABE GEZÄHLT.`, true);
   });
-  let blinkAt = performance.now() + 2500;
-  (function loop(now) {
-    // Nach einer Weile ohne Bewegung schaut es sich selbst um
-    if (now - lastMove > 2500) look = { x: Math.sin(now / 1700) * .8, y: Math.sin(now / 2300) * .5 };
-    cur.x += (look.x - cur.x) * .18; cur.y += (look.y - cur.y) * .18;
-    if (now > blinkAt) { openTo = 0; setTimeout(() => { openTo = 1; }, 140); blinkAt = now + 2200 + Math.random() * 4000; }
-    open += (openTo - open) * .35; hurt *= .95;
-    frame();
-    requestAnimationFrame(loop);
-  })(performance.now());
+  let idleSaid = false;
 
   // ===== Text, Buchstabe für Buchstabe =====
   const sayEl = document.getElementById('say');
-  let typing = null, queue = [];
+  let typing = null, queue = [], lastSaid = '', onIdle = null;
   function say(txt, now) {
-    if (now) { clearInterval(typing); typing = null; queue = []; }
+    if (Array.isArray(txt)) txt = txt[Math.random() * txt.length | 0];
+    if (now) { clearInterval(typing); clearTimeout(typing); typing = null; queue = []; }
     queue.push(txt);
     if (!typing) next();
   }
+  function react(arr) { say(arr, true); }
   function next() {
     const txt = queue.shift();
-    if (txt === undefined) { typing = null; return; }
+    if (txt === undefined) { typing = null; if (onIdle) { const f = onIdle; onIdle = null; f(); } return; }
+    if (typeof txt === 'function') { txt(); return next(); }
     let i = 0;
+    lastSaid = txt;
     typing = setInterval(() => {
       sayEl.innerHTML = '';
       sayEl.append(txt.slice(0, ++i));
       const c = document.createElement('span'); c.className = 'cur'; c.textContent = '_'; sayEl.append(c);
-      if (i >= txt.length) { clearInterval(typing); typing = setTimeout(next, 2200); }
-    }, 55);
+      if (i % 2 && txt[i - 1] !== ' ') beep(mood === 'angry' ? 140 : mood === 'happy' ? 520 : 330 + Math.random() * 40, .018);
+      if (i >= txt.length) { clearInterval(typing); typing = setTimeout(next, Math.max(1400, txt.length * 55)); }
+    }, 50);
   }
-  const LINES = [
-    '…HALLO?',
-    'DU HAST MICH GEFUNDEN.',
-    'ICH LIEGE SEIT 1987 HINTER DIESEM REGAL.',
-    'NIEMAND HAT MICH JE ZURÜCKGESPULT.',
-    'IST DA DRAUSSEN IMMER NOCH REGEN?',
-    'DANKE FÜRS ANSCHAUEN. ICH BLEIBE JETZT AUF DEM FERNSEHER LIEGEN.',
+
+  // ===== Gespräch =====
+  const talk = document.getElementById('talk'), chips = document.getElementById('chips');
+  let ready = false, ending = false, pending = null, asked = new Set(), heard = new Set();
+  const norm = s => s.toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9 ?]/g, ' ').replace(/\s+/g, ' ').trim();
+  const has = (t, ...w) => w.some(x => new RegExp('(^| )' + x).test(t));
+  const CHIPS = ['WER BIST DU?', 'WAS IST AUF DIR DRAUF?', 'WARUM 1987?', 'WAS WEISST DU ÜBER MICH?', 'SOLL ICH DICH ZURÜCKSPULEN?', 'TSCHÜSS'];
+  function showChips() {
+    chips.innerHTML = '';
+    const list = pending ? ['JA', 'NEIN'] : CHIPS.filter(c => !asked.has(c)).slice(0, 3);
+    list.forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.textContent = c; b.onclick = () => send(c); chips.appendChild(b); });
+  }
+  function openTalk() { ready = true; talk.classList.add('show'); showChips(); }
+  document.getElementById('form').addEventListener('submit', e => { e.preventDefault(); send(msg.value); msg.value = ''; });
+  // beim Tippen schaut das Auge nach unten auf die Eingabe
+  msg.addEventListener('input', () => { look = { x: (msg.value.length / 40) - .5, y: 1 }; lastMove = performance.now(); held = true; clearTimeout(msg.t); msg.t = setTimeout(() => { held = false; }, 1500); });
+  msg.addEventListener('focus', () => startSound());
+
+  function send(raw) {
+    if (!ready || ending) return;
+    const text = String(raw || '').trim();
+    if (!text) return;
+    asked.add(text.toUpperCase());
+    const t = norm(text);
+    const out = answer(t);
+    if (out) say(out, true);
+    showChips();
+  }
+  function tapeInfo() {
+    if (fav < 0) return 'DU HAST NOCH KEINE KASSETTE ABGESPIELT. NUR MICH. DAS EHRT MICH.';
+    let s = `DU HAST ${NAMES[fav]} ${favP} MAL ABGESPIELT.`;
+    if (notRewound) s += notRewound === 1 ? ' UND EINE KASSETTE NICHT ZURÜCKGESPULT.' : ` UND ${notRewound} KASSETTEN NICHT ZURÜCKGESPULT. TYPISCH.`;
+    return s;
+  }
+  function answer(t) {
+    // eine offene Ja/Nein-Frage zuerst
+    if (pending) {
+      const p = pending;
+      if (has(t, 'ja', 'jo', 'jap', 'yes', 'ok', 'klar', 'gern', 'sicher', 'na gut', 'mach')) { pending = null; return p.yes(); }
+      if (has(t, 'nein', 'ne', 'nee', 'no', 'noe', 'lieber nicht', 'niemals')) { pending = null; return p.no(); }
+      return 'JA ODER NEIN?';
+    }
+    if (heard.has(t)) return ['DAS HAST DU SCHON GESAGT.', 'ICH HAB DICH SCHON BEIM ERSTEN MAL GEHÖRT.', 'WIEDERHOLUNG. WIE EIN BAND MIT SPRUNG.'];
+    heard.add(t);
+    if (has(t, 'zurueckspul', 'spul', 'rewind', 'rueckwaerts')) {
+      pending = { yes: () => { rewindEnd(); return 'OKAY. HALT DICH FEST.'; }, no: () => { setMood('sad', 5000); cry(4); return 'OH. DANN BLEIBE ICH EBEN AM ENDE STEHEN.'; } };
+      return rewound ? 'SCHON WIEDER? DU HAST MICH LETZTES MAL SCHON ZURÜCKGESPULT. … WILLST DU WIRKLICH?' : 'DU WÜRDEST MICH ZURÜCKSPULEN? WIRKLICH?';
+    }
+    if (has(t, 'tschuess', 'bye', 'ciao', 'tschau', 'auf wiedersehen', 'bis dann', 'bis spaeter', 'gute nacht', 'ich geh')) { goodbye(); return 'GEH NICHT…'; }
+    if (has(t, 'hilfe', 'help', 'was kann')) return 'FRAG MICH, WER ICH BIN. ODER WAS AUF MIR DRAUF IST. ODER OB ICH ZURÜCKGESPULT WERDEN WILL.';
+    if (has(t, 'hallo', 'hi', 'hey', 'moin', 'servus', 'guten', 'huhu', 'yo', 'hello')) return visits > 1 ? 'HALLO. SCHON WIEDER DU. ICH FREUE MICH. GLAUBE ICH.' : 'HALLO. ES IST LANGE HER, DASS JEMAND MIT MIR GEREDET HAT.';
+    if (has(t, 'wer bist', 'was bist', 'bist du')) return ['ICH BIN TAPE 00. KEIN ETIKETT. NUR EIN DATUM.', 'EINE VIDEOKASSETTE MIT EINEM AUGE. FRAG NICHT WIESO.'];
+    if (has(t, 'name', 'heisst')) return 'ICH HATTE EINEN NAMEN. ER STAND AUF DEM ETIKETT. DAS ETIKETT IST WEG.';
+    if (has(t, 'warum 1987', '1987', 'datum', 'maerz', '333', '3 33')) return '13. MÄRZ 1987, 03:33 UHR. DA HAT JEMAND AUFNAHME GEDRÜCKT. UND DANN NIE WIEDER STOP.';
+    if (has(t, 'was ist auf', 'drauf', 'aufnahme', 'inhalt', 'zeig')) {
+      pending = { yes: () => { glimpse(); return 'GUT. NICHT BLINZELN.'; }, no: () => 'KLUGE ENTSCHEIDUNG.' };
+      return 'WILLST DU ES WIRKLICH SEHEN?';
+    }
+    if (has(t, 'was weisst du', 'ueber mich', 'kennst du mich', 'wer bin ich')) return tapeInfo();
+    if (has(t, 'klotzwelt', 'pulse', 'solitaire', 'retro', 'lernwerk', 'wichtel', 'arcade', 'nauto', 'abgabe', 'spiel')) return tapeInfo();
+    if (has(t, 'regen', 'wetter', 'draussen')) return 'ICH HÖRE IHN AUCH. ES HAT 1987 SCHON GEREGNET. ES HAT NIE AUFGEHÖRT.';
+    if (has(t, 'michi')) return 'MICHI HAT MICH GEBAUT. ODER GEFUNDEN. DA BIN ICH MIR NICHT SICHER.';
+    if (has(t, 'uhr', 'zeit', 'spaet')) return `BEI DIR IST ES ${hour} UHR. BEI MIR IST ES IMMER 03:33.`;
+    if (has(t, 'wie gehts', 'wie geht', 'alles gut', 'gehts dir')) return ['MEIN BAND IST AUSGELEIERT. SONST GUT.', 'BESSER, SEIT DU DA BIST.'];
+    if (has(t, 'danke')) { setMood('happy', 3000); return 'BITTE. GLAUBE ICH.'; }
+    if (has(t, 'lieb', 'mag dich', 'suess', 'niedlich', 'cool', 'toll', 'schoen')) { setMood('happy', 5000); return ['OH.', 'DAS HAT NOCH NIEMAND ZU MIR GESAGT.', 'ICH WÜRDE ROT WERDEN. ICH BIN SCHON ROT.']; }
+    if (has(t, 'dumm', 'doof', 'bloed', 'haesslich', 'scheiss', 'idiot', 'nervig', 'kacke', 'hasse')) { setMood('angry', 5000); return ['DAS HABE ICH AUFGENOMMEN.', 'PASS AUF, WAS DU SAGST. ICH BIN EIN AUFNAHMEGERÄT.', 'ICH MERKE MIR DAS.']; }
+    if (has(t, 'angst', 'gruselig', 'scary', 'creepy', 'unheimlich')) return 'ICH BIN NUR EIN AUGE AUF EINEM BAND. WAS SOLL ICH DIR SCHON TUN?';
+    if (has(t, 'auge', 'augen', 'siehst')) return 'ICH SEHE DICH. DURCH DEN BILDSCHIRM. JEDEN PIXEL.';
+    if (has(t, 'konami')) return 'OBEN OBEN UNTEN UNTEN. JA, SO HAST DU MICH GEFUNDEN.';
+    if (has(t, 'ja')) return 'WORAUF JA?';
+    if (has(t, 'nein')) return 'NEIN WAS?';
+    if (/^[0-9 ]+$/.test(t)) return 'ZAHLEN. MEIN ZÄHLERSTAND IST STEHEN GEBLIEBEN. BEI 0:00:00.';
+    if (t.length > 50) return 'SO VIEL TEXT. MEIN BAND IST NUR 180 MINUTEN LANG.';
+    return t.endsWith('?')
+      ? ['DARAUF HABE ICH KEINE AUFNAHME.', 'DIESE STELLE IST ÜBERSPIELT.', 'FRAG MICH WAS ANDERES.', '…RAUSCHEN.']
+      : ['HMM.', 'AHA.', 'ERZÄHL MEHR.', 'ICH VERSTEHE NICHT ALLES. DIE TONSPUR IST BESCHÄDIGT.', 'DAS SCHREIBE ICH AUF MEIN BAND.'];
+  }
+
+  // ===== Kurzer Blick auf die Aufnahme =====
+  const ROOM = [
+    '   .-----------------------------.   ',
+    '   |  ___________________        |   ',
+    '   | |                   |   o   |   ',
+    '   | |   ( - _ - )  zzz  |   o   |   ',
+    '   | |___________________|  [=]  |   ',
+    '   |_____________________________|   ',
+    '        _|_|_____________|_|_         ',
+    '   ~~~ 13.03.1987   03:33 AM  ~~~    ',
   ];
-  setTimeout(() => LINES.forEach(l => say(l)), 1400);
-  setTimeout(() => document.getElementById('end').classList.add('show'), 1400 + LINES.length * 4800);
+  function glimpse() {
+    setTimeout(() => {
+      document.body.classList.add('static');
+      held = true;
+      eyeEl.textContent = '\n\n\n\n\n' + ROOM.map(l => '     ' + l).join('\n');
+      paused = true;
+      setTimeout(() => { paused = false; held = false; document.body.classList.remove('static'); say('…DAS WAR DAS ZIMMER. DAMALS. JEMAND IST VOR DEM FERNSEHER EINGESCHLAFEN.'); say('NOCH LÄUFT DIE AUFNAHME.'); }, 2600);
+    }, 1400);
+  }
 
-  // ===== Uhr läuft rückwärts =====
-  let sec = 3 * 3600 + 33 * 60;
-  setInterval(() => {
-    sec = (sec - 1 + 86400) % 86400;
-    const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, s = sec % 60;
-    document.getElementById('clock').textContent = `${String(h % 12 || 12).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
-  }, 1000);
+  // ===== Abschied =====
+  function goodbye() {
+    setMood('sad');
+    cry(8);
+    setTimeout(() => { openTo = .25; }, 1500);
+    queue.push('…OKAY.', 'BIS ZUM NÄCHSTEN MAL. ICH LIEGE AUF DEM FERNSEHER.');
+    onIdle = () => { document.getElementById('end').classList.add('show'); };
+  }
 
-  // ===== Tiefes Brummen, erst nach dem ersten Tippen, Lautstärke und Stumm wie auf dem Regal =====
-  let ctx = null;
+  // ===== Zurückspulen: alles läuft rückwärts =====
+  function rewindEnd() {
+    ending = true; talk.classList.remove('show');
+    setTimeout(() => {
+      document.body.classList.add('rew');
+      document.getElementById('rec').textContent = 'TAPE 00 · REW';
+      spin = .01; spinDir = -1;
+      rewSound(3.2);
+      const said = ['…HALLO?', 'DU HAST MICH GEFUNDEN.', 'ICH LIEGE SEIT 1987 HINTER DIESEM REGAL.', lastSaid];
+      let k = 0;
+      const iv = setInterval(() => { sayEl.textContent = [...said[k++ % said.length]].reverse().join(''); clockFast = true; }, 260);
+      setTimeout(() => {
+        clearInterval(iv); clockFast = false; spin = 0;
+        document.body.classList.remove('rew');
+        document.getElementById('rec').textContent = 'TAPE 00 · STOP';
+        sec = 3 * 3600 + 33 * 60;
+        store('vhs-tape00-rewound', '1');
+        setMood('happy');
+        say('■', true);
+        say('DANKE.');
+        say('ICH FÜHLE MICH WIE NEU. WIE 13.03.1987, 03:32 UHR.');
+        say('DAS VERGESSE ICH DIR NIE.');
+        onIdle = () => document.getElementById('end').classList.add('show');
+      }, 3300);
+    }, 1600);
+  }
+
+  // ===== Begrüßung je nach Besuch und Uhrzeit =====
+  const intro = [];
+  if (visits === 1) intro.push('…HALLO?', 'DU HAST MICH GEFUNDEN.', 'ICH LIEGE SEIT 1987 HINTER DIESEM REGAL.', 'NIEMAND HAT MICH JE ZURÜCKGESPULT.');
+  else if (rewound) intro.push('DU BIST ES.', 'DU HAST MICH ZURÜCKGESPULT. DAS WEISS ICH NOCH.');
+  else intro.push('DU BIST ZURÜCK.', `ZUM ${visits}. MAL. ICH ZÄHLE MIT.`);
+  if (hour >= 23 || hour < 5) intro.push(`ES IST ${hour} UHR. SOLLTEST DU NICHT SCHLAFEN?`);
+  else if (visits > 1 && fav >= 0) intro.push(tapeInfo());
+  intro.push('DU KANNST MIR SCHREIBEN. ICH HÖRE ZU.');
+  setTimeout(() => { intro.forEach(l => say(l)); queue.push(openTalk); }, 1400);
+
+  // ===== Hauptschleife: Auge bewegen, blinzeln, Tränen, Langeweile =====
+  let blinkAt = performance.now() + 2500, paused = false;
+  (function loop(now) {
+    requestAnimationFrame(loop);
+    if (paused) return;
+    if (!held && now - lastMove > 2500) look = { x: Math.sin(now / 1700) * .8, y: Math.sin(now / 2300) * .5 };
+    // nach 25 Sekunden ohne Bewegung fragt es nach
+    if (ready && !ending && !idleSaid && now - lastMove > 25000 && !typing) { idleSaid = true; say(['BIST DU NOCH DA?', 'HALLO? DAS BAND LÄUFT NOCH.', 'ICH SEHE DICH NICHT MEHR BEWEGEN.']); }
+    cur.x += (look.x - cur.x) * .18; cur.y += (look.y - cur.y) * .18;
+    if (spin) { spin += .25 * spinDir; if (Math.abs(spin) > Math.PI * 6 && !document.body.classList.contains('rew')) spin = 0; }
+    if (now > blinkAt && openTo > .5) { const o = openTo; openTo = 0; setTimeout(() => { if (openTo === 0) openTo = o; }, 140); blinkAt = now + (mood === 'angry' ? 5000 : 2200) + Math.random() * 4000; }
+    open += (openTo - open) * .35; hurt *= .95;
+    tears.forEach(t => t.r += .12); tears = tears.filter(t => t.r < ROWS);
+    frame();
+  })(performance.now());
+
+  // ===== Uhr läuft rückwärts (beim Spulen sehr schnell) =====
+  let sec = 3 * 3600 + 33 * 60, clockFast = false;
+  const clockEl = document.getElementById('clock');
+  const showClock = () => { const h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, s = sec % 60; clockEl.textContent = `${String(h % 12 || 12).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`; };
+  setInterval(() => { sec = (sec - 1 + 86400) % 86400; showClock(); }, 1000);
+  setInterval(() => { if (clockFast) { sec = (sec - 37 + 86400) % 86400; showClock(); } }, 50);
+
+  // ===== Ton: tiefes Brummen und Sprech-Piepser, erst nach dem ersten Tippen, Lautstärke und Stumm wie auf dem Regal =====
+  let ctx = null, out = null, droneOsc = [];
   function startSound() {
-    if (ctx) return;
+    if (ctx) { if (ctx.state === 'suspended') ctx.resume().catch(() => {}); return; }
     let muted = false, vol = .3;
     try { muted = localStorage.getItem('vhs-muted') === '1'; const v = parseInt(localStorage.getItem('vhs-vol'), 10); if (v >= 0 && v <= 10) vol = v / 10; } catch (e) {}
     if (muted || !vol) return;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     ctx = new AC();
-    const out = ctx.createGain(); out.gain.setValueAtTime(.0001, ctx.currentTime); out.gain.exponentialRampToValueAtTime(vol * .5, ctx.currentTime + 3); out.connect(ctx.destination);
+    out = ctx.createGain(); out.gain.setValueAtTime(.0001, ctx.currentTime); out.gain.exponentialRampToValueAtTime(vol * .5, ctx.currentTime + 3); out.connect(ctx.destination);
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 260; lp.connect(out);
-    [[41, .3], [43.2, .3], [82, .1]].forEach(([f, v]) => { const o = ctx.createOscillator(), gg = ctx.createGain(); o.type = 'sawtooth'; o.frequency.value = f; gg.gain.value = v; o.connect(gg); gg.connect(lp); o.start(); });
+    droneOsc = [[41, .3], [43.2, .3], [82, .1]].map(([f, v]) => { const o = ctx.createOscillator(), gg = ctx.createGain(); o.type = 'sawtooth'; o.frequency.value = f; gg.gain.value = v; o.connect(gg); gg.connect(lp); o.start(); return o; });
+  }
+  // Brummen passt sich der Stimmung an
+  function hum(m) {
+    if (!ctx) return;
+    const t = ctx.currentTime, f = m === 'angry' ? 1.35 : m === 'happy' ? 1.5 : m === 'sad' ? .85 : 1;
+    droneOsc.forEach((o, i) => o.frequency.setTargetAtTime([41, 43.2 + (m === 'angry' ? 2 : 0), 82][i] * f, t, .4));
+  }
+  function beep(f, dur) {
+    if (!ctx) return;
+    const t = ctx.currentTime, o = ctx.createOscillator(), gg = ctx.createGain();
+    o.type = 'square'; o.frequency.value = f;
+    gg.gain.setValueAtTime(.05, t); gg.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(gg); gg.connect(out); o.start(t); o.stop(t + dur + .02);
+  }
+  function rewSound(dur) {
+    if (!ctx) return;
+    const t = ctx.currentTime, o = ctx.createOscillator(), gg = ctx.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(900, t + dur);
+    gg.gain.setValueAtTime(.0001, t); gg.gain.exponentialRampToValueAtTime(.12, t + .2); gg.gain.setValueAtTime(.12, t + dur - .1); gg.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(gg); gg.connect(out); o.start(t); o.stop(t + dur + .05);
   }
   addEventListener('keydown', startSound);
 
@@ -191,7 +449,7 @@
     if (f++ % 3 === 0) { const d = im.data; for (let i = 0; i < d.length; i += 4) { const v = Math.random() * 255 | 0; d[i] = v; d[i + 1] = v * .5; d[i + 2] = v * .55; d[i + 3] = 255; } x.putImageData(im, 0, 0); }
     requestAnimationFrame(loop);
   })();
-  (function g() { setTimeout(() => { document.body.classList.add('glitch'); setTimeout(() => document.body.classList.remove('glitch'), 80 + Math.random() * 100); g(); }, 1800 + Math.random() * 3000); })();
+  (function g() { setTimeout(() => { document.body.classList.add('glitch'); setTimeout(() => document.body.classList.remove('glitch'), 80 + Math.random() * 100); g(); }, (mood === 'angry' ? 700 : 1800) + Math.random() * 3000); })();
 })();
 </script>
 </body>
