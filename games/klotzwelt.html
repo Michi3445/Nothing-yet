@@ -342,6 +342,17 @@ blk('coal_block',{n:'Kohleblock',tex:'coal_block',h:5,tool:'pick',tier:0});
 blk('glowstone',{n:'Leuchtstein',tex:'glowstone',lum:15,h:.3,snd:'glass',drop:[],cat:'deco'});
 blk('bed_block',{n:'Bett',cls:'box',tex:'wool_red',texf:(f,m)=>f===2?[(m&4)?'bed_head_top':'bed_foot_top',0]:f===3?['planks_oak',0]:['bed_side',0],op:0,h:.2,snd:'cloth',boxes:[[0,0,0,1,.5625,1]],use:'bed',noItem:1,drop:[['bed',1,1]]});
 blk('fence',{n:'Zaun',cls:'fence',tex:'planks_oak',op:0,h:2,tool:'axe',snd:'wood',coll:2,cat:'deco'});
+// --- added later: lantern, stained glass, trapdoor, carpets, lily pad, carrots, ruin bricks
+blk('lantern',{n:'Laterne',cls:'box',tex:'lantern',texf:(f,m)=>[(f===2||f===3)?'lantern_top':'lantern',0],op:0,lum:15,h:1,tool:'pick',snd:'metal',cat:'deco',boxes:[[.3125,0,.3125,.6875,.5,.6875],[.375,.5,.375,.625,.625,.625]]});
+const GLASSC=[['white','Weiß','#f2f2f2'],['orange','Orange','#e8862e'],['red','Rot','#c23a32'],['yellow','Gelb','#f0d44a'],['lime','Grün','#74c83a'],['blue','Blau','#3d63d6'],['purple','Lila','#9a4fd0'],['black','Schwarz','#2a2a32']];
+for(const[k,n]of GLASSC)blk('glass_'+k,{n:'Buntglas '+n,cls:'trans',tex:'glass_'+k,op:0,h:.3,snd:'glass',cat:'deco'});
+const TRAPT=.1875,TRAPBOX=(m)=>{const d=m&3,open=(m>>2)&1,top=(m>>3)&1;if(!open)return[top?[0,1-TRAPT,0,1,1,1]:[0,0,0,1,TRAPT,1]];return[[[0,0,1-TRAPT,1,1,1],[0,0,0,TRAPT,1,1],[0,0,0,1,1,TRAPT],[1-TRAPT,0,0,1,1,1]][d]]};
+blk('trapdoor',{n:'Falltür',cls:'box',tex:'trapdoor',op:0,h:3,tool:'axe',snd:'wood',coll:2,use:'trapdoor',cat:'deco',boxesf:TRAPBOX});
+for(const[k,n]of WOOLS)blk('carpet_'+k,{n:'Teppich '+n,cls:'box',tex:'wool_'+k,op:0,h:.1,snd:'cloth',cat:'deco',boxes:[[0,0,0,1,.0625,1]]});
+blk('lily_pad',{n:'Seerose',cls:'box',tex:'lily_pad',texf:(f,m)=>[f===2||f===3?'lily_pad':'lily_side',0],op:0,h:0,snd:'grass',plant:1,lily:1,cat:'nature',boxes:[[0,0,0,1,.015625,1]],tint:''});
+blk('carrots',{n:'Karotten',cls:'crop',tex:'carrots_0',op:0,coll:0,h:0,snd:'grass',plant:1,noItem:1,drop:[]});
+blk('stone_bricks_mossy',{n:'Moosige Steinziegel',tex:'stone_bricks_mossy',h:1.5,tool:'pick',tier:0});
+blk('stone_bricks_cracked',{n:'Rissige Steinziegel',tex:'stone_bricks_cracked',h:1.5,tool:'pick',tier:0});
 // ===== classification tables =====
 const NB=BD.length;
 const OP=new Uint8Array(256),LUM=new Uint8Array(256),CLS=new Uint8Array(256),OPQ=new Uint8Array(256),COLL=new Uint8Array(256),CULLSAME=new Uint8Array(256),REPL=new Uint8Array(256),FALL=new Uint8Array(256),LIQ=new Uint8Array(256);
@@ -374,6 +385,10 @@ itm('bow',{n:'Bogen',st:1,dur:385,cat:'tool'});
 itm('bucket',{n:'Eimer',st:1,cat:'tool'});itm('bucket_water',{n:'Wassereimer',st:1,cat:'tool',fluid:'water'});itm('bucket_lava',{n:'Lavaeimer',st:1,cat:'tool',fluid:'lava'});
 itm('flint_steel',{n:'Feuerzeug',st:1,dur:65,cat:'tool'});
 itm('door',{n:'Holztür',place:'door_block',cat:'deco'});itm('bed',{n:'Bett',place:'bed_block',cat:'deco',st:1});
+// --- added later (appended so saved item ids stay the same)
+itm('carrot',{n:'Karotte',food:3,cat:'food',plantSeed:1,crop:'carrots'});
+itm('fishing_rod',{n:'Angel',st:1,dur:64,cat:'tool'});
+itm('fish_raw',{n:'Roher Fisch',food:2,cat:'food'});itm('fish_cooked',{n:'Gebratener Fisch',food:6,cat:'food'});
 // resolve name -> id (block first, then item)
 function nid(name){if(name in I)return I[name];if(name in B)return B[name];throw new Error('unknown item '+name)}
 function dropList(def){return def.drop}
@@ -381,7 +396,7 @@ function dropList(def){return def.drop}
 const FUEL={};const SMELT={};
 function initRecipes(){
  for(const[k,t]of[['coal',1600],['charcoal',1600],['planks',300],['planks_spruce',300],['planks_birch',300],['log',300],['log_spruce',300],['log_birch',300],['stick',100],['coal_block',16000],['sapling',100],['crafting_table',300],['chest',300],['bookshelf',300],['wool_white',100]])FUEL[nid(k)]=t;
- for(const[a,b,t]of[['sand','glass'],['cobble','stone'],['iron_ore','iron_ingot'],['gold_ore','gold_ingot'],['clay_ball','brick'],['log','charcoal'],['log_spruce','charcoal'],['log_birch','charcoal'],['pork_raw','pork_cooked'],['beef_raw','beef_cooked'],['chicken_raw','chicken_cooked'],['mutton_raw','mutton_cooked'],['stone','stone'],['sandstone','sandstone'],['clay_block','bricks']])if(a!==b)SMELT[nid(a)]={out:nid(b),n:1};
+ for(const[a,b,t]of[['sand','glass'],['cobble','stone'],['iron_ore','iron_ingot'],['gold_ore','gold_ingot'],['clay_ball','brick'],['log','charcoal'],['log_spruce','charcoal'],['log_birch','charcoal'],['pork_raw','pork_cooked'],['beef_raw','beef_cooked'],['chicken_raw','chicken_cooked'],['mutton_raw','mutton_cooked'],['stone','stone'],['sandstone','sandstone'],['clay_block','bricks'],['fish_raw','fish_cooked'],['stone_bricks','stone_bricks_cracked']])if(a!==b)SMELT[nid(a)]={out:nid(b),n:1};
 }
 // recipes
 const RECIPES=[];
@@ -422,6 +437,13 @@ function defRecipes(){
  R_shaped(['SSS'],{S:'sugar_cane'},'paper',3);R_shaped(['PP','PL'],{P:'paper',L:'leather'},'book');
  R_shaped(['WWW','PPP'],{W:'#wool',P:'#planks'},'bed');
  for(const[k,b]of[['iron_block','iron_ingot'],['gold_block','gold_ingot'],['diamond_block','diamond'],['coal_block','coal']]){R_shaped(['BBB','BBB','BBB'],{B:b},k);R_shapeless([k],b,9)}
+ // added later
+ R_shaped([' I ','ITI',' I '],{I:'iron_ingot',T:'torch'},'lantern');
+ for(let i=0;i<GLASSC.length;i++)R_shaped(['GGG','GWG','GGG'],{G:'glass',W:'wool_'+WOOLS[i][0]},'glass_'+GLASSC[i][0],8);
+ R_shaped(['PPP','PPP'],{P:'#planks'},'trapdoor',2);
+ for(const[k]of WOOLS)R_shaped(['WW'],{W:'wool_'+k},'carpet_'+k,3);
+ R_shaped(['  S',' SX','S X'],{S:'stick',X:'string'},'fishing_rod');
+ R_shapeless(['stone_bricks','mossy_cobble'],'stone_bricks_mossy',2);
 }
 
 /* ==== 03_atlas.js ==== */
@@ -585,6 +607,22 @@ for(let s=0;s<8;s++)T('wheat_'+s,(t,r)=>{clr(t);const h=2+s*1.7,ripe=s>=7,c1=rip
 T('bed_head_top',(t,r)=>{t.fill([176,40,40]);t.rect(1,1,14,5,[240,240,240]);t.rect(1,1,14,1,[255,255,255]);for(let i=0;i<16;i++){t.set(i,15,[120,24,24]);t.set(0,i,[130,26,26]);t.set(15,i,[130,26,26])}});
 T('bed_foot_top',(t,r)=>{t.fill([176,40,40]);for(let y=0;y<16;y++)for(let x=0;x<16;x++)if((x+y)%5===0)t.set(x,y,[160,34,34]);for(let i=0;i<16;i++){t.set(i,0,[120,24,24]);t.set(0,i,[130,26,26]);t.set(15,i,[130,26,26])}});
 T('bed_side',(t,r)=>{t.fill([176,40,40]);t.rect(0,8,16,8,[150,110,60]);t.rect(0,8,16,1,[110,80,40])});
+// --- added later: lantern, stained glass, trapdoor, lily pad, carrots, ruin bricks
+T('lantern',(t,r)=>{clr(t);const M=[74,74,82],D=[44,44,50],L=[118,118,128];t.rect(5,8,6,8,D);t.rect(5,8,6,1,L);t.rect(5,15,6,1,M);t.rect(5,8,1,8,M);t.rect(10,8,1,8,M);
+ t.rect(6,9,4,6,[255,190,72]);t.rect(7,10,2,4,[255,226,140]);t.set(7,11,[255,248,210]);t.rect(6,6,4,2,M);t.rect(6,6,4,1,L);t.rect(7,4,2,2,D)});
+T('lantern_top',(t,r)=>{clr(t);t.rect(5,5,6,6,[74,74,82]);t.rect(6,6,4,4,[96,96,106]);t.rect(7,7,2,2,[44,44,50])});
+for(const[k,n,c]of GLASSC)T('glass_'+k,(t,r)=>{const b=hex(c),e=mixc(b,[255,255,255],.45),d=mulc(b,.7);for(let y=0;y<16;y++)for(let x=0;x<16;x++){const v=(r()-.5)*8;t.set(x,y,[b[0]+v,b[1]+v,b[2]+v],120)}
+ for(let i=0;i<16;i++){t.set(i,0,e,235);t.set(0,i,e,235);t.set(i,15,d,235);t.set(15,i,d,235)}for(const[x,y]of[[3,4],[4,3],[4,5],[5,4],[11,10],[10,11]])t.set(x,y,mixc(b,[255,255,255],.7),170)});
+T('trapdoor',(t,r)=>{planks(t,r,[150,118,70],[104,78,42]);const F=[84,60,30];t.rect(0,0,16,1,F);t.rect(0,15,16,1,F);t.rect(0,0,1,16,F);t.rect(15,0,1,16,F);t.rect(7,0,2,16,F);
+ for(const[x,y]of[[2,2],[10,2],[2,10],[10,10]])t.rect(x,y,4,4,[0,0,0],0);t.rect(12,7,2,2,[200,200,206])});
+T('lily_pad',(t,r)=>{clr(t);const P1=[46,110,40],P2=[64,140,52],P3=[92,170,70];for(let y=0;y<16;y++)for(let x=0;x<16;x++){const dx=x+.5-8,dy=y+.5-8,d=Math.hypot(dx,dy);if(d>7.2)continue;if(dy<0&&Math.abs(dx)<.9+(-dy)*.12&&d>1.2)continue;
+  const v=r();t.set(x,y,d>6.2?P1:v<.2?P3:P2)}for(let k=0;k<4;k++){const a=k*1.4+.6;for(let q=2;q<6;q++)t.set(Math.round(8+Math.cos(a)*q),Math.round(8+Math.sin(a)*q),P1)}t.set(5,6,[230,150,190]);t.set(6,6,[245,190,215]);t.set(5,5,[245,190,215])});
+T('lily_side',(t,r)=>{t.fill([46,110,40])});
+for(let s2=0;s2<4;s2++)T('carrots_'+s2,(t,r)=>{clr(t);const g1=[70,150,46],g2=[100,184,64];for(const x of[2,6,10,13]){const hh=3+s2*2+((x*7)%3);for(let y=0;y<hh;y++){t.set(x,15-y,y%2?g2:g1);if(y>hh-3)t.set(x+(y%2?1:-1),15-y,g2)}
+  if(s2===3){t.rect(x-1,14,3,2,[236,120,30]);t.set(x,13,[250,150,50])}}});
+T('stone_bricks_mossy',(t,r)=>{TP[TI.stone_bricks][0](t,r);const m=TPAL('#2f5a24 #3f7330 #548c3c #6aa448'),f=fbm(r,[8,4],[.5,.5]);
+ for(let y=0;y<16;y++)for(let x=0;x<16;x++){const v=f(x,y)+((y&7)===7||y<3?.12:0);if(v>.6)t.set(x,y,rmp(m,stretch(v,.6,.85),x,y,.3))}});
+T('stone_bricks_cracked',(t,r)=>{TP[TI.stone_bricks][0](t,r);const C=[50,52,58];for(let k=0;k<3;k++){let x=(r()*16)|0,y=(r()*16)|0;for(let i=0;i<9;i++){t.set(x,y,C);const d=(r()*4)|0;if(d===0)x++;else if(d===1)x--;else y+=d===2?1:-1}}});
 TN.push('_pad');TP.push([()=>{}]);TI._pad=TN.length-1;
 // Build atlas canvases
 const ATLAS={canvas:null,ctx:null,tiles:[]};
@@ -603,15 +641,16 @@ function faceTileOf(id,f,m){const d=BD[id];if(d.texf){const r=d.texf(f,m);return
 
 /* ==== 04_gen.js ==== */
 // ===== World generation =====
-const BIO={OCEAN:0,BEACH:1,PLAINS:2,FOREST:3,DESERT:4,TAIGA:5,TUNDRA:6,MOUNTAINS:7,RIVER:8,BIRCH:9};
-const BIO_NAMES=['Ozean','Strand','Ebene','Wald','Wüste','Taiga','Tundra','Gebirge','Fluss','Birkenwald'];
+const BIO={OCEAN:0,BEACH:1,PLAINS:2,FOREST:3,DESERT:4,TAIGA:5,TUNDRA:6,MOUNTAINS:7,RIVER:8,BIRCH:9,SWAMP:10};
+const BIO_NAMES=['Ozean','Strand','Ebene','Wald','Wüste','Taiga','Tundra','Gebirge','Fluss','Birkenwald','Sumpf'];
+const GEN_V=2;
 // grass / foliage target colors per biome (multiplied against ~200 grey)
-const BIO_GRASS=['#8cb85a','#8cb85a','#91bd59','#79c05a','#bfb755','#86b783','#80b497','#8ab689','#8cb85a','#88bb67'];
-const BIO_FOL=['#6fa830','#6fa830','#77ab2f','#59ae30','#aea42a','#68a464','#60a17b','#6da36b','#6fa830','#6ba941'];
+const BIO_GRASS=['#8cb85a','#8cb85a','#91bd59','#79c05a','#bfb755','#86b783','#80b497','#8ab689','#8cb85a','#88bb67','#6a7a3c'];
+const BIO_FOL=['#6fa830','#6fa830','#77ab2f','#59ae30','#aea42a','#68a464','#60a17b','#6da36b','#6fa830','#6ba941','#58742a'];
 const CRV_X=[-1.2,-.7,-.35,-.14,-.03,.05,.25,.6,1.2],CRV_Y=[-27,-21,-9,-3.2,-.4,2.8,6.5,11,18];
 function curve(c){if(c<=CRV_X[0])return CRV_Y[0];for(let i=1;i<CRV_X.length;i++)if(c<=CRV_X[i]){const t=(c-CRV_X[i-1])/(CRV_X[i]-CRV_X[i-1]);return CRV_Y[i-1]+(CRV_Y[i]-CRV_Y[i-1])*t}return CRV_Y[CRV_Y.length-1]}
 class Gen{
- constructor(seed,type){this.seed=seed|0;this.type=type||'normal';const s=this.seed;
+ constructor(seed,type){this.seed=seed|0;this.type=type||'normal';this.gv=1;const s=this.seed;
   this.nC=new Noise(s+1);this.nE=new Noise(s+2);this.nH=new Noise(s+3);this.nT=new Noise(s+4);this.nW=new Noise(s+5);this.nR=new Noise(s+6);this.nD=new Noise(s+10);this.nM=new Noise(s+11);
   this.nCv=[new Noise(s+7),new Noise(s+8),new Noise(s+9)];
   this.h=0;this.bio=0;this.tp=0;this.hu=0;this.mt=0;this.rv=0}
@@ -626,10 +665,13 @@ class Gen{
   h+=hl+this.nD.n2(x/9,z/9)*.9;
   const rvn=Math.abs(this.nR.fbm2(x/520+17,z/520,3));let rt=0;
   if(rvn<.032&&c>-.25){rt=(1-rvn/.032)*(1-smooth(.4,.62,c));if(rt>0){const tg=SEA-3-rt*.5;h=lerp(h,Math.min(h,tg),smooth(0,.8,rt))}}
-  h=Math.floor(h);if(h>WH-6)h=WH-6;if(h<3)h=3;
   const tp=this.nT.fbm2(x/560+100,z/560,3)*1.9,hu=this.nW.fbm2(x/440-50,z/440,3)*1.9;
+  let sw=0;if(this.gv>=2){sw=smooth(.28,.55,hu)*(1-smooth(.3,.55,tp))*smooth(-.5,-.28,tp)*(1-smooth(.04,.16,mt))*smooth(-.14,.0,c)*(1-smooth(.38,.55,c))*(1-smooth(.1,.3,rt));
+   if(sw>0){const tg=SEA-.4+this.nD.n2(x/13,z/13)*1.7;h=lerp(h,tg,smooth(0,.65,sw))}}
+  h=Math.floor(h);if(h>WH-6)h=WH-6;if(h<3)h=3;
   let bio;
-  if(h<SEA){bio=rt>.35?BIO.RIVER:BIO.OCEAN}
+  if(sw>.45&&h>=SEA-3&&h<=SEA+4)bio=BIO.SWAMP;
+  else if(h<SEA){bio=rt>.35?BIO.RIVER:BIO.OCEAN}
   else if(h<=SEA+1&&c<.12)bio=BIO.BEACH;
   else if(mt>.32||h>SEA+30)bio=BIO.MOUNTAINS;
   else if(tp>.38&&hu<.25)bio=BIO.DESERT;
@@ -654,6 +696,7 @@ class Gen{
    let top=B.grass,sub=B.dirt,subN=3+((rnd()*2)|0);
    switch(bio){
     case BIO.DESERT:top=B.sand;sub=B.sand;subN=4;break;
+    case BIO.SWAMP:if(h<SEA){top=dn>.3?B.clay_block:B.dirt;sub=B.dirt;subN=3}break;
     case BIO.BEACH:top=B.sand;sub=B.sand;subN=3;break;
     case BIO.OCEAN:case BIO.RIVER:{const gr=this.nD.n2((ox+x)/25+9,(oz+z)/25);top=h<SEA-12?B.gravel:(gr>.45?B.gravel:B.sand);sub=top===B.gravel?B.gravel:B.sand;subN=3;if(h>=SEA-6&&gr<-.5){top=B.clay_block;sub=B.clay_block;subN=2}break}
     case BIO.MOUNTAINS:{if(h>SEA+38){top=B.snow_block;sub=B.stone;subN=0}else if(h>SEA+28||dn>.25){top=B.stone;sub=B.stone;subN=0;if(dn>.55&&h<SEA+34){top=B.gravel;sub=B.gravel;subN=2}}else{top=B.grass;sub=B.dirt;subN=2}break}
@@ -670,6 +713,7 @@ class Gen{
   // structures first (so trees avoid), then vegetation
   this.dungeon(ch,hs,rnd);
   this.cabin(ch);
+  if(this.gv>=2)this.ruins(ch);
   this.vegetation(ch,hs,bi,tps,rnd);
   this.trees(ch);
   let mx=0;for(let y=WH-1;y>=0&&!mx;y--){for(let i=0;i<256;i++)if(b[(y<<8)|i]){mx=y+1;break}}ch.maxY=mx+1>WH?WH:mx+1}
@@ -700,7 +744,7 @@ class Gen{
  treeAt(wx,wz){// returns kind or 0 (also sets this.* column info)
   const h=hash(wx,wz,this.seed,23);const r=(h&0xffff)/65536;if(r>.06)return 0;
   this.column(wx,wz);const bio=this.bio,hh=this.h;if(hh<SEA+1)return 0;let p=0,kind=0;
-  switch(bio){case BIO.FOREST:p=.05;kind=1;break;case BIO.BIRCH:p=.045;kind=2;break;case BIO.PLAINS:p=.0035;kind=1;break;case BIO.TAIGA:p=.04;kind=3;break;case BIO.TUNDRA:p=.004;kind=3;break;case BIO.MOUNTAINS:p=hh<SEA+26?.012:0;kind=3;break;case BIO.DESERT:return 0;default:return 0}
+  switch(bio){case BIO.FOREST:p=.05;kind=1;break;case BIO.BIRCH:p=.045;kind=2;break;case BIO.PLAINS:p=.0035;kind=1;break;case BIO.TAIGA:p=.04;kind=3;break;case BIO.TUNDRA:p=.004;kind=3;break;case BIO.MOUNTAINS:p=hh<SEA+26?.012:0;kind=3;break;case BIO.SWAMP:p=.022;kind=1;break;case BIO.DESERT:return 0;default:return 0}
   if(r>=p)return 0;return kind}
  trees(ch){const ox=ch.cx*16,oz=ch.cz*16;
   const put=(x,y,z,id,mode)=>{const lx=x-ox,lz=z-oz;if((lx|lz)&~15||y<0||y>=WH)return;const i=(y<<8)|(lz<<4)|lx,cur=ch.b[i];if(mode===1){if(cur===0||CLS[cur]===C_CROSS||cur===B.snow||cur===B.tall_grass)ch.b[i]=id}else if(mode===2){if(cur===0||CLS[cur]===C_CROSS||cur===B.snow)ch.b[i]=id}else ch.b[i]=id};
@@ -717,18 +761,20 @@ class Gen{
     const topY=gy+th,pat=[0,1,1,2,2,3,2,3,3,3];for(let i=0;i<pat.length;i++){const y=topY+1-i;if(y<gy+3)break;const rad=pat[i];for(let dz=-rad;dz<=rad;dz++)for(let dx=-rad;dx<=rad;dx++){if(Math.abs(dx)+Math.abs(dz)>rad+(rad>1?1:0))continue;if(dx===0&&dz===0&&i>0&&y<=topY)continue;put(wx+dx,y,wz+dz,B.leaves_spruce,1)}}}
   }}
  vegetation(ch,hs,bi,tps,rnd){const b=ch.b,ox=ch.cx*16,oz=ch.cz*16;
-  for(let z=0;z<16;z++)for(let x=0;x<16;x++){const ci=z*16+x,h=hs[ci],bio=bi[ci],col=(z<<4)|x,above=((h+1)<<8)|col;if(h<SEA||h>=WH-3)continue;if(b[above]!==0)continue;const gnd=b[(h<<8)|col],r=rnd();
+  for(let z=0;z<16;z++)for(let x=0;x<16;x++){const ci=z*16+x,h=hs[ci],bio=bi[ci],col=(z<<4)|x,above=((h+1)<<8)|col;
+   if(bio===BIO.SWAMP&&h<SEA&&h>=SEA-3){const si=((SEA+1)<<8)|col;if(b[(SEA<<8)|col]===B.water&&b[si]===0&&rnd()<.1)b[si]=B.lily_pad;continue}
+   if(h<SEA||h>=WH-3)continue;if(b[above]!==0)continue;const gnd=b[(h<<8)|col],r=rnd();
    if(gnd===B.grass){
     if(bio===BIO.TAIGA||bio===BIO.TUNDRA){b[above]=B.snow;continue}
-    let pg=0,pf=0,pm=0;if(bio===BIO.PLAINS){pg=.22;pf=.025}else if(bio===BIO.FOREST||bio===BIO.BIRCH){pg=.09;pf=.008;pm=.004}else if(bio===BIO.MOUNTAINS){pg=.03}
-    if(r<pg)b[above]=B.tall_grass;else if(r<pg+pf){const q=rnd();b[above]=q<.45?B.dandelion:q<.9?B.poppy:B.blue_orchid}else if(r<pg+pf+pm)b[above]=rnd()<.5?B.mushroom_red:B.mushroom_brown}
+    let pg=0,pf=0,pm=0;if(bio===BIO.SWAMP){pg=.16;pf=.012;pm=.02}else if(bio===BIO.PLAINS){pg=.22;pf=.025}else if(bio===BIO.FOREST||bio===BIO.BIRCH){pg=.09;pf=.008;pm=.004}else if(bio===BIO.MOUNTAINS){pg=.03}
+    if(r<pg)b[above]=B.tall_grass;else if(r<pg+pf){const q=rnd();b[above]=bio===BIO.SWAMP?B.blue_orchid:q<.45?B.dandelion:q<.9?B.poppy:B.blue_orchid}else if(r<pg+pf+pm)b[above]=rnd()<.5?B.mushroom_red:B.mushroom_brown}
    else if(gnd===B.sand&&bio===BIO.DESERT){if(r<.012){const ht=1+((rnd()*3)|0);let ok=true;for(let k=1;k<=ht;k++)b[((h+k)<<8)|col]=B.cactus}else if(r<.03)b[above]=B.dead_bush}
    else if(gnd===B.sand&&h===SEA){// sugar cane next to water
     if(r<.08){let wat=false;for(const[dx,dz]of[[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,nz=z+dz;if(nx>=0&&nx<16&&nz>=0&&nz<16&&hs[nz*16+nx]<SEA)wat=true}if(wat){const ht=1+((rnd()*3)|0);for(let k=1;k<=ht;k++)b[((h+k)<<8)|col]=B.reeds}}}
    else if(gnd===B.snow_block||(gnd===B.stone&&bio===BIO.MOUNTAINS&&h>SEA+34)){if(gnd===B.stone&&r<.5)b[above]=B.snow}
   }}
  // loot
- loot(rnd,nStacks,rich){const t=[['bread',1,3,10],['apple',1,3,8],['coal',2,6,12],['iron_ingot',1,3,9],['gold_ingot',1,2,5],['string',1,4,9],['bone',1,4,9],['arrow',3,8,8],['seeds',2,6,8],['gunpowder',1,4,8],['feather',1,3,6],['flint',1,3,6],['bucket',1,1,3],['stick',2,6,6],['torch',3,10,8],['pickaxe_iron',1,1,1.2],['sword_iron',1,1,1.2],['diamond',1,2,1.4],['leather',1,3,5],['cobble',6,16,5],['planks',4,10,5],['wheat',2,5,6],['pork_cooked',1,2,3],['bow',1,1,2],['helmet_iron',1,1,1],['chestplate_iron',1,1,.8]];
+ loot(rnd,nStacks,rich){const t=[['bread',1,3,10],['apple',1,3,8],['coal',2,6,12],['iron_ingot',1,3,9],['gold_ingot',1,2,5],['string',1,4,9],['bone',1,4,9],['arrow',3,8,8],['seeds',2,6,8],['gunpowder',1,4,8],['feather',1,3,6],['flint',1,3,6],['bucket',1,1,3],['stick',2,6,6],['torch',3,10,8],['pickaxe_iron',1,1,1.2],['sword_iron',1,1,1.2],['diamond',1,2,1.4],['leather',1,3,5],['cobble',6,16,5],['planks',4,10,5],['wheat',2,5,6],['pork_cooked',1,2,3],['bow',1,1,2],['helmet_iron',1,1,1],['chestplate_iron',1,1,.8],['carrot',1,4,7],['fishing_rod',1,1,2],['lantern',1,2,2]];
   let tot=0;for(const e of t)tot+=e[3];const items=new Array(27).fill(null);
   for(let k=0;k<nStacks;k++){let r=rnd()*tot,e=t[0];for(const q of t){r-=q[3];if(r<=0){e=q;break}}const n=e[1]+((rnd()*(e[2]-e[1]+1))|0);const slot=(rnd()*27)|0;if(!items[slot])items[slot]={id:nid(e[0]),n};}
   return items}
@@ -741,6 +787,30 @@ class Gen{
   const nc=1+((r()*2)|0);for(let k=0;k<nc;k++){const cx=r()<.5?x0:x0+w-1,cz=r()<.5?z0:z0+d-1,i=(y0<<8)|(cz<<4)|cx;b[i]=B.chest;ch.m[i]=cz===z0?2:0;ch.be.set(i,{t:'chest',items:this.loot(r,5+((r()*4)|0),1)})}
   b[(y0<<8)|((z0+((d/2)|0))<<4)|(x0+((w/2)|0))]=B.torch;
  }
+ // ruins: a crumbling stone-brick tower with a treasure chest; every random number comes from the cell, so all chunks (and all players) agree
+ ruins(ch){const ox=ch.cx*16,oz=ch.cz*16,CW=72;
+  for(let cz=Math.floor((oz-10)/CW);cz<=Math.floor((oz+16)/CW);cz++)for(let cx=Math.floor((ox-10)/CW);cx<=Math.floor((ox+16)/CW);cx++){
+   const hh=hash(cx,cz,this.seed,53);if((hh%100)>=22)continue;const r=rng32(hh);const S=7,x0=cx*CW+10+((r()*(CW-30))|0),z0=cz*CW+10+((r()*(CW-30))|0);
+   if(x0+S+4<ox||x0-4>=ox+16||z0+S+4<oz||z0-4>=oz+16)continue;
+   this.column(x0+3,z0+3);const bio=this.bio;if(bio===BIO.OCEAN||bio===BIO.RIVER||bio===BIO.BEACH)continue;
+   let lo=999,hi=0;for(const[dx,dz]of[[0,0],[S-1,0],[0,S-1],[S-1,S-1],[3,3]]){this.column(x0+dx,z0+dz);lo=Math.min(lo,this.h);hi=Math.max(hi,this.h)}if(hi-lo>4||lo<SEA)continue;
+   const gy=lo+1,H=4+((r()*6)|0);
+   const put=(x,y,z,id,mt)=>{const lx=x-ox,lz=z-oz;if((lx|lz)&~15||y<0||y>=WH)return;const i=(y<<8)|(lz<<4)|lx;ch.b[i]=id;ch.m[i]=mt||0;ch.be.delete(i)};
+   const brick=()=>{const q=r();return q<.5?B.stone_bricks:q<.8?B.stone_bricks_mossy:B.stone_bricks_cracked};
+   for(let z=0;z<S;z++)for(let x=0;x<S;x++){const wx=x0+x,wz=z0+z,edge=x===0||x===S-1||z===0||z===S-1;
+    for(let y=gy-5;y<gy;y++)put(wx,y,wz,y===gy-1?(r()<.15?B.gravel:brick()):B.stone_bricks);
+    const top=edge?H-((r()*4)|0)-(((x+z)&1)&&r()<.5?1:0):0;
+    for(let y=0;y<=hi-lo+H+2;y++){const doorway=(z===S-1&&x===3&&y<2),win=edge&&y===2&&((x===3&&(z===0))||(z===3&&(x===0||x===S-1)));
+     put(wx,gy+y,wz,edge&&y<top&&!doorway&&!win?brick():0)}}
+   // an upper floor that has partly fallen in
+   if(H>=7)for(let z=1;z<S-1;z++)for(let x=1;x<S-1;x++){if(r()<.55)put(x0+x,gy+4,z0+z,r()<.7?B.slab_stone_bricks:B.stone_bricks_mossy,r()<.7?1:0)}
+   // rubble and broken pillars around it
+   for(let k=0;k<6;k++){const px=x0-3+((r()*(S+6))|0),pz=z0-3+((r()*(S+6))|0),ph=1+((r()*3)|0),inside=px>=x0&&px<x0+S&&pz>=z0&&pz<z0+S;if(inside)continue;this.column(px,pz);const g=this.h;for(let y=1;y<=ph;y++)put(px,g+y,pz,y===ph&&r()<.4?B.slab_stone_bricks:brick())}
+   // treasure
+   const items=this.loot(r,6+((r()*4)|0),1);const kx=x0+1+((r()*2)|0)*(S-3),kz=z0+1;
+   const lx=kx-ox,lz=kz-oz;if(!((lx|lz)&~15)){const i=(gy<<8)|(lz<<4)|lx;ch.b[i]=B.chest;ch.m[i]=2;ch.be.set(i,{t:'chest',items})}
+   put(x0+S-2,gy,z0+S-2,B.lantern);put(x0+1,gy,z0+S-2,B.carpet_red);put(x0+2,gy,z0+S-2,B.carpet_red);
+  }}
  cabin(ch){// cells of 56x56 world blocks
   const ox=ch.cx*16,oz=ch.cz*16,CW=56;
   for(let cz=Math.floor((oz-8)/CW);cz<=Math.floor((oz+16)/CW);cz++)for(let cx=Math.floor((ox-8)/CW);cx<=Math.floor((ox+16)/CW);cx++){
@@ -880,6 +950,7 @@ class World{
 const DXH=[1,-1,0,0],DZH=[0,0,1,-1];
 const DIRV=[[0,-1],[1,0],[0,1],[-1,0]]; // facing meta 0..3 -> (dx,dz): north,east,south,west
 function dropsFor(id,m,rnd){const d=BD[id],out=[];
+ if(id===B.carrots){out.push([I.carrot,m>=7?2+((rnd()*3)|0):1]);return out}
  if(id===B.wheat){if(m>=7){out.push([I.wheat,1]);const n=(rnd()*4)|0;if(n)out.push([I.seeds,n])}else out.push([I.seeds,1]);return out}
  if(id===B.door_block){if(!(m&16))out.push([I.door,1]);return out}
  if(id===B.bed_block){if(m&4)out.push([I.bed,1]);return out}
@@ -893,7 +964,7 @@ function blastRes(id){const d=BD[id];if(d.liquid)return 100;if(d.h<0)return 3600
 Object.assign(World.prototype,{
  schedule(x,y,z,delay){const t=this.tick+delay;let a=this.sched.get(t);if(!a){a=[];this.sched.set(t,a)}a.push(x,y,z)},
  canStay(id,x,y,z){const d=BD[id],below=this.get(x,y-1,z),m=this.getM(x,y,z);
-  if(d.plant){if(id===B.wheat)return below===B.farmland;
+  if(d.plant){if(id===B.wheat||id===B.carrots)return below===B.farmland;if(d.lily)return below===B.water;
    if(id===B.reeds){if(below===B.reeds)return true;if(below!==B.sand&&below!==B.dirt&&below!==B.grass)return false;for(let k=0;k<4;k++){const n=this.get(x+DXH[k],y-1,z+DZH[k]);if(n===B.water)return true}return false}
    if(d.sandok)return below===B.sand||below===B.dirt||below===B.grass||below===B.sandstone;
    if(d.soilany)return below!==0&&OPQ[below]===1;
@@ -957,9 +1028,9 @@ Object.assign(World.prototype,{
   if(id===B.grass){const above=this.get(x,y+1,z);if(OP[above]>=14||(this.skyAt(x,y+1,z)<4&&this.blAt(x,y+1,z)<4&&OP[above]>=2)){this.setBlock(x,y,z,B.dirt,0,3);return}
    const tx=x+((rnd()*3)|0)-1,ty=y+((rnd()*5)|0)-3,tz=z+((rnd()*3)|0)-1;if(this.get(tx,ty,tz)===B.dirt&&OP[this.get(tx,ty+1,tz)]<2&&this.skyAt(tx,ty+1,tz)>=9)this.setBlock(tx,ty,tz,B.grass,0,3);return}
   if(id===B.leaves||id===B.leaves_spruce||id===B.leaves_birch){const m=this.getM(x,y,z);if(m&1)return;if(!this.leafConnected(x,y,z)){const dl=dropsFor(id,m,rnd);for(const[i2,n]of dl)this.hooks.drop(x+.5,y+.5,z+.5,{id:i2,n});this.setBlock(x,y,z,0,0,3)}return}
-  if(id===B.wheat){const m=this.getM(x,y,z);if(m>=7)return;if(this.skyAt(x,y,z)<8&&this.blAt(x,y,z)<8)return;const moist=(this.getM(x,y-1,z)&7)>0;if(rnd()<(moist?.3:.15))this.setBlock(x,y,z,id,m+1,3);return}
+  if(id===B.wheat||id===B.carrots){const m=this.getM(x,y,z);if(m>=7)return;if(this.skyAt(x,y,z)<8&&this.blAt(x,y,z)<8)return;const moist=(this.getM(x,y-1,z)&7)>0;if(rnd()<(moist?.3:.15))this.setBlock(x,y,z,id,m+1,3);return}
   if(id===B.farmland){const m=this.getM(x,y,z);let wet=false;for(let dz=-4;dz<=4&&!wet;dz++)for(let dx=-4;dx<=4&&!wet;dx++)for(let dy=0;dy<=1;dy++)if(this.get(x+dx,y+dy,z+dz)===B.water){wet=true;break}
-   if(wet){if((m&7)<7)this.setMeta(x,y,z,7)}else if((m&7)>0)this.setMeta(x,y,z,(m&7)-1);else if(this.get(x,y+1,z)!==B.wheat)this.setBlock(x,y,z,B.dirt,0,3);return}
+   if(wet){if((m&7)<7)this.setMeta(x,y,z,7)}else if((m&7)>0)this.setMeta(x,y,z,(m&7)-1);else if(this.get(x,y+1,z)!==B.wheat&&this.get(x,y+1,z)!==B.carrots)this.setBlock(x,y,z,B.dirt,0,3);return}
   if(id===B.sapling||id===B.sapling_spruce||id===B.sapling_birch){if(rnd()<.18&&this.skyAt(x,y+1,z)>=9)this.growTree(x,y,z,id===B.sapling?1:id===B.sapling_birch?2:3);return}
   if(id===B.reeds){let h=1;while(this.get(x,y-h,z)===B.reeds)h++;if(h<3&&this.get(x,y+1,z)===0&&rnd()<.25)this.setBlock(x,y+1,z,B.reeds,0,3);return}
   if(id===B.cactus){let h=1;while(this.get(x,y-h,z)===B.cactus)h++;if(h<3&&this.get(x,y+1,z)===0&&rnd()<.25)this.setBlock(x,y+1,z,B.cactus,0,3);return}},
@@ -1088,7 +1159,7 @@ function build(world,ch){
   if(c===C_CROSS||c===C_CROP){
    let tr=255,tg=255,tb=255;if(d.tint==='grass'){const o=(z*16+x)*3;tr=SC.tg[o];tg=SC.tg[o+1];tb=SC.tg[o+2]}
    const sk=ls[pi]*BYTE15+.5,bk=ll[pi]*BYTE15+.5;
-   let tl=d.texf?tileOf(id,0,m):FTILE[id*6];if(id===B.wheat)tl=TI['wheat_'+(m&7)];tl&=4095;
+   let tl=d.texf?tileOf(id,0,m):FTILE[id*6];if(id===B.wheat)tl=TI['wheat_'+(m&7)];else if(id===B.carrots)tl=TI['carrots_'+((m&7)>>1)];tl&=4095;
    const em=d.lum>=14?255:0;
    if(c===C_CROSS){const a=.1,b2=.9;const pl=[[a,a,b2,b2],[a,b2,b2,a]];const hgt=(id===B.sapling||d.plant&&d.name.indexOf('mushroom')>=0)?1:1;
     for(const[x0,z0,x1,z1]of pl)for(let side=0;side<2;side++){
@@ -1517,6 +1588,11 @@ function foodSprite(k){const s=new Sp();const P=(x,y,c)=>s.put(x,y,c);const ell=
   case'chicken_cooked':meatSp(s,drum,CK_C,{grill:null});P(4,4,[252,214,140]);P(5,4,[252,214,140]);boneSp(s,10,10,13,13);break;
   case'mutton_raw':meatSp(s,leg,RAW_M,{marb:[[4,9,4],[6,12,3]],marbC:[240,200,200]});boneSp(s,10,7,12,3);break;
   case'mutton_cooked':meatSp(s,leg,CK_M,{grill:[60,30,16]});boneSp(s,10,7,12,3);break;
+  case'carrot':{const c=(x,y)=>{const u=(x-y)*.7071,v=(x+y)*.7071-11.3;return Math.abs(u)<=2.2*(1-(v+6)/12)+.3&&v>=-6.5&&v<=5};meatSp(s,c,[[176,72,14],[214,104,24],[238,138,40],[252,180,90]]);
+   for(const[x,y]of[[11,3],[12,2],[12,4],[13,3],[10,2],[13,1]])P(x,y,[80,160,50]);P(11,2,[110,190,70]);P(6,9,[170,70,16]);P(8,7,[170,70,16]);break}
+  case'fish_raw':case'fish_cooked':{const ck=k==='fish_cooked',f=(x,y)=>ell(7.5,8,5.2,3.2)(x,y)||(x>=12&&x<=14&&Math.abs(y+.5-8)<=(x-11)*1.1);
+   meatSp(s,f,ck?[[110,64,30],[150,94,44],[186,128,66],[222,170,104]]:[[60,92,120],[84,124,156],[120,160,190],[176,206,226]],{rim:ck?null:(x,y)=>y>=9,rimC:[226,232,236]});
+   P(4,7,ck?[40,24,14]:[20,20,24]);if(ck){P(7,7,[96,50,20]);P(9,8,[96,50,20])}else{P(8,6,[200,220,236])}break}
   case'rotten_flesh':{const rt=(x,y)=>ell(8,8.5,6,5)(x,y)&&!(x<4&&y<6)&&!(x>12&&y>10)&&!(x===9&&y<5);meatSp(s,rt,[[70,84,40],[98,112,52],[126,134,66],[156,160,88]]);for(const[x,y]of[[6,7],[10,9],[7,11],[11,6]]){P(x,y,[86,48,40]);P(x+1,y,[110,64,52])}P(5,9,[190,60,60]);break}}
  s.outline(OUTC);return s}
 function matSprite(k){const s=new Sp();const P=(x,y,c)=>s.put(x,y,c);
@@ -1549,6 +1625,7 @@ function matSprite(k){const s=new Sp();const P=(x,y,c)=>s.put(x,y,c);
   case'bed':s.rect(2,7,12,5,[176,40,40]);s.rect(2,7,4,5,[240,240,240]);s.rect(2,6,12,1,[206,66,66]);s.rect(2,12,12,2,[150,110,60]);s.rect(2,14,2,1,[110,80,40]);s.rect(12,14,2,1,[110,80,40]);break;
   case'sugar_cane':s.line(5,14,6,2,[120,190,90]);s.line(6,14,7,2,[100,170,70]);s.line(10,14,11,4,[130,200,100]);s.line(11,14,12,4,[104,176,76]);for(const y of[5,9,12]){s.put(5,y,[70,130,50]);s.put(10,y+1,[70,130,50])}break;
   case'flint_steel':s.rect(3,8,9,5,[150,150,160]);s.rect(4,7,7,1,[190,190,200]);s.rect(3,12,9,1,[100,100,110]);s.rect(5,9,3,3,[40,40,44]);s.line(10,3,12,6,[70,70,76]);s.rect(9,2,4,2,[90,90,96]);s.put(12,2,[255,170,40]);s.put(11,1,[255,230,120]);break;
+  case'fishing_rod':{s.line(2,14,12,2,HDL[0]);s.line(3,14,13,2,HDL[1]);s.line(13,2,13,11,[226,226,226]);s.put(13,12,[200,40,40]);s.put(12,12,[240,240,240]);s.put(13,13,[200,40,40]);s.rect(3,12,2,2,[60,60,66]);break}
   case'door':{const u=ATLAS.tiles[TI.door_upper],lw=ATLAS.tiles[TI.door_lower];for(let y=0;y<16;y++)for(let x=3;x<13;x++){const src=y<8?u.get(x,y*2):lw.get(x,(y-8)*2);s.put(x,y,src,src[3])}break}
  }
  s.outline(OUTC);return s}
@@ -1576,7 +1653,7 @@ function iconFor(id,ex){const key=id+(ex||'');let c=ICONC.get(key);if(c)return c
  if(id>=256){const s=itemSprite(id).canvas(3);g.drawImage(s,0,0)}
  else{const d=BD[id];const cl=d.c;let tint=null;if(d.tint==='grass')tint=[140,190,90];else if(d.tint==='foliage')tint=[100,170,50];
   const m=(id===B.furnace||id===B.furnace_lit||id===B.chest||id===B.crafting_table)?2:0;
-  if(cl===C_CROSS||cl===C_CROP||cl===C_TORCH||id===B.ladder||id===B.door_block){const t=id===B.wheat?TI.wheat_7:id===B.door_block?TI.door_lower:FTILE[id*6+2]!==undefined&&d.tex?(typeof d.tex==='string'?TI[d.tex]:TI[d.tex[2]]):0;const tc=tileCanvas(t,tint);g.drawImage(tc,0,0,ISZ,ISZ)}
+  if(cl===C_CROSS||cl===C_CROP||cl===C_TORCH||id===B.ladder||id===B.door_block||id===B.lily_pad){const t=id===B.wheat?TI.wheat_7:id===B.door_block?TI.door_lower:FTILE[id*6+2]!==undefined&&d.tex?(typeof d.tex==='string'?TI[d.tex]:TI[d.tex[2]]):0;const tc=tileCanvas(t,tint);g.drawImage(tc,0,0,ISZ,ISZ)}
   else if(id===B.fence){for(const b of[[0,.375,.4375,.375,.5625,.5625],[0,.6875,.4375,.375,.875,.5625],[.375,0,.375,.625,1,.625],[.625,.375,.4375,1,.5625,.5625],[.625,.6875,.4375,1,.875,.5625]])isoBox(g,id,0,b,tint)}
   else if(d.slab)isoBox(g,id,0,[0,0,0,1,.5,1],tint);
   else if(d.stairs){isoBox(g,id,0,[0,0,0,1,.5,1],tint);isoBox(g,id,0,[0,.5,0,1,1,.5],tint)}
@@ -1608,7 +1685,7 @@ function craftMatch(cells,gw,gh){let minx=gw,miny=gh,maxx=-1,maxy=-1,cnt=0;for(l
 function foodOf(id){const d=itemDef(id);if(!d||!d.food)return null;const sat=({apple:2.4,bread:6,pork_cooked:12.8,beef_cooked:12.8,chicken_cooked:7.2,mutton_cooked:9.6,rotten_flesh:.8}[d.name])||d.food*.5;return{food:d.food,sat}}
 // creative inventory lists
 function creativeLists(){const L={build:[],nature:[],deco:[],tools:[],food:[],mat:[]};
- for(const d of BD){if(d.noItem||d.id===0)continue;if(d.id===B.furnace_lit||d.id===B.bed_block||d.id===B.door_block||d.id===B.wheat)continue;const c=d.cat==='nature'?'nature':d.cat==='deco'?'deco':'build';L[c].push(d.id)}
+ for(const d of BD){if(d.noItem||d.id===0)continue;if(d.id===B.furnace_lit||d.id===B.bed_block||d.id===B.door_block||d.id===B.wheat||d.id===B.carrots)continue;const c=d.cat==='nature'?'nature':d.cat==='deco'?'deco':'build';L[c].push(d.id)}
  L.build.push(B.water,B.lava);
  for(let id=256;id<IT.length;id++){const d=IT[id];if(!d)continue;if(d.cat==='tool'||d.cat==='armor')L.tools.push(id);else if(d.cat==='food')L.food.push(id);else if(d.cat==='deco')L.deco.push(id);else L.mat.push(id)}
  return L}
@@ -1654,7 +1731,7 @@ function itemSpriteGeo(id){let g=IGEO.get(id);if(g)return g;const s=itemSprite(i
 function itemModel(id){
  if(id>=256)return{geo:itemSpriteGeo(id),item:true};
  const d=BD[id];
- if(d.c===C_CROSS||d.c===C_CROP||d.c===C_TORCH||id===B.ladder){let tile=id===B.torch?TI.torch:id===B.ladder?TI.ladder:id===B.wheat?TI.wheat_7:FTILE[id*6+2];return{geo:tileSpriteGeo(tile,d.tint==='grass'?[145,189,89]:null),flat:true}}
+ if(d.c===C_CROSS||d.c===C_CROP||d.c===C_TORCH||id===B.ladder||id===B.lily_pad){let tile=id===B.torch?TI.torch:id===B.ladder?TI.ladder:id===B.wheat?TI.wheat_7:FTILE[id*6+2];return{geo:tileSpriteGeo(tile,d.tint==='grass'?[145,189,89]:null),flat:true}}
  return{geo:blockGeo(id,id===B.chest||id===B.furnace?2:0),block:true}}
 // ---- entity materials
 const ENTMATS=new Set();
@@ -1766,7 +1843,7 @@ class Mob extends Ent{
   G.sfx('hurt_'+this.type,1,this.x,this.y,this.z);G.part(this.x,this.y+this.h*.6,this.z,'hit');
   if(this.hp<=0)this.die(byPlayer);return true}
  die(byPlayer){if(this.dead)return;this.dead=true;this.deathT=0;G.sfx('death_'+this.type,1,this.x,this.y,this.z);
-  const rnd=Math.random;for(const[nm,mn,mx]of this.D.loot){const n=mn+((rnd()*(mx-mn+1))|0);if(n>0){let id=nid(nm);if(this.burn>0&&I[nm.replace('_raw','_cooked')])id=I[nm.replace('_raw','_cooked')];Ents.spawnItem(this.x,this.y+.4,this.z,{id,n})}}
+  const rnd=Math.random;if(this.type==='zombie'&&rnd()<.06)Ents.spawnItem(this.x,this.y+.4,this.z,{id:I.carrot,n:1});for(const[nm,mn,mx]of(this.baby?[]:this.D.loot)){const n=mn+((rnd()*(mx-mn+1))|0);if(n>0){let id=nid(nm);if(this.burn>0&&I[nm.replace('_raw','_cooked')])id=I[nm.replace('_raw','_cooked')];Ents.spawnItem(this.x,this.y+.4,this.z,{id,n})}}
   if(this.D.rare&&rnd()<.04)Ents.spawnItem(this.x,this.y+.4,this.z,{id:I.iron_ingot,n:1});
   if(byPlayer&&G.onKill)G.onKill(this)}
  update(dt,w,P){
@@ -1782,8 +1859,11 @@ class Mob extends Ent{
   // sounds
   this.sayT-=dt;if(this.sayT<=0){this.sayT=5+Math.random()*12;if(dist<22)G.sfx('say_'+this.type,.8,this.x,this.y,this.z)}
   this.mvx=0;this.mvz=0;let speed=0;
-  if(this.kb<=0){const f=MobAI[this.D.passive?'passive':this.type];if(f)f(this,dt,w,P,dx,dz,dy,dist)}
+  if(this.baby){this.growT-=dt;if(this.growT<=0)this.setBaby(false)}if(this.breedCd>0)this.breedCd-=dt;
+  if(this.kb<=0){const f=MobAI[this.D.passive?'passive':this.type];if(!(this.love>0&&Breed.tick(this,dt))&&f)f(this,dt,w,P,dx,dz,dy,dist)}
   this.physics(dt,w)}
+ feed(){if(this.baby){this.growT-=40;Part.fx('heart',this.x,this.y+this.h+.2,this.z);return}if((this.breedCd||0)>0){Part.fx('smoke',this.x,this.y+this.h,this.z);return}this.love=30;for(let i=0;i<4;i++)Part.fx('heart',this.x+(Math.random()-.5)*.6,this.y+this.h+.2,this.z+(Math.random()-.5)*.6)}
+ setBaby(on){this.baby=on?1:0;const k=on?.55:1;this.hw=this.D.hw*k;this.h=this.D.h*k;if(on&&!this.growT)this.growT=300}
  hurt0(n){this.hp-=n;this.hurtT=.4;G.sfx('hurt_'+this.type,.7,this.x,this.y,this.z);if(this.hp<=0)this.die(false)}
  physics(dt,w){
   const ix=Math.floor(this.x),iz=Math.floor(this.z);this.inW=w.get(ix,Math.floor(this.y+.2),iz)===B.water;const deep=w.get(ix,Math.floor(this.y+this.h*.7),iz)===B.water;this.inLava=w.get(ix,Math.floor(this.y+.2),iz)===B.lava;
@@ -1809,6 +1889,7 @@ class Mob extends Ent{
   let hy=0,hx=0;if(!this.dead){const dx=player.x-this.x,dz=player.z-this.z,dist=Math.hypot(dx,dz);if(dist<8&&!this.D.hostile||this.target){let a=Math.atan2(dx,dz)-this.yaw;while(a>Math.PI)a-=TAU;while(a<-Math.PI)a+=TAU;hy=clamp(a,-.9,.9);hx=clamp(-Math.atan2(player.y+1.6-(this.y+this.h*.9),dist),-.5,.5)}}
   this.hy+=(hy-this.hy)*.15;this.hx+=(hx-this.hx)*.15;
   ANIM[D.kind](this,P,s,wa);
+  if(this.type!=='creeper')g.scale.setScalar(this.baby?.55:1);
   if(this.dead){const t=Math.min(1,this.deathT/.35);g.rotation.z=t*Math.PI/2;g.position.y=this.y+t*.0;g.position.x=this.x}else g.rotation.z=this.hurtT>0?Math.sin(this.hurtT*30)*.06:0;
   g.visible=true}
 }
@@ -1832,6 +1913,18 @@ function wander(e,dt,w,speed){e.stT-=dt;
  if(e.stT<=0){if(Math.random()<.4){e.state='idle';e.stT=1.5+Math.random()*4;e.dirx=e.dirz=0}else{const a=Math.random()*TAU;e.dirx=Math.sin(a);e.dirz=Math.cos(a);e.state='walk';e.stT=1.5+Math.random()*3.5}}
  if(e.dirx||e.dirz){const ax=e.x+e.dirx*.7,az=e.z+e.dirz*.7;const g=hasGround(w,ax,e.y,az,2);if(!g||g===B.water){e.dirx=-e.dirx+(Math.random()-.5);e.dirz=-e.dirz+(Math.random()-.5);const l=Math.hypot(e.dirx,e.dirz)||1;e.dirx/=l;e.dirz/=l;e.stT=Math.min(e.stT,1.2)}
   e.mvx=e.dirx*speed;e.mvz=e.dirz*speed}}
+// ---------------- breeding: feed two animals of the same kind, they find each other and get a baby
+const Breed={
+ food(m){return{cow:I.wheat,sheep:I.wheat,pig:I.carrot,chicken:I.seeds}[m.type]},
+ tick(e,dt){e.love-=dt;if(Math.random()<dt*1.5)Part.fx('heart',e.x,e.y+e.h+.2,e.z);if(e.baby)return false;
+  let best=null,bd=64;for(const o of Ents.mobs){if(o===e||o.type!==e.type||o.dead||o.proxy||o.baby||!(o.love>0))continue;const d=(o.x-e.x)**2+(o.z-e.z)**2;if(d<bd){bd=d;best=o}}
+  if(!best)return false;
+  if(bd>1.6){chase(e,best,e.D.spd,best.x-e.x,best.z-e.z);return true}
+  e.love=best.love=0;e.breedCd=best.breedCd=300;
+  const b=Ents.spawnMob(e.type,(e.x+best.x)/2,Math.max(e.y,best.y)+.1,(e.z+best.z)/2);if(b){b.setBaby(true);b.yaw=e.yaw}
+  for(let i=0;i<7;i++)Part.fx('heart',e.x+(Math.random()-.5),e.y+e.h+Math.random()*.5,e.z+(Math.random()-.5));
+  G.sfx('pop',.6,e.x,e.y,e.z);G.ach('breed');return true}
+};
 const MobAI={
  passive(e,dt,w,P,dx,dz,dy,dist){
   if(e.panic>0){e.panic-=dt;e.stT-=dt;if(e.stT<=0||(!e.dirx&&!e.dirz)){e.stT=.5+Math.random()*.8;const a=Math.atan2(e.x-e.fx,e.z-e.fz)+(Math.random()-.5)*1.4;e.dirx=Math.sin(a);e.dirz=Math.cos(a)}
@@ -2010,7 +2103,7 @@ const Ents={list:[],items:[],mobs:[],others:[],animalChunks:new Set(),spawnT:0,d
  spawnAnimals(ch){const key=CKEY(ch.cx,ch.cz);if(this.animalChunks.has(key))return;this.animalChunks.add(key);const w=G.world;if(this.count(m=>m.D.passive)>=44)return;
   const rnd=rng32(hash(ch.cx,ch.cz,w.seed,777));if(rnd()>.42)return;
   const bx=ch.cx*16+((rnd()*16)|0),bz=ch.cz*16+((rnd()*16)|0);const bio=w.biomeAt(bx,bz);
-  const table={[BIO.PLAINS]:['pig','cow','sheep','chicken','sheep','cow'],[BIO.FOREST]:['pig','pig','sheep','chicken','cow'],[BIO.BIRCH]:['cow','pig','sheep','chicken'],[BIO.TAIGA]:['sheep','cow','pig'],[BIO.TUNDRA]:['sheep','cow'],[BIO.MOUNTAINS]:['sheep']}[bio];if(!table)return;
+  const table={[BIO.PLAINS]:['pig','cow','sheep','chicken','sheep','cow'],[BIO.FOREST]:['pig','pig','sheep','chicken','cow'],[BIO.BIRCH]:['cow','pig','sheep','chicken'],[BIO.TAIGA]:['sheep','cow','pig'],[BIO.TUNDRA]:['sheep','cow'],[BIO.MOUNTAINS]:['sheep'],[BIO.SWAMP]:['pig','chicken','cow','pig']}[bio];if(!table)return;
   const type=table[(rnd()*table.length)|0],n=type==='chicken'?3+((rnd()*3)|0):2+((rnd()*3)|0);
   for(let i=0;i<n;i++){const x=bx+((rnd()*6)|0)-3,z=bz+((rnd()*6)|0)-3;if(!w.has(x,z))continue;const gy=w.groundY(x,z,true);if(gy<SEA)continue;const g=w.get(x,gy,z);if(g!==B.grass&&g!==B.snow_block&&g!==B.dirt)continue;const a1=w.get(x,gy+1,z),a2=w.get(x,gy+2,z);if(!((a1===0||REPL[a1])&&(a2===0||REPL[a2])))continue;if(OP[a1]>3)continue;
    this.spawnMob(type,x+.5,gy+1,z+.5)}},
@@ -2393,7 +2486,8 @@ const ACH=[
  {id:'stone',t:'Steinzeit',d:'Baue Stein mit einer Spitzhacke ab',icon:B.cobble},{id:'furnace',t:'Heiße Sache',d:'Stelle einen Ofen auf',icon:B.furnace},{id:'iron',t:'Eisen-Hardware',d:'Schmelze einen Eisenbarren',icon:I.iron_ingot},
  {id:'ironpick',t:'Profi-Ausrüstung',d:'Stelle eine Eisenspitzhacke her',icon:I.pickaxe_iron},{id:'diamond',t:'DIAMANTEN!',d:'Finde einen Diamanten',icon:I.diamond},{id:'bed',t:'Süße Träume',d:'Schlafe in einem Bett',icon:I.bed},
  {id:'kill',t:'Monsterjäger',d:'Besiege ein feindliches Monster',icon:I.sword_stone},{id:'creeper',t:'Zisch!',d:'Überlebe eine Creeper-Explosion',icon:I.gunpowder},{id:'cow',t:'Frisches Steak',d:'Brate Fleisch im Ofen',icon:I.beef_cooked},
- {id:'bow',t:'Scharfschütze',d:'Triff ein Ziel mit dem Bogen',icon:I.bow},{id:'farm',t:'Landwirt',d:'Ernte Weizen',icon:I.wheat},{id:'tnt',t:'Bumm!',d:'Zünde TNT',icon:B.tnt},{id:'chest',t:'Schatzsucher',d:'Öffne eine Truhe',icon:B.chest}];
+ {id:'bow',t:'Scharfschütze',d:'Triff ein Ziel mit dem Bogen',icon:I.bow},{id:'farm',t:'Landwirt',d:'Ernte Weizen',icon:I.wheat},{id:'tnt',t:'Bumm!',d:'Zünde TNT',icon:B.tnt},{id:'chest',t:'Schatzsucher',d:'Öffne eine Truhe',icon:B.chest},
+ {id:'fish',t:'Petri Heil',d:'Fange etwas mit der Angel',icon:I.fishing_rod},{id:'breed',t:'Familienzuwachs',d:'Lass zwei Tiere ein Junges bekommen',icon:I.wheat},{id:'ruin',t:'Ruinenforscher',d:'Finde eine Ruine',icon:B.stone_bricks_mossy}];
 
 /* ==== 11d_ui_cmds.js ==== */
 // ===== Command menu: every chat command as buttons / small forms =====
@@ -2704,7 +2798,7 @@ const G={
  async newWorld(o){
   const seedStr=(o.seed||'').trim();let seed;
   if(!seedStr)seed=(Math.random()*2147483647)|0;else if(/^-?\d+$/.test(seedStr))seed=parseInt(seedStr,10)|0;else seed=strSeed(seedStr);
-  const meta={id:Save.newId(),name:o.name||'Neue Welt',seed,mode:o.mode||'survival',type:o.type||'normal',diff:o.diff===undefined?1:o.diff,created:Date.now(),played:Date.now(),v:1,tod:.04,ach:{},stats:{time:0,mined:0,kills:0}};
+  const meta={id:Save.newId(),name:o.name||'Neue Welt',seed,mode:o.mode||'survival',type:o.type||'normal',diff:o.diff===undefined?1:o.diff,created:Date.now(),played:Date.now(),v:1,gv:GEN_V,tod:.04,ach:{},stats:{time:0,mined:0,kills:0}};
   await this.startWorld(meta,true)},
  async loadWorld(id){const meta=await Save.getMeta(id);if(!meta){UI.toast('Fehler','Welt nicht gefunden.',0,'#ff7a6a');return}await this.startWorld(meta,false)},
  async startWorld(meta,isNew){
@@ -2712,7 +2806,7 @@ const G={
   UI.setHudVisible(false);await nextFrame();
   try{
   this.clearWorld();await Save.init();await Save.openWorld(meta.id);
-  const w=this.world=new World(meta.seed,meta.type);
+  const w=this.world=new World(meta.seed,meta.type);w.gen.gv=meta.gv||1;
   w.saved=(ch)=>{if(Save.unpackInto(ch)){w.gen.fillBiome(ch);return true}return false};
   this.wireHooks(w);
   this.meta=meta;this.mode=meta.mode;this.diff=meta.diff|0;this.opts.diff=this.diff;if(!meta.ach)meta.ach={};this.stats=Object.assign({time:0,mined:0,kills:0},meta.stats||{});meta.stats=this.stats;
@@ -2919,6 +3013,31 @@ const G={
 
 /* ==== 14b_play.js ==== */
 // ===== Gameplay: targeting, mining, placing, using items, combat, camera, sleeping =====
+// ---- fishing: throw the line into water, wait for the bite (bobber dips + splash), then pull in quickly
+const Fish={on:false,x:0,y:0,z:0,t:0,bite:0,biting:0,obj:null,line:null,
+ build(){const g=new THREE.Group();const a=new THREE.Mesh(new THREE.BoxGeometry(.14,.1,.14),new THREE.MeshBasicMaterial({color:0xd8342c}));a.position.y=-.02;const b=new THREE.Mesh(new THREE.BoxGeometry(.1,.08,.1),new THREE.MeshBasicMaterial({color:0xf2f2f2}));b.position.y=.07;g.add(a,b);g.visible=false;R.scene.add(g);this.obj=g;
+  const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(6),3));this.line=new THREE.Line(lg,new THREE.LineBasicMaterial({color:0x202020}));this.line.frustumCulled=false;this.line.visible=false;R.scene.add(this.line)},
+ use(){if(this.on){this.reel();return}const w=G.world,e=Play.eye,d=Play.dir;if(!e||!d)return;const r=raycast(w,e[0],e[1],e[2],d[0],d[1],d[2],18,true);Hand.swingT=.3;Aud.play('swing',.5);
+  if(!r.hit||r.id!==B.water){UI.msg('Wirf die Angel ins Wasser.','#bfe6ff');return}
+  let y=r.y;while(y<WH-1&&w.get(r.x,y+1,r.z)===B.water)y++;
+  if(!this.obj)this.build();this.on=true;this.x=r.px;this.z=r.pz;this.y=y+.88;this.t=0;this.biting=0;this.bite=this.wait();Part.fx('splash',this.x,this.y,this.z,6);Aud.play('splash',.4,this.x,this.y,this.z)},
+ wait(){return(5+Math.random()*16)*(G.wx&&G.wx.rain>.5?.7:1)},
+ stop(){this.on=false;this.biting=0;if(this.obj){this.obj.visible=false;this.line.visible=false}},
+ reel(){const P=G.player;Hand.swingT=.3;
+  if(this.biting>0){const r=Math.random();const tab=[[I.fish_raw,64],[B.lily_pad,6],[I.string,5],[I.stick,5],[I.leather,4],[I.bone,4],[I.carrot,4],[I.bow,1.2],[I.fishing_rod,1],[I.diamond,.6]];let tot=0;for(const q of tab)tot+=q[1];let k=r*tot,id=tab[0][0];for(const q of tab){k-=q[1];if(k<=0){id=q[0];break}}
+   const dx=P.x-this.x,dy=P.y+1.2-this.y,dz=P.z-this.z,l=Math.hypot(dx,dz)||1;
+   Ents.spawnItem(this.x,this.y+.2,this.z,{id,n:1,d:0},dx*1.15,dy*1.1+Math.sqrt(l)*2.1,dz*1.15);Part.fx('splash',this.x,this.y,this.z,10);Aud.play('splash',.7,this.x,this.y,this.z);G.ach('fish');if(G.stats)G.stats.fish=(G.stats.fish||0)+1}
+  if(G.mode==='survival')Inv.hurtHeld(1);this.stop()},
+ update(dt){if(!this.on)return;const P=G.player,h=Inv.held();
+  if(!P||P.dead||!h||h.id!==I.fishing_rod||G.state!=='play'||Math.hypot(P.x-this.x,P.z-this.z)>26||G.world.get(Math.floor(this.x),Math.floor(this.y-.3),Math.floor(this.z))!==B.water){this.stop();return}
+  this.t+=dt;let oy=Math.sin(this.t*2.4)*.03;
+  if(this.biting>0){this.biting-=dt;oy-=.16;if(Math.random()<dt*20)Part.fx('splash',this.x,this.y,this.z,1);if(this.biting<=0){this.bite=this.t+this.wait()}}
+  else if(this.t>=this.bite){this.biting=1.1;Part.fx('splash',this.x,this.y,this.z,12);Aud.play('splash',.8,this.x,this.y,this.z)}
+  else if(this.bite-this.t<2&&Math.random()<dt*6)Part.fx('bubble',this.x+(Math.random()-.5)*1.5,this.y-.2,this.z+(Math.random()-.5)*1.5);
+  this.obj.visible=true;this.obj.position.set(this.x,this.y+oy,this.z);
+  const a=P.yaw,hx=P.x-Math.sin(a)*.5+Math.cos(a)*.35,hz=P.z-Math.cos(a)*.5-Math.sin(a)*.35,hy=P.eye-.1;
+  const pa=this.line.geometry.attributes.position;pa.setXYZ(0,hx,hy,hz);pa.setXYZ(1,this.x,this.y+oy+.1,this.z);pa.needsUpdate=true;this.line.visible=true}
+};
 const NOIN={w:false,a:false,s:false,d:false,jump:false,sneak:false,sprint:false,moveX:0,moveZ:0};
 const DIRN=(x,z)=>Math.abs(x)>Math.abs(z)?(x>0?1:3):(z>0?2:0);
 const Play={
@@ -2935,7 +3054,7 @@ const Play={
  eatFrac(){return this.eating?Math.min(1,this.eat/1.6):0},
  // ------------------------------------------------------------------ per-frame update
  update(dt){
-  const P=G.player,w=G.world,T=this.T;const ui=UI.isOpen()||G.chatOpen;const sleeping=G.sleepT>=0;
+  const P=G.player,w=G.world,T=this.T;const ui=UI.isOpen()||G.chatOpen;const sleeping=G.sleepT>=0;Fish.update(dt);
   const held=Inv.held();Hand.setItem(held);
   if(sleeping)this.sleepTick(dt);
   // looking via arrow keys
@@ -3017,12 +3136,19 @@ const Play={
    switch(bd.use){
     case'table':UI.show('table');return;
     case'furnace':{let be=w.beAt(T.x,T.y,T.z);if(!be){be={t:'furnace',in:null,fuel:null,out:null,burn:0,burnMax:0,cook:0};w.setBE(T.x,T.y,T.z,be)}UI.show('furnace',{be});return}
-    case'chest':{let be=w.beAt(T.x,T.y,T.z);if(!be||!be.items){be={t:'chest',items:new Array(27).fill(null)};w.setBE(T.x,T.y,T.z,be)}G.ach('chest');UI.show('chest',{be});return}
+    case'chest':{let be=w.beAt(T.x,T.y,T.z);if(!be||!be.items){be={t:'chest',items:new Array(27).fill(null)};w.setBE(T.x,T.y,T.z,be)}G.ach('chest');if([B.stone_bricks,B.stone_bricks_mossy,B.stone_bricks_cracked,B.gravel].includes(w.get(T.x,T.y-1,T.z)))G.ach('ruin');UI.show('chest',{be});return}
     case'door':if(w.toggleDoor(T.x,T.y,T.z)){Hand.swingT=.3;this.placeCd=.25}return;
     case'bed':this.trySleep(T.x,T.y,T.z);return;
+    case'trapdoor':{const m=w.getM(T.x,T.y,T.z)^4;w.setBlock(T.x,T.y,T.z,B.trapdoor,m,1|4);w.hooks.sound((m&4)?'door_open':'door_close',T.x,T.y,T.z);Hand.swingT=.3;this.placeCd=.25;return}
     case'tnt':if(held&&held.id===I.flint_steel){this.igniteTNT(T.x,T.y,T.z);return}break}}
   if(!held){return}
+  // animals: feed them to breed (or to make babies grow up faster)
+  if(first&&T.ent&&T.ent.D&&T.ent.D.passive&&!T.ent.dead&&Breed.food(T.ent)===held.id){T.ent.feed();Hand.swingT=.3;if(G.mode==='survival')Inv.useHeld();this.placeCd=.3;return}
+  if(held.id===I.fishing_rod){if(first){Fish.use()}return}
+  if(held.id===B.lily_pad&&first){const r=raycast(w,this.eye[0],this.eye[1],this.eye[2],this.dir[0],this.dir[1],this.dir[2],4.6,true);
+   if(r.hit&&r.id===B.water&&w.get(r.x,r.y+1,r.z)===0){w.setBlock(r.x,r.y+1,r.z,B.lily_pad,0,3|4);Aud.play('place',.8,r.x+.5,r.y+1,r.z+.5,'grass');Hand.swingT=.3;this.placeCd=.25;if(G.mode==='survival')Inv.useHeld()}return}
   // 2) the held item
+  if(hd.plantSeed&&hd.food&&T.hit&&T.id===B.farmland&&T.f===2){this.plantSeed();return}
   if(hd.food&&!hd.place&&first){const f=foodOf(held.id);if(f&&(P.food<20||held.id===I.rotten_flesh&&false)){this.eating=true;this.eat=0;this.digT=0;return}if(f&&G.mode==='creative'){this.eating=true;this.eat=0;this.digT=0;return}return}
   if(held.id===I.bow&&first){if(G.mode==='creative'||Inv.count(I.arrow)>0){this.drawing=true;this.draw=0;Aud.play('bow_draw',.6)}else if(first)UI.msg('Du hast keine Pfeile.','#ffb0a0');return}
   if(hd.cat==='armor'&&first){const s=hd.slot,cur=Inv.armor[s];Inv.armor[s]=held;Inv.main[Inv.sel]=cur;Inv.ver++;Aud.play('click',.7);return}
@@ -3055,6 +3181,7 @@ const Play={
   else if(bd.slab)m=(f===3||(f<2||f>3)&&fracY>=.5)?1:0;
   else if(bd.stairs)m=fwd|((f===3||(f<2||f>3)&&fracY>=.5)?4:0);
   else if(pid===B.furnace||pid===B.chest)m=back;
+  else if(pid===B.trapdoor)m=back|((f===3||(f<2||f>3)&&fracY>=.5)?8:0);
   else if(pid===B.water||pid===B.lava)m=0;
   if(this.blockHitsPlayer(pid,m,tx,ty,tz))return false;
   w.setBlock(tx,ty,tz,pid,m,3|4);
@@ -3092,12 +3219,12 @@ const Play={
  hoe(){const w=G.world,T=this.T;if(!T.hit)return;if(T.id!==B.grass&&T.id!==B.dirt)return;if(T.f===3)return;const a=w.get(T.x,T.y+1,T.z);if(a!==0&&!(REPL[a]&&!LIQ[a]))return;
   if(a!==0)w.setBlock(T.x,T.y+1,T.z,0,0,3);w.setBlock(T.x,T.y,T.z,B.farmland,0,3|4);Aud.play('dig',.8,T.x+.5,T.y+.5,T.z+.5,'gravel');Hand.swingT=.3;this.placeCd=.3;
   if(G.mode==='survival')Inv.hurtHeld(1);this.urgentAround(T.x,T.z)},
- plantSeed(){const w=G.world,T=this.T;if(T.id!==B.farmland||T.f!==2)return;if(w.get(T.x,T.y+1,T.z)!==0)return;w.setBlock(T.x,T.y+1,T.z,B.wheat,0,3|4);Aud.play('place',.6,T.x+.5,T.y+1,T.z+.5,'grass');Hand.swingT=.3;this.placeCd=.25;if(G.mode==='survival')Inv.useHeld()},
+ plantSeed(){const w=G.world,T=this.T;if(T.id!==B.farmland||T.f!==2)return;if(w.get(T.x,T.y+1,T.z)!==0)return;const hd=itemDef(Inv.held().id),crop=hd.crop?B[hd.crop]:B.wheat;w.setBlock(T.x,T.y+1,T.z,crop,0,3|4);Aud.play('place',.6,T.x+.5,T.y+1,T.z+.5,'grass');Hand.swingT=.3;this.placeCd=.25;if(G.mode==='survival')Inv.useHeld()},
  shoot(){const P=G.player,w=G.world;const c=Math.min(1,this.draw);this.drawing=false;this.draw=0;if(c<.12){return}
   if(G.mode==='survival'){if(!Inv.take(I.arrow,1))return;Inv.hurtHeld(1)}
   const sp=34*c+4,d=this.dir;const x=P.x+d[0]*.6,y=P.eye-.1+d[1]*.6,z=P.z+d[2]*.6;
   Ents.spawnArrow(x,y,z,d[0]*sp+P.vx*.3,d[1]*sp,d[2]*sp+P.vz*.3,2+7*c*c,'player');Aud.play('bow',.8);Hand.swingT=.3;this.placeCd=.2},
- pickBlock(){const T=this.T;if(!T.hit||G.mode!=='creative')return;let id=T.id;if(id===B.furnace_lit)id=B.furnace;else if(id===B.door_block)id=I.door;else if(id===B.bed_block)id=I.bed;else if(id===B.wheat)id=I.seeds;else if(id===B.farmland)id=B.dirt;else if(id===B.reeds)id=I.sugar_cane;
+ pickBlock(){const T=this.T;if(!T.hit||G.mode!=='creative')return;let id=T.id;if(id===B.furnace_lit)id=B.furnace;else if(id===B.door_block)id=I.door;else if(id===B.bed_block)id=I.bed;else if(id===B.wheat)id=I.seeds;else if(id===B.carrots)id=I.carrot;else if(id===B.farmland)id=B.dirt;else if(id===B.reeds)id=I.sugar_cane;
   for(let i=0;i<9;i++){const s=Inv.main[i];if(s&&s.id===id){G.selectSlot(i);return}}
   let slot=Inv.sel;if(Inv.main[slot]){for(let i=0;i<9;i++)if(!Inv.main[i]){slot=i;break}}
   Inv.main[slot]={id,n:stMax(id),d:0};Inv.sel=slot;Inv.ver++},

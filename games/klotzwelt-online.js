@@ -356,6 +356,13 @@
     if (byPlayer && on()) kw('mhits/' + N.wid + '/' + this.owner).push({ m: this.mid, d: r1(dmg), x: r1(sx), z: r1(sz), ts: firebase.database.ServerValue.TIMESTAMP }).catch(() => { });
     return true;
   };
+  // feeding a copy: the owner's computer does the breeding
+  const oFeed = Mob.prototype.feed;
+  Mob.prototype.feed = function () {
+    if (!this.proxy) return oFeed.apply(this, arguments);
+    for (let i = 0; i < 3; i++) Part.fx('heart', this.x + (Math.random() - .5) * .6, this.y + this.h + .2, this.z + (Math.random() - .5) * .6);
+    if (on()) kw('mhits/' + N.wid + '/' + this.owner).push({ m: this.mid, d: 0, f: 1, x: 0, z: 0, ts: firebase.database.ServerValue.TIMESTAMP }).catch(() => { });
+  };
   Mob.prototype.hurt0 = function () { if (!this.proxy) return oMobHurt0.apply(this, arguments); };
   // a copy never dies on its own (its owner says when); loot of our own mobs is shared
   Mob.prototype.die = function () {
@@ -441,6 +448,7 @@
       m.tx = x; m.ty = y; m.tz = z; m.tyaw = yaw; m.fuse = fuse;
       m.aim = (fl & 4) ? .5 : 0; if ((fl & 8) && !m.swing) m.swing = 1; m.burn = (fl & 16) ? 1 : 0;
       if ((fl & 2) && m.hurtT <= 0) m.hurtT = .4;
+      if (!!(fl & 32) !== !!m.baby) m.setBaby(!!(fl & 32));
       if ((fl & 1) && !m.dead) { m.dead = true; m.deathT = 0; G.sfx('death_' + m.type, 1, m.x, m.y, m.z); }
     }
     for (const [key, m] of N.proxies) if (m.owner === uid && !seen.has(key)) { if (!m.dead) { m.dead = true; m.deathT = 9; } N.proxies.delete(key); }
@@ -477,7 +485,7 @@
       // nobody near enough to see it: don't send it (saves a lot of traffic with many players)
       if (!others.some(t => (t.x - m.x) ** 2 + (t.z - m.z) ** 2 < 96 * 96)) continue;
       if (m.dead && m.deathT > .5) continue;
-      const fl = (m.dead ? 1 : 0) | (m.hurtT > 0 ? 2 : 0) | (m.aim > 0 ? 4 : 0) | (m.swing > .5 ? 8 : 0) | (m.burn > 0 ? 16 : 0);
+      const fl = (m.dead ? 1 : 0) | (m.hurtT > 0 ? 2 : 0) | (m.aim > 0 ? 4 : 0) | (m.swing > .5 ? 8 : 0) | (m.burn > 0 ? 16 : 0) | (m.baby ? 32 : 0);
       out[m.mid] = m.type + ',' + r1(m.x) + ',' + r1(m.y) + ',' + r1(m.z) + ',' + r1(m.yaw) + ',' + fl + ',' + r1(m.fuse || 0);
     }
     const s = JSON.stringify(out);
@@ -490,7 +498,7 @@
     const v = s.val(); s.ref.remove().catch(() => { });
     if (!v || !on()) return;
     const m = Ents.mobs.find(e => !e.proxy && e.mid === v.m);
-    if (m) m.hurt(+v.d || 1, +v.x, +v.z, false);
+    if (m && v.f) m.feed(); else if (m) m.hurt(+v.d || 1, +v.x, +v.z, false);
   }
   function onPlayerHit(s) {
     const v = s.val(); s.ref.remove().catch(() => { });
@@ -828,7 +836,7 @@
     store.set('klotzwelt.netWorlds', mine.slice(0, 20));
     const parse = (s, d) => { try { return s ? JSON.parse(s) : d; } catch (e) { return d; } };
     const meta = { id: 'net-' + wid, net: wid, name: doc.name, seed: doc.seed, type: doc.type || 'normal', mode: doc.mode || 'survival', diff: 1, created: doc.created, played: Date.now(), v: 1,
-      tod: ((serverNow() - doc.created) / DAY_MS + .04) % 1, ach: sv ? parse(sv.ach, {}) : {}, stats: sv ? parse(sv.stats, {}) : { time: 0, mined: 0, kills: 0 } };
+      gv: doc.gv || 1, tod: ((serverNow() - doc.created) / DAY_MS + .04) % 1, ach: sv ? parse(sv.ach, {}) : {}, stats: sv ? parse(sv.stats, {}) : { time: 0, mined: 0, kills: 0 } };
     if (sv && sv.p) { meta.player = sv.p; meta.inv = parse(sv.inv, null); meta.bed = sv.bed || null; }
     // presence
     const me = kw('players/' + wid + '/' + N.uid);
@@ -897,7 +905,7 @@
       if (r.committed) code = c;
     }
     if (!code) throw new Error('Kein freier Code gefunden, bitte nochmal versuchen.');
-    await kw('worlds/' + wid).set({ owner: N.uid, name: (o.name || 'Online-Welt').slice(0, 30), seed, type: o.type || 'normal', mode: o.mode || 'survival', created: Math.round(serverNow()), code });
+    await kw('worlds/' + wid).set({ owner: N.uid, name: (o.name || 'Online-Welt').slice(0, 30), seed, type: o.type || 'normal', mode: o.mode || 'survival', created: Math.round(serverNow()), code, gv: GEN_V });
     return wid;
   }
   async function widOf(code) {
