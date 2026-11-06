@@ -2037,7 +2037,7 @@ const Hand={
  H:{block:[.5,-.5,-.75,1.9,.3,-.4,.62],flat:[.62,-.42,-.8,1.4,-.2,-.9,.5],item:[.62,-.42,-.8,1.4,-.2,-.9,.5],tool:[.4,-.48,-.8,2.5,.05,-.08,.55],bow:[.62,-.42,-.8,1.4,-.2,-.9,.5]},
  cur:-1,swing:0,swingT:0,equip:1,item:null,mesh:null,arm:null,lastSel:-1,eat:0,eating:false,draw:0,lt:0,kind:'arm',
  // tools: handle in the fist, rising up and to the left towards the crosshair, axe/pick head facing the centre
- toolPose(){const u=new THREE.Vector3(-.1,.75,-.65).normalize(),n=new THREE.Vector3(-.6,0,1);n.sub(u.clone().multiplyScalar(n.dot(u))).normalize();const v=new THREE.Vector3().crossVectors(n,u).multiplyScalar(-1);
+ toolPose(){const u=new THREE.Vector3(0,1,-.1).normalize(),n=new THREE.Vector3(-1,0,.4);n.sub(u.clone().multiplyScalar(n.dot(u))).normalize();const v=new THREE.Vector3().crossVectors(n,u).multiplyScalar(-1);
   const X=u.clone().add(v).multiplyScalar(Math.SQRT1_2),Y=u.clone().sub(v).multiplyScalar(Math.SQRT1_2);const e=new THREE.Euler().setFromRotationMatrix(new THREE.Matrix4().makeBasis(X,Y,n),'XYZ');return[.5,-.3,-.95,e.x,e.y,e.z,.5]},
  init(){this.T.tool=this.toolPose();const hs=R.hs;this.g=new THREE.Group();hs.add(this.g);this.matBlk=entMat(null,true,false);this.matItm=entMat(ITEXT,true,true);
   // arm (skin with sleeve, shoulder at +y, hand at -y)
