@@ -1570,10 +1570,15 @@
   let kIdx = 0, logoTaps = [];
   // e.code als Rückfall, damit B und A auf jedem Tastaturlayout zählen
   function konami(e) {
+    // Shift, Strg, Alt, Feststelltaste usw. zählen nicht und brechen den Code nicht ab
+    if (['Shift', 'Control', 'Alt', 'AltGraph', 'Meta', 'CapsLock', 'Fn'].includes(e.key) || e.repeat) return false;
     const c = e.code === 'KeyB' ? 'b' : e.code === 'KeyA' ? 'a' : '';
     const k = e.key && e.key.length === 1 ? e.key.toLowerCase() : e.key;
-    const want = KONAMI[kIdx], was = kIdx;
-    if (k === want || c === want) {
+    // B und A dürfen am Ende in beliebiger Reihenfolge kommen
+    const was = kIdx, kk = c || k;
+    const want = kIdx === 8 ? ['b', 'a'] : kIdx === 9 ? [konami.first === 'a' ? 'b' : 'a'] : [KONAMI[kIdx]];
+    if (want.includes(k) || want.includes(c)) {
+      if (kIdx === 8) konami.first = kk;
       if (++kIdx === KONAMI.length) { kIdx = 0; unlockSecret(); return true; }
     } else kIdx = (k === KONAMI[0]) ? 1 : 0;
     // ab der vierten richtigen Taste zeigt der Fernseher, dass etwas passiert
