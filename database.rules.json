@@ -41,14 +41,17 @@
         "$wid": {
           ".read": "auth != null",
           ".write": "auth != null && (!data.exists() || data.child('owner').val() === auth.uid)",
-          ".validate": "newData.child('owner').isString() && newData.child('seed').isNumber() && newData.child('created').isNumber() && newData.child('name').isString() && newData.child('name').val().length <= 30"
+          ".validate": "newData.child('owner').isString() && newData.child('seed').isNumber() && newData.child('created').isNumber() && newData.child('name').isString() && newData.child('name').val().length <= 30",
+          "pvp": {
+            ".validate": "newData.isBoolean()"
+          }
         }
       },
       "edits": {
         "$wid": {
           ".read": "auth != null",
           "$k": {
-            ".write": "auth != null && root.child('kw/worlds/' + $wid + '/owner').exists()",
+            ".write": "auth != null && root.child('kw/worlds/' + $wid + '/owner').exists() && (!root.child('kw/bans/' + $wid + '/' + auth.uid).exists() || root.child('kw/bans/' + $wid + '/' + auth.uid).val() < now)",
             ".validate": "$k.matches(/^-?[0-9]{1,8}_[0-9]{1,3}_-?[0-9]{1,8}$/) && newData.isString() && newData.val().length <= 12"
           }
         }
@@ -57,7 +60,7 @@
         "$wid": {
           ".read": "auth != null",
           "$uid": {
-            ".write": "auth != null && auth.uid === $uid && root.child('kw/worlds/' + $wid + '/owner').exists()",
+            ".write": "auth != null && auth.uid === $uid && root.child('kw/worlds/' + $wid + '/owner').exists() && (!newData.exists() || (!root.child('kw/bans/' + $wid + '/' + auth.uid).exists() || root.child('kw/bans/' + $wid + '/' + auth.uid).val() < now))",
             ".validate": "newData.child('name').isString() && newData.child('name').val().length >= 1 && newData.child('name').val().length <= 16"
           }
         }
@@ -160,6 +163,15 @@
           "$k": {
             ".write": "auth != null && root.child('kw/worlds/' + $wid + '/owner').exists() && (!data.exists() || data.child('u').val() === auth.uid)",
             ".validate": "newData.child('u').val() === auth.uid && newData.child('t').isString()"
+          }
+        }
+      },
+      "bans": {
+        "$wid": {
+          ".read": "auth != null",
+          "$uid": {
+            ".write": "auth != null && root.child('kw/worlds/' + $wid + '/owner').val() === auth.uid",
+            ".validate": "newData.isNumber()"
           }
         }
       }

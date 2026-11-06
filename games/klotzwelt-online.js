@@ -18,7 +18,9 @@
     edits: new Map(), byChunk: new Map(), mine: new Map(), out: new Map(), cap: 0,
     players: new Map(), avatars: new Map(), refs: [], joinedAt: 0, lastPos: '', posT: 0, flushT: 0,
     be: new Map(), beByChunk: new Map(), beSent: new Map(), locks: new Map(), open: null, items: new Map(), remote: false, wxo: null,
-    tgts: new Map(), proxies: new Map(), claims: new Map(), mobSig: '', mobT: 0 };
+    tgts: new Map(), proxies: new Map(), claims: new Map(), mobSig: '', mobT: 0,
+    conn: false, everConn: false, lostAt: 0, ping: 0, swings: 0, prevSw: 0, beatT: 0, myClaims: new Set(), oldClaims: new Map(),
+    orphans: new Map(), pvpT: new Map(), ban: 0 };
   const serverNow = () => Date.now() + N.offset;
   const on = () => !!N.wid && !!G.meta && G.meta.net === N.wid;
   const store = {
@@ -44,6 +46,7 @@
       const cred = await auth.signInAnonymously();
       N.uid = cred.user.uid; N.db = db;
       db.ref('.info/serverTimeOffset').on('value', s => { N.offset = s.val() || 0; });
+      db.ref('.info/connected').on('value', s => connChanged(!!s.val()));
       return db;
     })();
     fbReady.catch(() => { fbReady = null; });
@@ -206,6 +209,7 @@
     const ref = kw('locks/' + N.wid + '/' + k);
     ref.set({ u: N.uid, n: N.name, t: firebase.database.ServerValue.TIMESTAMP }).catch(() => { });
     ref.onDisconnect().remove();
+    N.openRef = ref;
     const r = oShow.apply(this, arguments);
     const cur = UI.cur;
     if (cur && cur.name === name) {
@@ -214,7 +218,7 @@
       cur.tick = function (dt) { if (oTick) oTick.call(this, dt); bePush(be, name === 'furnace'); };
       cur.close = function () {
         const res = oClose.apply(this, arguments);
-        bePush(be, name === 'furnace'); N.open = null;
+        bePush(be, name === 'furnace'); N.open = null; if (N.openRef === ref) N.openRef = null;
         ref.remove().catch(() => { }); ref.onDisconnect().cancel();
         return res;
       };
@@ -371,7 +375,7 @@
     if (!on()) return oAnimals.apply(this, arguments);
     const key = String(CKEY(ch.cx, ch.cz));
     for (const [uid, set] of N.claims) if (uid !== N.uid && N.players.has(uid) && set[key]) { this.animalChunks.add(+key); return; }
-    if (!this.animalChunks.has(+key)) kw('achunks/' + N.wid + '/' + N.uid + '/' + key).set(1).catch(() => { });
+    if (!this.animalChunks.has(+key)) { N.myClaims.add(key); kw('achunks/' + N.wid + '/' + N.uid + '/' + key).set(1).catch(() => { }); }
     return oAnimals.apply(this, arguments);
   };
   // skeleton arrows fly on every computer, so they can hit everybody
@@ -417,6 +421,17 @@
       let m = N.proxies.get(key);
       if (m && !m.dead && Ents.mobs.indexOf(m) < 0) { N.proxies.delete(key); m = null; }   // dropped for being far away
       if (!m) {
+        const tl = mid.indexOf('~');
+        if (mid[0] === 'o' && tl > 0) {
+          const from = mid.slice(1, tl), rest = mid.slice(tl + 1);
+          // one of OUR animals that someone took over while we were offline: theirs counts, ours goes
+          if (from === N.uid.slice(0, 8)) { const own = Ents.mobs.find(e => !e.proxy && e.mid === rest); if (own && !own.dead) { own.dead = true; own.deathT = 9; } }
+          // a mob whose owner left and that another player took over: keep showing the same one
+          const o = N.orphans.get(from + '~' + rest);
+          if (o && !o.m.dead && Ents.mobs.indexOf(o.m) >= 0) { N.orphans.delete(from + '~' + rest); m = o.m; m.owner = uid; m.mid = mid; N.proxies.set(key, m); }
+        }
+      }
+      if (!m) {
         if (fl & 1) continue;
         if ((x - P.x) ** 2 + (z - P.z) ** 2 > 80 * 80) continue;
         m = new Mob(type, x, y, z); m.proxy = true; m.owner = uid; m.mid = mid; m.yaw = yaw; m.tx = x; m.ty = y; m.tz = z; m.tyaw = yaw;
@@ -430,13 +445,37 @@
     }
     for (const [key, m] of N.proxies) if (m.owner === uid && !seen.has(key)) { if (!m.dead) { m.dead = true; m.deathT = 9; } N.proxies.delete(key); }
   }
+  // a player left (or lost the connection): one of the others takes over their animals and monsters
+  function chainMid(uid, mid) { const m = 'o' + uid.slice(0, 8) + '~' + mid; return m.length <= 120 ? m : 'r' + (++midN).toString(36) + N.uid.slice(0, 4); }
+  function ownerGone(uid) {
+    if (uid === N.uid || !on()) return;
+    let heir = N.uid; for (const u of N.players.keys()) if (u !== uid && u < heir) heir = u;
+    const w = G.world;
+    for (const [key, m] of N.proxies) {
+      if (m.owner !== uid) continue;
+      N.proxies.delete(key);
+      if (m.dead) { m.deathT = 9; continue; }
+      if (heir !== N.uid) { N.orphans.set(uid.slice(0, 8) + '~' + m.mid, { m, t: performance.now() }); continue; }
+      const c = w && w.chunkAt(m.tx, m.tz);
+      if (!c || c.state < 1) { m.dead = true; m.deathT = 9; continue; }
+      m.proxy = false; m.owner = undefined; m.x = m.tx; m.y = m.ty; m.z = m.tz; m.yaw = m.tyaw; m.vx = m.vy = m.vz = 0;
+      m.mid = chainMid(uid, m.mid);
+    }
+    if (heir === N.uid) {
+      const cl = N.claims.get(uid) || N.oldClaims.get(uid);
+      if (cl) { const o = {}; for (const k in cl) { o[k] = 1; N.myClaims.add(k); if (Ents.animalChunks) Ents.animalChunks.add(+k); } kw('achunks/' + N.wid + '/' + N.uid).update(o).catch(() => { }); }
+    }
+    N.oldClaims.delete(uid);
+  }
   function dropProxies(uid) {
     for (const [key, m] of N.proxies) if (!uid || m.owner === uid) { if (!m.dead) { m.dead = true; m.deathT = 9; } N.proxies.delete(key); }
   }
   function sendMobs() {
-    const out = {};
+    const out = {}, others = [...N.tgts.values()].filter(t => N.players.has(t.uid));
     for (const m of Ents.mobs) {
       if (m.proxy || !m.mid) continue;
+      // nobody near enough to see it: don't send it (saves a lot of traffic with many players)
+      if (!others.some(t => (t.x - m.x) ** 2 + (t.z - m.z) ** 2 < 96 * 96)) continue;
       if (m.dead && m.deathT > .5) continue;
       const fl = (m.dead ? 1 : 0) | (m.hurtT > 0 ? 2 : 0) | (m.aim > 0 ? 4 : 0) | (m.swing > .5 ? 8 : 0) | (m.burn > 0 ? 16 : 0);
       out[m.mid] = m.type + ',' + r1(m.x) + ',' + r1(m.y) + ',' + r1(m.z) + ',' + r1(m.yaw) + ',' + fl + ',' + r1(m.fuse || 0);
@@ -457,6 +496,12 @@
     const v = s.val(); s.ref.remove().catch(() => { });
     if (!v || !on() || !G.player || G.player.dead) return;
     if (v.ts && serverNow() - v.ts > 4000) return;
+    if (v.k === 'pvp') {
+      if (!N.doc || !N.doc.pvp) return;
+      DEATHMSG.pvp = (v.n ? String(v.n).slice(0, 16) : 'Jemand') + ' hat dich besiegt.';
+      G.player.hurt((+v.d || 1) * (1 - Math.min(20, G.player.armorPts || 0) * .04), 'pvp', +v.x, +v.z);
+      return;
+    }
     G.player.hurt(+v.d || 1, v.k || 'mob', +v.x, +v.z);
   }
 
@@ -470,27 +515,43 @@
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true, fog: false }));
     s.scale.set(w / 100, .4, 1); s.renderOrder = 10; return s;
   }
+  const ITEX = new Map();
+  function itemTex(id) {
+    let t = ITEX.get(id);
+    if (!t) { t = new THREE.CanvasTexture(iconFor(id)); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; ITEX.set(id, t); }
+    return t;
+  }
   function makeAvatar(uid, name) {
-    const g = new THREE.Group(), col = hashCol(uid), skin = new THREE.Color(0xe0b48c), dark = col.clone().multiplyScalar(.55);
+    const g = new THREE.Group(), body = new THREE.Group(), col = hashCol(uid), skin = new THREE.Color(0xe0b48c), dark = col.clone().multiplyScalar(.55);
+    g.add(body);
     const mats = [];
     const box = (w, h, d, c, x, y, z, pivotTop) => {
       const m = new THREE.MeshBasicMaterial({ color: c.clone() }); m.userData.base = c.clone(); mats.push(m);
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
-      if (pivotTop) { const p = new THREE.Group(); p.position.set(x, y, z); mesh.position.y = -h / 2; p.add(mesh); g.add(p); return p; }
-      mesh.position.set(x, y, z); g.add(mesh); return mesh;
+      if (pivotTop) { const p = new THREE.Group(); p.position.set(x, y, z); mesh.position.y = -h / 2; p.add(mesh); body.add(p); return p; }
+      mesh.position.set(x, y, z); body.add(mesh); return mesh;
     };
-    const head = box(.5, .5, .5, skin, 0, 1.55, 0);
-    const eyes = new THREE.Mesh(new THREE.BoxGeometry(.3, .06, .02), new THREE.MeshBasicMaterial({ color: 0x222222 })); eyes.position.set(0, 1.6, -.26); g.add(eyes);
+    const head = new THREE.Group(); head.position.set(0, 1.32, 0); body.add(head);
+    const hm = new THREE.MeshBasicMaterial({ color: skin.clone() }); hm.userData.base = skin.clone(); mats.push(hm);
+    const hmesh = new THREE.Mesh(new THREE.BoxGeometry(.5, .5, .5), hm); hmesh.position.y = .25; head.add(hmesh);
+    const eyes = new THREE.Mesh(new THREE.BoxGeometry(.3, .06, .02), new THREE.MeshBasicMaterial({ color: 0x222222 })); eyes.position.set(0, .3, -.26); head.add(eyes);
     box(.5, .7, .26, col, 0, .97, 0);
     const armL = box(.2, .7, .2, col, -.36, 1.3, 0, true), armR = box(.2, .7, .2, col, .36, 1.3, 0, true);
     const legL = box(.22, .62, .22, dark, -.12, .62, 0, true), legR = box(.22, .62, .22, dark, .12, .62, 0, true);
+    // the item in the right hand: two crossed pictures, so it can be seen from every side
+    const im = new THREE.MeshBasicMaterial({ transparent: true, alphaTest: .4, side: THREE.DoubleSide }); im.userData.base = new THREE.Color(1, 1, 1); mats.push(im);
+    const item = new THREE.Group(); item.position.set(0, -.7, -.12); item.rotation.x = -.5;
+    for (const ry of [Math.PI / 4, -Math.PI / 4]) { const q = new THREE.Mesh(new THREE.PlaneGeometry(.42, .42), im); q.rotation.y = ry; item.add(q); }
+    item.visible = false; armR.add(item);
     const tag = nameSprite(name); tag.position.y = 2.15; g.add(tag);
     R.scene.add(g);
-    return { g, head, armL, armR, legL, legR, tag, mats, name, x: 0, y: 0, z: 0, yaw: 0, pitch: 0, tx: 0, ty: 0, tz: 0, tyaw: 0, tpitch: 0, phase: 0, fresh: true };
+    return { g, body, head, armL, armR, legL, legR, tag, mats, item, im, itemId: 0, name, x: 0, y: 0, z: 0, yaw: 0, pitch: 0, buf: [], phase: 0,
+      sw: -1, swingT: 0, sneakK: 0, hp: 20, hurtT: 0 };
   }
   function dropAvatar(uid) {
     const a = N.avatars.get(uid); if (!a) return;
-    R.scene.remove(a.g); a.g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
+    R.scene.remove(a.g); a.g.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material !== a.im) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
+    a.im.dispose();
     N.avatars.delete(uid);
   }
   function onPlayer(uid, p, isNew) {
@@ -498,48 +559,217 @@
     const known = N.players.has(uid);
     N.players.set(uid, p);
     let a = N.avatars.get(uid);
-    if (!a || a.name !== p.name) { dropAvatar(uid); a = makeAvatar(uid, p.name || '?'); N.avatars.set(uid, a); }
+    if (!a || a.name !== (p.name || '?')) { dropAvatar(uid); a = makeAvatar(uid, p.name || '?'); N.avatars.set(uid, a); }
     const tg = targetOf(uid); tg.x = +p.x || 0; tg.y = +p.y || 0; tg.z = +p.z || 0; tg.eye = tg.y + 1.62; tg.dead = !!p.dd || tg.y < -50; tg.creative = !!p.cr;
-    a.tx = +p.x || 0; a.ty = +p.y || 0; a.tz = +p.z || 0; a.tyaw = +p.yaw || 0; a.tpitch = +p.pitch || 0;
-    if (a.fresh) { a.x = a.tx; a.y = a.ty; a.z = a.tz; a.yaw = a.tyaw; a.fresh = false; }
+    // positions go into a small buffer and are shown ~0.14 s late, so movement stays smooth even when updates arrive unevenly
+    const now = performance.now(), last = a.buf[a.buf.length - 1];
+    const smp = { t: now, x: +p.x || 0, y: +p.y || 0, z: +p.z || 0, yaw: +p.yaw || 0, pitch: +p.pitch || 0 };
+    if (last && now - last.t > 250) a.buf.push(Object.assign({}, last, { t: now - 110 }));
+    if (last && Math.hypot(smp.x - last.x, smp.y - last.y, smp.z - last.z) > 12) a.buf.length = 0;   // teleport: jump there
+    a.buf.push(smp); if (a.buf.length > 12) a.buf.splice(0, a.buf.length - 12);
+    if (a.buf.length === 1) { a.x = smp.x; a.y = smp.y; a.z = smp.z; a.yaw = smp.yaw; a.pitch = smp.pitch; }
+    if (p.sw !== undefined && p.sw !== a.sw) { if (a.sw >= 0) a.swingT = .3; a.sw = p.sw; }
+    const hp = p.hp === undefined ? 20 : +p.hp; if (hp < a.hp) a.hurtT = .35; a.hp = hp;
+    const hid = +p.h || 0;
+    if (hid !== a.itemId) { a.itemId = hid; let ok = false; if (hid) { try { a.im.map = itemTex(hid); a.im.needsUpdate = true; ok = true; } catch (e) { } } a.item.visible = ok; }
     if (isNew && !known) UI.msg((p.name || 'Jemand') + ' ist der Welt beigetreten.', '#ffe9a8');
   }
   function lerpAngle(a, b, t) { let d = ((b - a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return a + d * t; }
+  function sampleAt(buf, rt) {
+    while (buf.length > 2 && buf[1].t <= rt) buf.shift();
+    const a = buf[0], b = buf[1];
+    if (!a) return null;
+    if (!b || rt <= a.t) return a;
+    const k = Math.min(1, (rt - a.t) / Math.max(1, b.t - a.t));
+    return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, z: a.z + (b.z - a.z) * k, yaw: lerpAngle(a.yaw, b.yaw, k), pitch: a.pitch + (b.pitch - a.pitch) * k };
+  }
+  const RED = new THREE.Color(1, .25, .2);
   let lastT = performance.now();
   function tick(now) {
     requestAnimationFrame(tick);
     const dt = Math.min(.1, (now - lastT) / 1000); lastT = now;
+    netHud(now);
     if (!N.wid) return;
     const playing = on() && (G.state === 'play' || G.state === 'dead');
     const light = .25 + .75 * ((G.env && G.env.dayF) || 1);
-    for (const a of N.avatars.values()) {
-      a.g.visible = playing;
-      if (!playing) continue;
-      const k = Math.min(1, dt * 10), ox = a.x, oz = a.z;
-      a.x += (a.tx - a.x) * k; a.y += (a.ty - a.y) * k; a.z += (a.tz - a.z) * k;
-      a.yaw = lerpAngle(a.yaw, a.tyaw, k); a.pitch += (a.tpitch - a.pitch) * k;
+    const rt = now - 140;
+    for (const [uid, a] of N.avatars) {
+      const p = N.players.get(uid);
+      a.g.visible = playing && !(p && p.dd);
+      if (!a.g.visible) continue;
+      const ox = a.x, oz = a.z, s = sampleAt(a.buf, rt);
+      if (s) { a.x = s.x; a.y = s.y; a.z = s.z; a.yaw = s.yaw; a.pitch = s.pitch; }
       const sp = Math.hypot(a.x - ox, a.z - oz) / Math.max(dt, 1e-3);
       a.phase += dt * Math.min(sp, 6) * 2.2;
       const sw = Math.sin(a.phase) * Math.min(1, sp / 3) * .8;
+      a.sneakK += (((p && p.sn) ? 1 : 0) - a.sneakK) * Math.min(1, dt * 12);
       a.g.position.set(a.x, a.y, a.z); a.g.rotation.y = a.yaw;
-      a.head.rotation.x = a.pitch * .8;
-      a.legL.rotation.x = sw; a.legR.rotation.x = -sw; a.armL.rotation.x = -sw * .8; a.armR.rotation.x = sw * .8;
-      for (const m of a.mats) m.color.copy(m.userData.base).multiplyScalar(light);
+      a.body.position.y = -.18 * a.sneakK; a.body.rotation.x = -.35 * a.sneakK; a.tag.position.y = 2.15 - .3 * a.sneakK;
+      a.head.rotation.x = a.pitch * .8 + .3 * a.sneakK;
+      a.legL.rotation.x = sw + .35 * a.sneakK; a.legR.rotation.x = -sw + .35 * a.sneakK; a.armL.rotation.x = -sw * .8;
+      if (a.swingT > 0) { a.swingT = Math.max(0, a.swingT - dt); const q = 1 - a.swingT / .3; a.armR.rotation.x = -Math.sin(q * Math.PI) * 1.5 - .3; }
+      else a.armR.rotation.x = a.item.visible ? -.35 + sw * .4 : sw * .8;
+      if (a.hurtT > 0) a.hurtT = Math.max(0, a.hurtT - dt);
+      for (const m of a.mats) { m.color.copy(m.userData.base); if (a.hurtT > 0) m.color.lerp(RED, .6); m.color.multiplyScalar(light); }
     }
+    for (const [k, o] of N.orphans) if (now - o.t > 4000) { if (!o.m.dead) { o.m.dead = true; o.m.deathT = 9; } N.orphans.delete(k); }
     if (!on()) return;
-    // send our own position ~8×/s while it changes
-    N.posT -= dt; N.flushT -= dt;
+    N.posT -= dt; N.flushT -= dt; N.beatT -= dt;
     if (N.flushT <= 0) { N.flushT = .12; flush(); }
     N.mobT -= dt; if (N.mobT <= 0) { N.mobT = .2; sendMobs(); }
+    if (Hand.swingT > N.prevSw + .05) N.swings = (N.swings + 1) % 100;
+    N.prevSw = Hand.swingT;
+    // send our own position ~10×/s while it changes, and a sign of life every 5 s
     const P = G.player;
     if (P && N.posT <= 0) {
-      N.posT = .125;
-      const pos = { x: Math.round(P.x * 100) / 100, y: Math.round(P.y * 100) / 100, z: Math.round(P.z * 100) / 100, yaw: Math.round(P.yaw * 100) / 100, pitch: Math.round(P.pitch * 100) / 100, dd: P.dead ? 1 : 0, cr: P.creative ? 1 : 0 };
-      const sig = JSON.stringify(pos);
-      if (sig !== N.lastPos) { N.lastPos = sig; kw('players/' + N.wid + '/' + N.uid).update(Object.assign(pos, { t: firebase.database.ServerValue.TIMESTAMP })); }
+      N.posT = .1;
+      const pos = posOf(P), sig = JSON.stringify(pos);
+      if (sig !== N.lastPos || N.beatT <= 0) {
+        N.lastPos = sig; N.beatT = 5;
+        const t0 = performance.now();
+        kw('players/' + N.wid + '/' + N.uid).update(Object.assign(pos, { name: N.name, pg: Math.min(9999, Math.round(N.ping / 10) * 10), t: firebase.database.ServerValue.TIMESTAMP }))
+          .then(() => { if (N.conn) N.ping = N.ping ? N.ping * .6 + (performance.now() - t0) * .4 : performance.now() - t0; }).catch(() => { });
+      }
     }
   }
+  function posOf(P) {
+    const r = v => Math.round(v * 100) / 100, held = Inv.held();
+    return { x: r(P.x), y: r(P.y), z: r(P.z), yaw: r(P.yaw), pitch: r(P.pitch), dd: P.dead ? 1 : 0, cr: P.creative ? 1 : 0,
+      h: held ? held.id : 0, sn: P.sneak ? 1 : 0, sw: N.swings, hp: Math.max(0, Math.ceil(P.hp)) };
+  }
   requestAnimationFrame(tick);
+
+  /* ---------- connection: losing it and getting it back ---------- */
+  const hudEl = h('div', { style: 'position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:40;padding:5px 12px;background:rgba(0,0,0,.7);border:2px solid #ff7a6a;color:#ffb0a0;font:bold 14px monospace;display:none;pointer-events:none;white-space:nowrap' });
+  document.body.append(hudEl);
+  let hudTxt = '';
+  function netHud(now) {
+    let t = '';
+    if (on() && N.everConn && !N.conn && G.state !== 'title') {
+      const s = Math.floor((now - N.lostAt) / 1000);
+      t = s < 2 ? '' : 'Verbindung weg · versuche neu (' + s + ' s) · deine Änderungen werden nachgeschickt';
+    }
+    if (t !== hudTxt) { hudTxt = t; hudEl.textContent = t; hudEl.style.display = t ? 'block' : 'none'; }
+  }
+  function connChanged(c) {
+    const was = N.conn; N.conn = c;
+    if (c) N.everConn = true;
+    if (!on()) return;
+    if (!c && was) { N.lostAt = performance.now(); }
+    else if (c && !was && N.lostAt) {
+      const long = performance.now() - N.lostAt > 2000; N.lostAt = 0;
+      rearm();
+      if (long) UI.msg('Verbindung wieder da.', '#9be27a');
+    }
+  }
+  // after a reconnect the server has already run our "on disconnect" cleanups: put everything back
+  function rearm() {
+    if (!on() || !G.player) return;
+    const wid = N.wid, me = kw('players/' + wid + '/' + N.uid);
+    me.onDisconnect().remove();
+    me.update(Object.assign(posOf(G.player), { name: N.name, t: firebase.database.ServerValue.TIMESTAMP })).catch(() => { });
+    for (const p of ['mobs/', 'achunks/']) kw(p + wid + '/' + N.uid).onDisconnect().remove();
+    if (N.myClaims.size) { const o = {}; for (const k of N.myClaims) o[k] = 1; kw('achunks/' + wid + '/' + N.uid).update(o).catch(() => { }); }
+    N.mobSig = ''; N.lastPos = '';
+    if (N.openRef) {
+      const ref = N.openRef;
+      ref.set({ u: N.uid, n: N.name, t: firebase.database.ServerValue.TIMESTAMP }).then(() => ref.onDisconnect().remove()).catch(() => {
+        if (N.openRef === ref && UI.cur) { UI.hideScreen(); UI.msg('Jemand anderes hat das inzwischen geöffnet.', '#ffe9a8'); }
+      });
+    }
+  }
+
+  /* ---------- player list (Tab) and managing players ---------- */
+  const tabEl = h('div', { style: 'position:fixed;top:12%;left:50%;transform:translateX(-50%);z-index:40;min-width:300px;max-width:92vw;background:rgba(0,0,0,.75);border:2px solid #555;color:#fff;font:14px monospace;padding:10px 14px;display:none;pointer-events:none' });
+  document.body.append(tabEl);
+  function playerRows() {
+    const P = G.player, rows = [{ uid: N.uid, name: N.name, me: true, ping: N.ping, hp: P ? Math.ceil(P.hp) : 20, d: 0 }];
+    for (const [uid, p] of N.players) rows.push({ uid, name: p.name || '?', ping: +p.pg || 0, hp: p.hp === undefined ? 20 : +p.hp, d: P ? Math.hypot((+p.x || 0) - P.x, (+p.z || 0) - P.z) : 0, dead: !!p.dd, cr: !!p.cr });
+    return rows;
+  }
+  function fillTab() {
+    const rows = playerRows();
+    tabEl.replaceChildren(h('div', { style: 'color:#ffe9a8;margin-bottom:6px' }, 'Code ' + N.code + ' · ' + rows.length + ' Spieler · PvP ' + (N.doc && N.doc.pvp ? 'an' : 'aus')));
+    for (const r of rows) {
+      const pc = r.ping < 120 ? '#9be27a' : r.ping < 300 ? '#ffe9a8' : '#ff7a6a';
+      tabEl.append(h('div', { style: 'display:flex;gap:14px;justify-content:space-between;padding:2px 0' + (r.me ? ';color:#bfe6ff' : '') },
+        h('b', null, r.name + (N.doc && r.uid === N.doc.owner ? ' ★' : '')),
+        h('span', null, (r.dead ? 'tot' : r.cr ? 'kreativ' : '♥ ' + r.hp) + (r.me ? '' : ' · ' + Math.round(r.d) + ' m'),
+          h('span', { style: 'color:' + pc }, ' · ' + (r.ping ? Math.round(r.ping) + ' ms' : '–')))));
+    }
+  }
+  let tabT = 0;
+  addEventListener('keydown', e => {
+    if (e.code !== 'Tab' || !on() || (G.state !== 'play' && G.state !== 'dead') || G.chatOpen || UI.cur) return;
+    e.preventDefault(); e.stopPropagation();
+    if (tabEl.style.display !== 'block') { fillTab(); tabEl.style.display = 'block'; clearInterval(tabT); tabT = setInterval(fillTab, 500); }
+  }, true);
+  addEventListener('keyup', e => { if (e.code === 'Tab') { tabEl.style.display = 'none'; clearInterval(tabT); } }, true);
+  addEventListener('blur', () => { tabEl.style.display = 'none'; clearInterval(tabT); });
+
+  UI.def('netplayers', (el) => {
+    const owner = N.doc && N.doc.owner === N.uid;
+    const list = h('div', { class: 'wlist' });
+    const fill = () => {
+      list.replaceChildren();
+      for (const r of playerRows()) {
+        list.append(h('div', { class: 'wrow' },
+          h('div', { class: 'winfo' }, h('b', null, r.name + (r.me ? ' (du)' : '') + (N.doc && r.uid === N.doc.owner ? ' ★' : '')),
+            h('span', null, (r.dead ? 'tot' : r.cr ? 'kreativ' : '♥ ' + r.hp) + (r.me ? '' : ' · ' + Math.round(r.d) + ' m entfernt') + ' · ' + (r.ping ? Math.round(r.ping) + ' ms' : '–'))),
+          owner && !r.me ? UI.btn('Rauswerfen', () => {
+            kw('bans/' + N.wid + '/' + r.uid).set(Math.round(serverNow() + 10 * 60 * 1000)).then(() => { UI.msg(r.name + ' wurde für 10 Minuten rausgeworfen.', '#ffe9a8'); setTimeout(fill, 600); })
+              .catch(e => UI.toast('Geht nicht', errText(e), 0, '#ff7a6a'));
+          }, 'sm') : null));
+      }
+    };
+    fill();
+    const pvp = UI.btn('', () => {
+      if (!owner) return;
+      kw('worlds/' + N.wid + '/pvp').set(N.doc.pvp ? null : true).catch(e => UI.toast('Geht nicht', errText(e), 0, '#ff7a6a'));
+    }, 'wide');
+    const upd = () => { pvp.textContent = 'Spieler gegen Spieler (PvP): ' + (N.doc && N.doc.pvp ? 'AN' : 'AUS') + (owner ? '' : ' · nur der Besitzer kann das ändern'); };
+    upd();
+    const iv = setInterval(() => { upd(); if (!document.contains(list)) clearInterval(iv); }, 400);
+    el.append(h('h2', null, 'Spieler in dieser Welt'), list, h('div', { class: 'form' }, pvp),
+      h('div', { class: 'wempty' }, 'Tipp: Tab gedrückt halten zeigt die Liste im Spiel.'),
+      h('div', { class: 'row3' }, UI.btn('Zurück', () => UI.show('pause'))));
+    return { close() { clearInterval(iv); } };
+  });
+
+  /* ---------- player vs player ---------- */
+  function pvpTarget(uid) {
+    let t = N.pvpT.get(uid);
+    if (!t) {
+      t = { uid, hw: .32, h: 1.8, x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, dead: false, cd: 0, pvp: true, D: {},
+        hurt(d, sx, sz) {
+          const now = performance.now(); if (now < this.cd || !on() || !N.doc || !N.doc.pvp) return false;
+          this.cd = now + 450;
+          kw('phits/' + N.wid + '/' + uid).push({ d: r1(Math.min(40, d)), k: 'pvp', n: N.name, x: r1(sx), z: r1(sz), ts: firebase.database.ServerValue.TIMESTAMP }).catch(() => { });
+          const a = N.avatars.get(uid); if (a) a.hurtT = .35;
+          G.part(this.x, this.y + 1.2, this.z, 'hit'); Aud.play('hurt', .8, this.x, this.y + 1, this.z);
+          return true;
+        } };
+      N.pvpT.set(uid, t);
+    }
+    return t;
+  }
+  const oEntRay = Ents.raycast;
+  Ents.raycast = function (ox, oy, oz, dx, dy, dz, maxD) {
+    const r = oEntRay.apply(this, arguments);
+    if (!on() || !N.doc || !N.doc.pvp) return r;
+    let best = r, bt = r ? r.t : maxD;
+    for (const [uid, a] of N.avatars) {
+      const p = N.players.get(uid); if (!p || p.dd || p.cr || !a.g.visible) continue;
+      const hgt = 1.8 - .3 * a.sneakK, mn = [a.x - .32, a.y, a.z - .32], mx = [a.x + .32, a.y + hgt, a.z + .32], o = [ox, oy, oz], d = [dx, dy, dz];
+      let t0 = 0, t1 = bt, ok = true;
+      for (let k = 0; k < 3 && ok; k++) {
+        if (Math.abs(d[k]) < 1e-9) { if (o[k] < mn[k] || o[k] > mx[k]) ok = false; }
+        else { let ta = (mn[k] - o[k]) / d[k], tb = (mx[k] - o[k]) / d[k]; if (ta > tb) { const q = ta; ta = tb; tb = q; } if (ta > t0) t0 = ta; if (tb < t1) t1 = tb; if (t0 > t1) ok = false; }
+      }
+      if (ok && t0 < bt) { const t = pvpTarget(uid); t.x = a.x; t.y = a.y; t.z = a.z; t.h = hgt; bt = t0; best = { ent: t, t: t0 }; }
+    }
+    return best;
+  };
 
   /* ---------- game hooks ---------- */
   const oSave = G.saveNow, oAdvance = G.advanceTime, oToTitle = G.toTitle, oChat = G.chatSubmit, oSleep = Play.trySleep;
@@ -576,16 +806,22 @@
   /* ---------- entering / leaving ---------- */
   function listen(ref, ev, fn) { ref.on(ev, fn, e => { console.error(e); }); N.refs.push([ref, ev, fn]); }
   async function enter(wid) {
-    const db = await initFirebase();
-    const [docS, editS, saveS, beS, wxS] = await Promise.all([kw('worlds/' + wid).get(), kw('edits/' + wid).get(), kw('saves/' + wid + '/' + N.uid).get(),
-      kw('be/' + wid).get(), kw('wx/' + wid).get()]);
+    await initFirebase();
+    const [docS, saveS, wxS, banS] = await Promise.all([kw('worlds/' + wid).get(), kw('saves/' + wid + '/' + N.uid).get(), kw('wx/' + wid).get(),
+      kw('bans/' + wid + '/' + N.uid).get().catch(() => null)]);
     const doc = docS.val(); if (!doc) throw new Error('Diese Welt gibt es nicht mehr.');
+    const ban = banS && banS.val();
+    if (ban && ban > serverNow()) throw new Error('Du wurdest aus dieser Welt rausgeworfen. Versuch es in ' + Math.ceil((ban - serverNow()) / 60000) + ' Min. nochmal.');
     N.wid = wid; N.doc = doc; N.code = doc.code; N.edits.clear(); N.byChunk.clear(); N.mine.clear(); N.out.clear(); N.players.clear(); N.lastPos = '';
-    N.be.clear(); N.beByChunk.clear(); N.beSent.clear(); N.locks.clear(); N.items.clear(); N.open = null; N.wxo = wxS.val() || null;
-    const bes = beS.val() || {};
-    for (const k in bes) { const p = k.split('_'); try { const o = JSON.parse(bes[k]); N.beSent.set(k, bes[k]); beRemember(k, +p[0], +p[1], +p[2], o); } catch (e) { } }
-    const ed = editS.val() || {};
-    for (const k in ed) { const p = k.split('_'), q = String(ed[k]).split(','); remember(k, +p[0], +p[1], +p[2], +q[0] | 0, +q[1] | 0); }
+    N.be.clear(); N.beByChunk.clear(); N.beSent.clear(); N.locks.clear(); N.items.clear(); N.open = null; N.openRef = null; N.wxo = wxS.val() || null;
+    N.myClaims.clear(); N.oldClaims.clear(); N.orphans.clear(); N.pvpT.clear();
+    // changed blocks, chests and furnaces: the listeners load everything once and then keep it up to date (one download, not two)
+    listen(kw('edits/' + wid), 'child_added', s => applyRemote(s.key, s.val()));
+    listen(kw('edits/' + wid), 'child_changed', s => applyRemote(s.key, s.val()));
+    listen(kw('be/' + wid), 'child_added', s => beRemote(s.key, s.val()));
+    listen(kw('be/' + wid), 'child_changed', s => beRemote(s.key, s.val()));
+    listen(kw('be/' + wid), 'child_removed', s => beRemote(s.key, null));
+    await Promise.all([kw('edits/' + wid).once('value'), kw('be/' + wid).once('value')]);
     const sv = saveS.val();
     let mine = store.get('klotzwelt.netWorlds', []).filter(w => w.wid !== wid);
     mine.unshift({ wid, code: doc.code, name: doc.name, mode: doc.mode, owner: doc.owner === N.uid, t: Date.now() });
@@ -601,12 +837,12 @@
     N.joinedAt = serverNow();
     await G.startWorld(meta, !sv);
     if (!on()) { disconnect(); return; }
-    listen(kw('edits/' + wid), 'child_added', s => applyRemote(s.key, s.val()));
-    listen(kw('edits/' + wid), 'child_changed', s => applyRemote(s.key, s.val()));
-    listen(kw('be/' + wid), 'child_added', s => beRemote(s.key, s.val()));
-    listen(kw('be/' + wid), 'child_changed', s => beRemote(s.key, s.val()));
-    listen(kw('be/' + wid), 'child_removed', s => beRemote(s.key, null));
-    listen(kw('locks/' + wid), 'child_added', s => N.locks.set(s.key, s.val()));
+    listen(kw('worlds/' + wid + '/pvp'), 'value', s => { if (N.doc) { const was = !!N.doc.pvp; N.doc.pvp = !!s.val(); if (was !== N.doc.pvp) UI.msg('Spieler gegen Spieler ist jetzt ' + (N.doc.pvp ? 'AN.' : 'AUS.'), '#ffe9a8'); } });
+    listen(kw('bans/' + wid + '/' + N.uid), 'value', s => {
+      const v = s.val(); if (!v || v <= serverNow() || !on()) return;
+      UI.toast('Rausgeworfen', 'Der Besitzer hat dich für 10 Minuten aus dieser Welt geworfen.', 0, '#ff7a6a');
+      G.toTitle();
+    });    listen(kw('locks/' + wid), 'child_added', s => N.locks.set(s.key, s.val()));
     listen(kw('locks/' + wid), 'child_changed', s => N.locks.set(s.key, s.val()));
     listen(kw('locks/' + wid), 'child_removed', s => N.locks.delete(s.key));
     listen(kw('items/' + wid), 'child_added', s => itemRemote(s.key, s.val()));
@@ -617,10 +853,10 @@
     kw('achunks/' + wid + '/' + N.uid).onDisconnect().remove();
     listen(kw('mobs/' + wid), 'child_added', s => onMobs(s.key, s.val()));
     listen(kw('mobs/' + wid), 'child_changed', s => onMobs(s.key, s.val()));
-    listen(kw('mobs/' + wid), 'child_removed', s => dropProxies(s.key));
+    listen(kw('mobs/' + wid), 'child_removed', s => ownerGone(s.key));
     listen(kw('achunks/' + wid), 'child_added', s => N.claims.set(s.key, s.val() || {}));
     listen(kw('achunks/' + wid), 'child_changed', s => N.claims.set(s.key, s.val() || {}));
-    listen(kw('achunks/' + wid), 'child_removed', s => N.claims.delete(s.key));
+    listen(kw('achunks/' + wid), 'child_removed', s => { if (N.claims.has(s.key)) N.oldClaims.set(s.key, N.claims.get(s.key)); N.claims.delete(s.key); });
     listen(kw('mhits/' + wid + '/' + N.uid), 'child_added', onMobHit);
     listen(kw('phits/' + wid + '/' + N.uid), 'child_added', onPlayerHit);
     listen(kw('fx/' + wid).limitToLast(20), 'child_added', s => onFx(s.val()));
@@ -640,7 +876,9 @@
     N.refs = [];
     if (N.wid && N.db) { const me = kw('players/' + N.wid + '/' + N.uid); me.remove().catch(() => { }); me.onDisconnect().cancel();
       for (const p of ['mobs/', 'achunks/']) { const r = kw(p + N.wid + '/' + N.uid); r.remove().catch(() => { }); r.onDisconnect().cancel(); } }
-    dropProxies(); N.tgts.clear(); N.claims.clear();
+    dropProxies(); N.tgts.clear(); N.claims.clear(); N.oldClaims.clear(); N.myClaims.clear(); N.pvpT.clear();
+    for (const o of N.orphans.values()) { o.m.dead = true; o.m.deathT = 9; } N.orphans.clear();
+    tabEl.style.display = 'none'; N.openRef = null;
     for (const uid of [...N.avatars.keys()]) dropAvatar(uid);
     N.wid = null; N.doc = null; N.code = null; N.players.clear(); N.out.clear(); N.items.clear(); N.locks.clear(); N.open = null;
     try { history.replaceState(null, '', location.pathname); } catch (e) { }
@@ -739,9 +977,10 @@
         try { await navigator.clipboard.writeText(url); UI.toast('Einladung kopiert', 'Schick den Link oder den Code ' + N.code + ' an deine Freunde.', 0, '#7fcb52'); }
         catch (e) { UI.toast('Code: ' + N.code, url, 0, '#7fcb52'); }
       });
-      const info = h('div', { class: 'wempty' }, 'Online · ' + n + (n === 1 ? ' Spieler' : ' Spieler') + ' · ' + [N.name, ...[...N.players.values()].map(p => p.name)].join(', '));
+      const info = h('div', { class: 'wempty' }, 'Online · ' + n + ' Spieler · ' + [N.name, ...[...N.players.values()].map(p => p.name)].join(', '));
+      const mg = UI.btn('Spieler & PvP', () => UI.show('netplayers'));
       const col = el.querySelector('.menucol');
-      if (col) { col.insertBefore(inv, col.children[1] || null); col.insertBefore(info, inv); }
+      if (col) { col.insertBefore(h('div', { class: 'row2' }, inv, mg), col.children[1] || null); col.insertBefore(info, col.children[1]); }
       const exp = [...el.querySelectorAll('button')].find(b => /Datei sichern/.test(b.textContent)); if (exp) exp.remove();
       const quit = [...el.querySelectorAll('button')].find(b => /zum Titel/.test(b.textContent)); if (quit) quit.textContent = 'Welt verlassen';
     }
