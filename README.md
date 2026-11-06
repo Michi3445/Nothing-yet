@@ -57,6 +57,17 @@ Neben dem Fernseher liegt eine Fernbedienung. Damit stellt man die Lautstärke e
 
 Auf dem Fernseher erscheint dabei eine grüne **VOL**-Anzeige, und die Lautstärke bleibt gespeichert. Die Musik (`audio/intro.m4a`) ist der erste Song (0:00–4:10) aus einem lizenzfreien Musikvideo.
 
+## ▶ Mehr VHS-Gefühl
+
+| Was | Wie |
+|---|---|
+| **Kanal-Zapping** | CH▲ / CH▼ auf der Fernbedienung, `Bild↑` / `Bild↓`, Zahlen `1`–`9` oder am Handy übers Bild wischen. Kurzes Schneegestöber und grüne **CH 03**-Anzeige |
+| **Kassetten-Zustand** | Jede Kassette merkt sich Zählerstand und wie oft sie lief. Abgenutzte Bänder haben Flecken auf dem Etikett und mehr Bildfehler. Zurückspulen mit `R` oder Klick auf den Kassettenschlitz am Fernseher |
+| **Tracking-Regler** | Drehknopf ganz rechts auf der Fernbedienung (ziehen, Mausrad, antippen) oder `[` / `]`. Falsch eingestellt wird das Bild unscharf, rauscht und rollt durch. `T` oder Doppeltippen = Auto-Tracking |
+| **Raumlicht** | Der Fernseher wirft einen flackernden Schein in der Farbe des Spiels ins Zimmer. Abends und nachts wird das Zimmer dunkler (zum Ausprobieren `?stunde=23` an die Adresse hängen) |
+| **Raumgeräusche** | Regen am Fenster und Röhrenbrummen, dazu Klacken beim Einlegen, Surren beim Spulen und Rauschen beim Umschalten. Startet erst nach dem ersten Klick, Knopf **☂ RAUM** schaltet es aus, Stumm auf der Fernbedienung schaltet alles aus |
+| **???** | Gibt es auch. Mehr wird nicht verraten |
+
 ## ⌨ Steuerung
 
 | Taste | Aktion |
@@ -64,6 +75,9 @@ Auf dem Fernseher erscheint dabei eine grüne **VOL**-Anzeige, und die Lautstär
 | `←` `↑` `→` `↓` | Kassette wählen |
 | `Enter` / Klick | Einlegen und starten |
 | `+` / `-` / `M` | Lauter, leiser, stumm |
+| `Bild↑` / `Bild↓` / `1`–`9` | Kanal wechseln |
+| `R` | Kassette zurückspulen |
+| `[` / `]` / `T` | Tracking verstellen / automatisch |
 | `Esc` | auf der Nauto-moD-Seite zurück zum Regal |
 
 ## ▯ Auch am Handy

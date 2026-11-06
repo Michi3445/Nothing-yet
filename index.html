@@ -70,8 +70,16 @@
     opacity: 0; transition: opacity .3s;
     image-rendering: pixelated;
   }
-  .screen.on canvas.noise { opacity: .22; }
+  .screen.on canvas.noise { opacity: var(--nz, .22); }
   .screen.static canvas.noise, .screen.flash canvas.noise { opacity: .85; }
+  /* Kanal-Zapping: Schneegestoeber ueber dem ganzen Bild */
+  .screen.zap canvas.noise { opacity: 1; z-index: 4; }
+  .screen.zap .content { visibility: hidden; }
+  .osd.ch { top: 6%; right: 8%; font-size: 9cqw; z-index: 5; opacity: 0; }
+  .osd.ch.show { opacity: 1; }
+  /* Raumlicht: Dunkelheit (nachts) und flackernder Lichtschein des Fernsehers */
+  #dark, #glow { position: absolute; left: 0; top: 0; image-rendering: pixelated; pointer-events: none; }
+  #glow { mix-blend-mode: screen; opacity: 0; }
 
   .scanlines, .glass, .tracking { position: absolute; inset: 0; pointer-events: none; }
   .scanlines {
@@ -109,7 +117,8 @@
   /* Spiel-Vorschau auf dem Fernseher */
   .p-img { position: absolute; inset: 0; display: none; }
   .p-img.has { display: block; }
-  .p-img canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+  .title, .preview { filter: blur(var(--blur, 0px)); }
+  .p-img canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; filter: blur(var(--blur, 0px)); }
   .p-img::after {
     content: ''; position: absolute; inset: 0;
     background:
@@ -121,6 +130,15 @@
   .preview.img .p-name { font-size: 9cqw; }
   .preview.img .p-tag { font-size: 3.6cqw; }
   .preview.img .p-play { font-size: 4cqw; margin-top: .4cqw; }
+  .p-wear { font-size: 3.6cqw; letter-spacing: .1em; color: var(--text); opacity: .85; white-space: nowrap; }
+  .p-wear b { font-weight: normal; color: var(--green); }
+  .p-wear b.mid { color: #ffd23e; }
+  .p-wear b.bad { color: var(--pink); }
+  .p-wear em { font-style: normal; color: var(--pink); }
+  .preview.img .p-wear { font-size: 3.2cqw; }
+  .screen.evil .p-name { color: #ff4a5a; text-shadow: .5cqw 0 #6a0010, -.5cqw 0 #ff0030; }
+  .screen.evil .p-tag, .screen.evil .p-num { color: #ff5a6e; text-shadow: none; }
+  .screen.evil .p-desc { color: #ffb3bd; }
 
   /* Leichter VHS-Schleier über der ganzen Seite */
   .vhs {
@@ -178,6 +196,7 @@
   .osd.vol span { display: inline-flex; gap: .8cqw; align-items: flex-end; vertical-align: .4cqw; margin: 0 1cqw; }
   .osd.vol i { display: block; width: 2cqw; height: 4cqw; background: rgba(57,255,106,.18); }
   .osd.vol i.on { background: var(--green); box-shadow: 0 0 1.5cqw rgba(57,255,106,.6); }
+  .osd.trk { top: auto; bottom: 22%; font-size: 5cqw; white-space: pre; }
   .screen.ready .osd.mode, .screen.ready .osd.time, .screen.ready .osd.date { opacity: .9; }
 
   .title {
@@ -242,14 +261,15 @@
   }
 
   .hint.big { font-size: 26px; color: var(--text); bottom: 46%; animation: blink 1.1s steps(1) infinite; text-shadow: 2px 0 var(--pink), -2px 0 var(--cyan); }
+  .btns { position: fixed; top: 10px; right: 12px; z-index: 10; display: flex; gap: 8px; }
   .sound {
-    position: fixed; top: 10px; right: 12px; z-index: 10;
     font: 20px 'VT323', monospace; letter-spacing: .1em;
     color: var(--text); background: rgba(11,6,18,.75);
     border: 2px solid #4a3f5c; padding: 2px 10px 0;
     cursor: pointer;
   }
   .sound:hover { border-color: var(--pink); color: #fff; }
+  @media (max-width: 560px) { .sound { font-size: 17px; padding: 1px 7px 0; } .sound .lbl { display: none; } }
   .sound.off { color: #6e6782; }
   .hint {
     position: fixed; bottom: 10px; left: 0; right: 0; text-align: center;
@@ -275,6 +295,8 @@
   <div class="stage" id="stage">
   <div class="scene" id="scene">
     <canvas id="art" aria-label="Fernseher auf einem Regal mit Videokassetten"></canvas>
+    <canvas id="dark"></canvas>
+    <canvas id="glow"></canvas>
 
     <div class="screen" id="screen">
       <canvas class="noise" id="noise"></canvas>
@@ -283,6 +305,7 @@
         <div class="osd mode">PLAY ▶</div>
         <div class="osd time" id="time">SP 0:00:00</div>
         <div class="osd date" id="date"></div>
+        <div class="osd vol trk" id="trkOsd"></div>
         <div class="osd vol" id="volOsd">VOL <span><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span> <b>03</b></div>
 
         <section class="title">
@@ -305,10 +328,12 @@
           <div class="p-num" id="pNum"></div>
           <div class="p-name" id="pName"></div>
           <div class="p-tag" id="pTag"></div>
+          <div class="p-wear" id="pWear"></div>
           <div class="p-desc" id="pDesc"></div>
           <div class="p-play" id="pPlay"></div>
         </section>
       </div>
+      <div class="osd ch" id="chOsd"></div>
       <div class="tracking"></div>
       <div class="jitter"></div>
       <div class="scanlines"></div>
@@ -318,7 +343,10 @@
   </div>
 
   <nav id="list" style="position:absolute;left:-9999px" aria-label="Spiele"></nav>
-  <button class="sound" id="sound" aria-label="Musik an oder aus">♪ AN</button>
+  <div class="btns">
+    <button class="sound" id="amb" aria-label="Raumgeräusche (Regen, Röhrenbrummen) an oder aus">☂ RAUM</button>
+    <button class="sound" id="sound" aria-label="Ton an oder aus">♪ AN</button>
+  </div>
   <audio id="music" src="audio/intro.m4a" preload="auto" loop></audio>
   <div class="hint" id="hint"></div>
   <div class="vhs" aria-hidden="true"><canvas id="vhsNoise" width="160" height="90"></canvas><div class="lines"></div><div class="vig"></div><div class="roll"></div><div class="bars" id="vhsBars"></div></div>
@@ -336,7 +364,26 @@
     { name: 'WICHTEL',        tag: 'PARTY',                 url: 'games/wichtel.html',        desc: 'Sieht aus wie ein Weihnachts-Countdown. Dahinter steckt eine ganze Spielhalle.' },
     { name: 'ABGABE-TRAINER', tag: 'KI · EIGENER API-KEY',  url: 'games/abgabe-trainer.html', desc: 'Übt das Abgabegespräch. Eine KI spielt die Lehrkraft.' },
     { name: 'NAUTO-MOD',      tag: 'MINECRAFT-MOD',         url: 'nauto-mod.html',            desc: 'Naruto-Mod für Minecraft 1.21.1, portiert von AHZNBs Original.' },
+    // Geheimkassette: erscheint erst nach dem Konami-Code oder 5x Tippen auf das VHS-VISION-Schild
+    { name: '???',            tag: 'NICHT ABSPIELEN',       url: 'geheim.html', secret: true, desc: 'Lag hinter dem Regal. Kein Etikett, nur ein Datum: 13.03.1987.' },
   ];
+  const SECRET = 9, NT = 9;
+
+  // ================= Kassetten-Zustand (Zählerstand + Abnutzung, bleibt gespeichert) =================
+  let tapeData = {};
+  try { tapeData = JSON.parse(localStorage.getItem('vhs-tapes')) || {}; } catch (e) {}
+  const td = i => tapeData[i] || (tapeData[i] = { c: 0, p: 0 });
+  const saveTapes = () => { try { localStorage.setItem('vhs-tapes', JSON.stringify(tapeData)); } catch (e) {} };
+  const wear = i => i < 0 || i >= NT ? 0 : Math.min(10, td(i).p);
+  const fmtCount = s => `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(Math.floor(s) % 60).padStart(2, '0')}`;
+  let secretOn = false;
+  try { secretOn = localStorage.getItem('vhs-secret') === '1'; } catch (e) {}
+  // Tracking: Knopfstellung 0..1. Jede Kassette hat ihren eigenen Idealpunkt, abgenutzte wandern weiter weg.
+  let trk = .5;
+  try { const v = parseFloat(localStorage.getItem('vhs-trk')); if (v >= 0 && v <= 1) trk = v; } catch (e) {}
+  const SWEET = [.5, .44, .57, .47, .6, .41, .53, .58, .45, .16];
+  const sweet = i => { if (i < 0) return .5; const b = SWEET[i]; return Math.min(.95, Math.max(.05, b + (b < .5 ? -1 : 1) * wear(i) * .012)); };
+  let chBlink = 0, rewinding = false;
 
   // ================= Palette =================
   const C = {
@@ -370,7 +417,8 @@
         const off = [[0, 5, -3], [4, -2, 2], [-3, 3, -5]][c][r];
         tapes.push({ x: colX[c] + off, y: cab.y + cab.h - 4 - (3 - r) * 17, w: tw, h: 16, top: r === 0 });
       }
-      const remote = { x: 84, y: shelfY - 5, w: 56 };
+      tapes.push({ x: tv.x + tv.w - 84, y: tv.y - 16, w: 66, h: 14, top: true });
+      const remote = { x: 52, y: shelfY - 5, w: 88 };
       return { W, H, portrait, tv, bezel, screen, shelfY, cab, tapes, remote, cols: 3, fs: 7 };
     } else {
       const W = 270, H = 480;
@@ -384,7 +432,8 @@
         const off = [0, 4, -3, 2, -4, 3, -2, 5, 0][i];
         tapes.push({ x: 34 + off, y: cab.y + 10 + i * 23, w: 196, h: 21, top: true });
       }
-      const remote = { x: (W - 56) / 2, y: cab.y + cab.h + 18, w: 56 };
+      tapes.push({ x: tv.x + tv.w - 88, y: tv.y - 16, w: 66, h: 14, top: true });
+      const remote = { x: (W - 88) / 2, y: cab.y + cab.h + 18, w: 88 };
       return { W, H, portrait, tv, bezel, screen, shelfY, cab, tapes, remote, cols: 1, fs: 7 };
     }
   }
@@ -436,7 +485,7 @@
     3:'11111000100010000010000011000101110', 4:'00010001100101010010111110001000010', 5:'11111100001111000001000011000101110',
     6:'00110010001000011110100011000101110', 7:'11111000010001000100010000100001000', 8:'01110100011000101110100011000101110',
     9:'01110100011000101111000010001001100', '-':'00000000000000011111000000000000000', '·':'00000000000000000100000000000000000',
-    '.':'00000000000000000000000000110001100', ' ':'00000000000000000000000000000000000',
+    '.':'00000000000000000000000000110001100', '?':'01110100010000100010001000000000100', ' ':'00000000000000000000000000000000000',
   };
   function textWidth(str, sp = 1) { return str.length * (5 + sp) - sp; }
   function text(str, x, y, _size, color, align = 'left', spacing = 1) {
@@ -508,7 +557,7 @@
 
     // ===== Deko =====
     if (!portrait) {
-      const px = 62, py = shelfY;
+      const px = 28, py = shelfY;
       R(px, py - 14, 18, 14, C.pot1); R(px, py - 14, 18, 2, '#b85c40'); R(px + 14, py - 12, 4, 12, C.pot0);
       R(px + 2, py - 2, 14, 2, C.pot0);
       const leaves = [[8, -30, 3, 16], [3, -26, 3, 12], [13, -27, 3, 13], [-1, -21, 4, 6], [15, -22, 4, 6], [6, -36, 3, 7]];
@@ -554,11 +603,13 @@
     const by = bezel.y + bezel.h;
     const rest = y + h - by;
     text('VHS·VISION', x + w / 2, by + rest * .14, L.portrait ? 12 : 10, C.tv6, 'center', 1);
+    L.logo = { x: x + w / 2 - 32, y: by + rest * .14 - 2, w: 64, h: 11 };
     const sy = by + Math.round(rest * .52), sw = Math.round(w * .5);
     R(x + (w - sw) / 2 - 1, sy - 1, sw + 2, 8, C.tv2);
     R(x + (w - sw) / 2, sy, sw, 6, C.tv0);
     R(x + (w - sw) / 2, sy + 5, sw, 1, C.tv4);
     R(x + (w - sw) / 2 + 3, sy + 2, sw - 6, 2, '#000');
+    L.slot = { x: x + (w - sw) / 2 - 1, y: sy - 1, w: sw + 2, h: 8 };
     for (let i = 0; i < 3; i++) { R(x + 12 + i * 7, sy + 1, 5, 4, C.tv1); R(x + 12 + i * 7, sy + 1, 5, 1, C.tv5); }
     R(x + 10, y + h - 1, 16, 3, C.tv0); R(x + w - 26, y + h - 1, 16, 3, C.tv0);
     L.power = { x: x + w - 22, y: sy - 3, w: 12, h: 12 };
@@ -574,8 +625,9 @@
     if (ledOn) R(L.led.x + 1, L.led.y, 1, 1, '#ff9aa8');
   }
 
-  // Fernbedienung (liegt auf dem Regal): Stumm-Knopf, Minus, 10 Lautstärke-Balken, Plus
-  const SEG0 = 17, SEGW = 3;
+  // Fernbedienung (liegt auf dem Regal): Stumm-Knopf, Minus, 10 Lautstärke-Balken, Plus,
+  // CH- / CH+ und der Tracking-Drehknopf
+  const SEG0 = 17, SEGW = 3, CHD = 57, CHU = 64, KNOB = 73;
   function drawRemote() {
     const { x, y, w } = L.remote;
     R(x + 2, y + 11, w - 2, 1, 'rgba(0,0,0,.55)');
@@ -595,12 +647,22 @@
       const c = on ? (i < 6 ? C.cyan : i < 8 ? '#b98cff' : C.pink) : C.tv0;
       R(x + SEG0 + i * SEGW, y + 7 - h, 2, h, c);
     }
+    // Kanal runter / hoch (grüne Pfeile)
+    R(x + CHD, y + 2, 6, 5, C.tv0); R(x + CHD + 1, y + 3, 4, 1, chBlink < 0 ? '#fff' : '#39ff6a'); R(x + CHD + 2, y + 4, 2, 1, chBlink < 0 ? '#fff' : '#39ff6a');
+    R(x + CHU, y + 2, 6, 5, C.tv0); R(x + CHU + 2, y + 3, 2, 1, chBlink > 0 ? '#fff' : '#39ff6a'); R(x + CHU + 1, y + 4, 4, 1, chBlink > 0 ? '#fff' : '#39ff6a');
+    // Tracking-Drehknopf mit Markierung (-135° bis +135°)
+    rrect(x + KNOB, y, 9, 9, 4, C.tv0);
+    rrect(x + KNOB + 1, y, 7, 8, 3, C.tv3);
+    R(x + KNOB + 3, y, 3, 1, C.tv5);
+    const ang = (-135 + trk * 270 - 90) * Math.PI / 180;
+    R(x + KNOB + 4 + Math.round(Math.cos(ang) * 2.6), y + 4 + Math.round(Math.sin(ang) * 2.6), 1, 1, trkErr() < .05 ? '#39ff6a' : C.pink);
     // Infrarot-Fenster blinkt beim Drücken
     R(x + w - 3, y + 2, 2, 5, irBlink ? '#ff5a6e' : '#3a1420');
   }
 
   function drawTape(i) {
     const t = L.tapes[i], d = TAPES[i];
+    if (d.secret && !secretOn) return;
     const s = i === sel && (state === 'shelf' || state === 'playing');
     const x = t.x - (s ? 7 : 0), y = t.y, w = t.w, h = t.h;
     const th = 3, fh = h - th;
@@ -615,16 +677,25 @@
     const nw = fh + 1;
     R(x + 3, y + th + 1, nw, fh - 2, C.note);
     R(x + 3, y + th + fh - 2, nw, 1, C.noteLo);
-    text(String(i + 1), x + 3 + nw / 2, y + th + (fh - L.fs) / 2, L.fs, C.red, 'center');
+    text(d.secret ? '0' : String(i + 1), x + 3 + nw / 2, y + th + (fh - L.fs) / 2, L.fs, C.red, 'center');
     const lx = x + 6 + nw, lw = w - nw - 12;
-    const lc = !d.url ? C.labDim : s ? '#ffffff' : C.lab;
+    const lc = d.secret ? (s ? '#5a1424' : '#3a0d18') : !d.url ? C.labDim : s ? '#ffffff' : C.lab;
     R(lx, y + th + 2, lw, fh - 4, lc);
-    R(lx, y + th + 2, lw, 1, s ? '#ffffff' : C.labHi);
-    R(lx, y + th + fh - 3, lw, 1, C.labLo);
+    R(lx, y + th + 2, lw, 1, d.secret ? '#6a1a2c' : s ? '#ffffff' : C.labHi);
+    R(lx, y + th + fh - 3, lw, 1, d.secret ? '#200008' : C.labLo);
+    // Abnutzung: Flecken und Kratzer auf dem Etikett, je öfter gespielt desto mehr
+    const wv = d.secret ? 2 : wear(i);
+    let seed = i * 977 + 13;
+    const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    for (let k = 0; k < wv * 3; k++) {
+      const sx = lx + 7 + (rnd() * (lw - 8) | 0), sy = y + th + 2 + (rnd() * (fh - 4) | 0);
+      R(sx, sy, rnd() < .3 ? 2 : 1, 1, rnd() < .5 ? C.labLo : '#8c7a66');
+    }
+    if (wv >= 6 && !d.secret) { R(lx + lw - 3, y + th + 2, 3, 1, C.tp2); R(lx + lw - 1, y + th + 3, 1, 1, C.tp2); }
     R(lx + 3, y + th + 4, 1, fh - 8, C.ink); R(lx + 5, y + th + 4, 1, fh - 8, C.ink);
-    text(d.name, lx + lw / 2 + 3, y + th + 1 + (fh - 2 - L.fs) / 2, L.fs, C.ink, 'center', 1);
+    text(d.name, lx + lw / 2 + 3, y + th + 1 + (fh - 2 - L.fs) / 2, L.fs, d.secret ? C.red : C.ink, 'center', 1);
     if (s) {
-      g.fillStyle = C.pink;
+      g.fillStyle = d.secret ? C.red : C.pink;
       g.fillRect(x - 2, y - 1, w + 4, 1); g.fillRect(x - 2, y + h, w + 4, 1);
       g.fillRect(x - 2, y - 1, 1, h + 2); g.fillRect(x + w + 1, y - 1, 1, h + 2);
       g.fillStyle = C.pinkLo;
@@ -712,6 +783,7 @@
     pBuf.width = pCan.width; pBuf.height = pCan.height;
     drawBackground();
     render();
+    drawDark(); drawGlow(); applyTracking();
   }
 
   // Kamera: Zoomfaktor k und Bildmitte (cx, cy) in Szenen-Pixeln
@@ -765,41 +837,65 @@
     requestAnimationFrame(drawNoise);
   })();
 
-  let pLast = 0;
+  let pLast = 0, rollY = 0;
   (function drawPreview(now) {
     requestAnimationFrame(drawPreview);
     if (now - pLast < 33) return;
+    const dt = Math.min(100, now - pLast);
     pLast = now;
     const box = pCan.parentElement;
     if (!box.classList.contains('has') || !pPic.complete || !pPic.naturalWidth || state !== 'shelf') return;
     const W = pCan.width, H = pCan.height, t = reducedMotion ? 0 : now / 1000;
-    // langsamer Kameraschwenk über das Bild
-    const k = Math.max(W / pPic.naturalWidth, H / pPic.naturalHeight) * (1.1 + .06 * Math.sin(t * .21));
+    const rew = rewinding, pan = rew ? t * 9 : t;
+    const w = wear(sel), a = trkAmt();
+    // langsamer Kameraschwenk über das Bild (beim Zurückspulen im Zeitraffer)
+    const k = Math.max(W / pPic.naturalWidth, H / pPic.naturalHeight) * (1.1 + .06 * Math.sin(pan * .21));
     const dw = pPic.naturalWidth * k, dh = pPic.naturalHeight * k;
-    const fx = (Math.sin(t * .17) + 1) / 2, fy = (Math.sin(t * .13 + 1) + 1) / 2;
+    const fx = (Math.sin(pan * .17) + 1) / 2, fy = (Math.sin(pan * .13 + 1) + 1) / 2;
     bctx.fillStyle = '#000'; bctx.fillRect(0, 0, W, H);
     bctx.drawImage(pPic, -(dw - W) * fx, -(dh - H) * fy, dw, dh);
     const src = bctx.getImageData(0, 0, W, H), d = src.data;
     const out = pctx.createImageData(W, H), o = out.data;
-    // Bandstreifen, der langsam nach unten wandert, plus gelegentliches Ruckeln
-    const band = ((t * 22) % (H + 60)) - 30;
-    const kick = !reducedMotion && Math.random() < .04 ? (Math.random() * 8 - 4) | 0 : 0;
+    // Tracking stark verstellt: das Bild rollt durch, mit schwarzem Austastbalken
+    if (a > .55) rollY = (rollY + (a - .55) * dt * .6) % H;
+    else if (rollY > 0) { rollY += dt * .5; if (rollY >= H) rollY = 0; }
+    const ry = rollY | 0;
+    // Bandstreifen, der langsam nach unten wandert, plus gelegentliches Ruckeln (öfter bei abgenutzten Bändern)
+    const band = ((t * (rew ? 260 : 22)) % (H + 60)) - 30;
+    const kick = !reducedMotion && Math.random() < .04 + w * .03 ? (Math.random() * (8 + w) - (4 + w / 2)) | 0 : 0;
     const kickY = Math.random() * H | 0, kickH = 6 + Math.random() * 20 | 0;
+    const tearP = a * .35 + w * .012;
+    // Kopfumschalt-Rauschen am unteren Rand, wächst mit falschem Tracking
+    const nbY = H * (1 - .035 - a * .25 - w * .006);
+    const sat = 1 - w * .045, snow = a * .035 + (rew ? .02 : 0);
     for (let y = 0; y < H; y++) {
-      let sh = 0;
+      const ys = (y - ry + H) % H, row = ys * W, orow = y * W;
+      if (ry && ys >= H - 10) { for (let x = 0; x < W; x++) { const i = (orow + x) * 4; o[i] = o[i + 1] = o[i + 2] = 6; o[i + 3] = 255; } continue; }
+      let sh = 0, noisy = y > nbY;
       const db = y - band;
       if (db > 0 && db < 14) sh += (Math.sin(y * .9 + t * 30) * 2.5) | 0;
       if (kick && y >= kickY && y < kickY + kickH) sh += kick;
+      if (Math.random() < tearP) sh += ((Math.random() * 2 - 1) * (3 + a * 14)) | 0;
+      if (rew) for (let q = 0; q < 3; q++) { const by = (t * 520 + q * H / 3) % H; if (y > by && y < by + 9) { noisy = true; sh += 14; } }
+      if (noisy) sh += ((Math.random() * 2 - 1) * 18) | 0;
       const bright = (db > 0 && db < 14) ? 1.25 : (y & 1 ? .86 : 1);
-      const row = y * W;
       for (let x = 0; x < W; x++) {
         const xr = Math.min(W - 1, Math.max(0, x + sh + 2)), xg = Math.min(W - 1, Math.max(0, x + sh)), xb = Math.min(W - 1, Math.max(0, x + sh - 2));
-        const i = (row + x) * 4;
-        o[i]     = Math.min(255, (d[(row + xr) * 4] - 128) * 1.15 + 120) * bright;
-        o[i + 1] = Math.min(255, (d[(row + xg) * 4 + 1] - 128) * 1.15 + 116) * bright;
-        o[i + 2] = Math.min(255, (d[(row + xb) * 4 + 2] - 128) * 1.15 + 124) * bright;
-        o[i + 3] = 255;
+        const i = (orow + x) * 4;
+        let r = Math.min(255, (d[(row + xr) * 4] - 128) * 1.15 + 120) * bright;
+        let gg = Math.min(255, (d[(row + xg) * 4 + 1] - 128) * 1.15 + 116) * bright;
+        let b = Math.min(255, (d[(row + xb) * 4 + 2] - 128) * 1.15 + 124) * bright;
+        if (sat < 1) { const l = r * .3 + gg * .59 + b * .11; r = l + (r - l) * sat; gg = l + (gg - l) * sat; b = l + (b - l) * sat; }
+        if (noisy) { const v = Math.random() * 255; r = r * .35 + v * .65; gg = gg * .35 + v * .65; b = b * .35 + v * .7; }
+        else if (snow && Math.random() < snow) r = gg = b = 235;
+        o[i] = r; o[i + 1] = gg; o[i + 2] = b; o[i + 3] = 255;
       }
+    }
+    // Dropouts: weiße Streifen, wo die Magnetschicht abgerieben ist
+    for (let q = 0; q < (w >> 1) + (rew ? 3 : 0); q++) {
+      if (Math.random() < .5) continue;
+      const y = Math.random() * H | 0, x0 = Math.random() * W | 0, len = 8 + Math.random() * 50 | 0;
+      for (let x = x0; x < Math.min(W, x0 + len); x++) { const i = (y * W + x) * 4; o[i] = o[i + 1] = o[i + 2] = 230; }
     }
     pctx.putImageData(out, 0, 0);
   })(0);
@@ -813,6 +909,7 @@
   dateEl.textContent = `${M[now.getMonth()]}. ${String(now.getDate()).padStart(2,'0')} ${now.getFullYear()}`;
   let t0 = 0, timer = null;
   const tick = () => {
+    if ((state === 'shelf' || state === 'playing') && sel >= 0) { timeEl.textContent = 'SP ' + fmtCount(td(sel).c); return; }
     const s = Math.floor((performance.now() - t0) / 1000);
     timeEl.textContent = `SP ${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
   };
@@ -829,6 +926,8 @@
     if (state !== 'off') return;
     state = 'booting';
     ledOn = true; render();
+    glowRGB = [210, 230, 255]; drawGlow(); drawDark();
+    sfxPlay('degauss'); updateAudio();
     hint.textContent = ''; hint.classList.remove('big');
     screen.classList.add('on', 'static');
     av.classList.remove('hide');
@@ -882,23 +981,28 @@
     screen.className = 'screen off-dot';
     ltxt.textContent = 'LADE'; spinEl.textContent = '/'; barEl.textContent = '[--------------------]';
     ledOn = false; state = 'off'; render();
+    drawDark(); sfxPlay('off'); updateAudio();
+    chOsd.classList.remove('show'); rewinding = false;
     hint.textContent = 'POWER-KNOPF ODER TASTE ZUM EINSCHALTEN';
     setTimeout(() => screen.classList.remove('off-dot'), 1500);
   }
 
   function select(i) {
-    if (i === sel) return;
+    if (i === sel || (rewinding && sel >= 0)) return;
     sel = i;
     const t = TAPES[i];
     document.getElementById('pNum').textContent = `TAPE ${String(i + 1).padStart(2, '0')}`;
     document.getElementById('pName').textContent = t.name;
     document.getElementById('pTag').textContent = t.tag;
     document.getElementById('pDesc').textContent = t.desc;
-    document.getElementById('pPlay').textContent = t.url ? (touch ? '▶ NOCHMAL TIPPEN' : '▶ ENTER / KLICK') : '■ BALD VERFÜGBAR';
+    document.getElementById('pPlay').textContent = t.secret ? (touch ? '▶ WIRKLICH? NOCHMAL TIPPEN' : '▶ WIRKLICH? ENTER') : t.url ? (touch ? '▶ NOCHMAL TIPPEN' : '▶ ENTER / KLICK') : '■ BALD VERFÜGBAR';
+    screen.classList.toggle('evil', !!t.secret);
+    updateWear(); tick(); applyTracking();
     const box = document.getElementById('pImgBox'), prev = document.getElementById('preview');
-    if (t.url) {
+    if (t.secret) setGlow([255, 40, 70]);
+    if (t.url && !t.secret) {
       const src = 'previews/' + t.url.split('/').pop().replace('.html', '.jpg');
-      if (!pPic.src.endsWith(src)) pPic.src = src;
+      if (!pPic.src.endsWith(src)) pPic.src = src; else glowFromPic();
       box.classList.add('has'); prev.classList.add('img');
     } else { box.classList.remove('has'); prev.classList.remove('img'); }
     screen.classList.add('flash');
@@ -907,6 +1011,7 @@
   }
 
   function play() {
+    if (rewinding || sel < 0) return;
     const t = TAPES[sel];
     if (!t.url) {
       screen.classList.add('glitch');
@@ -914,6 +1019,9 @@
       return;
     }
     state = 'playing';
+    sfxPlay('clack');
+    // merken, welche Kassette läuft: beim Zurückkommen zählt das Band weiter und nutzt sich ab
+    if (!t.secret) try { sessionStorage.setItem('vhs-play', JSON.stringify({ i: sel, t: Date.now(), r: td(sel).c === 0 })); } catch (e) {}
     document.getElementById('insertSub').textContent = t.name;
     screen.classList.add('glitch', 'inserting');
     setTimeout(() => screen.classList.remove('glitch'), 350);
@@ -929,7 +1037,7 @@
     const show = () => {
       screen.classList.remove('glitch', 'static', 'inserting');
       screen.classList.add('shelf-mode');
-      hint.textContent = touch ? 'KASSETTE ANTIPPEN' : '↑ ↓ ← → WÄHLEN · ENTER ABSPIELEN';
+      hint.textContent = shelfHint();
       const keep = sel; sel = -1; select(keep < 0 ? 0 : keep);
     };
     // erst ganz herausfahren, dann schaltet der Fernseher auf die Spielvorschau um
@@ -938,7 +1046,8 @@
   }
 
   function move(dx, dy) {
-    const n = TAPES.length;
+    const n = NT;
+    if (sel >= NT) return select(0);
     if (L.cols === 1) { select((sel + (dx || dy) + n) % n); return; }
     let c = Math.floor(sel / 3), r = sel % 3;
     c = (c + dx + 3) % 3; r = (r + dy + 3) % 3;
@@ -958,10 +1067,19 @@
       const rx = x - rm.x;
       if (rx < 8) return 'mute';
       if (rx < SEG0 - 1) return 'vdown';
-      if (rx >= SEG0 + 10 * SEGW) return 'vup';
-      return 'seg' + Math.min(10, Math.max(1, Math.floor((rx - SEG0) / SEGW) + 1));
+      if (rx < SEG0 + 10 * SEGW) return 'seg' + Math.min(10, Math.max(1, Math.floor((rx - SEG0) / SEGW) + 1));
+      if (rx < CHD - 1) return 'vup';
+      if (rx < CHU - .5) return 'chdown';
+      if (rx < KNOB - 1) return 'chup';
+      if (rx < KNOB + 10) return 'knob';
+      return null;
     }
+    const lg = L.logo;
+    if (lg && x >= lg.x && x <= lg.x + lg.w && y >= lg.y && y <= lg.y + lg.h) return 'logo';
+    const sl = L.slot;
+    if (state === 'shelf' && sl && x >= sl.x - 2 && x <= sl.x + sl.w + 2 && y >= sl.y - 3 && y <= sl.y + sl.h + 3) return 'slot';
     if (state === 'shelf') for (let i = 0; i < L.tapes.length; i++) {
+      if (TAPES[i].secret && !secretOn) continue;
       const t = L.tapes[i];
       if (x >= t.x - 8 && x <= t.x + t.w && y >= t.y && y <= t.y + t.h) return i;
     }
@@ -990,9 +1108,12 @@
   // Lautstärke über die Fernbedienung (0–10), wird gespeichert
   const volOsd = document.getElementById('volOsd');
   let irT = null, osdT = null;
-  function remoteFeedback() {
+  function irPulse() {
     irBlink = true; render();
-    clearTimeout(irT); irT = setTimeout(() => { irBlink = false; render(); }, 130);
+    clearTimeout(irT); irT = setTimeout(() => { irBlink = false; chBlink = 0; render(); }, 130);
+  }
+  function remoteFeedback() {
+    irPulse();
     volOsd.querySelector('b').textContent = muted ? 'STUMM' : String(level).padStart(2, '0');
     volOsd.querySelectorAll('i').forEach((el, i) => el.classList.toggle('on', !muted && i < level));
     volOsd.classList.add('show');
@@ -1007,6 +1128,7 @@
       clearInterval(fadeT);
       if (!music.paused) music.volume = vol();
     }
+    updateAudio();
     remoteFeedback();
   }
   function startMusic() {
@@ -1019,18 +1141,43 @@
     try { localStorage.setItem('vhs-muted', muted ? '1' : '0'); } catch (e) {}
     showSound();
     if (muted) music.pause(); else { if (level === 0) level = 3; startMusic(); }
-    render();
+    render(); updateAudio();
   }
   soundBtn.addEventListener('click', e => { e.stopPropagation(); toggleSound(); });
   addEventListener('pagehide', () => { try { sessionStorage.setItem('vhs-music-t', String(music.currentTime)); } catch (e) {} });
-  document.addEventListener('pointerdown', startMusic);
-  // Über die Balken ziehen wie bei einem Schieberegler
-  let volDrag = false;
+  document.addEventListener('pointerdown', () => { startMusic(); audioInit(); });
+  // Über die Balken ziehen wie bei einem Schieberegler, am Tracking-Knopf drehen, übers Bild wischen = Kanal
+  let volDrag = false, knobDrag = null, swipe = null, swallowClick = false, lastKnobTap = 0;
   art.addEventListener('pointerdown', ev => {
+    swallowClick = false;
     const h = hit(ev);
     if (typeof h === 'string' && h.startsWith('seg')) { volDrag = true; try { art.setPointerCapture(ev.pointerId); } catch (e) {} }
+    else if (h === 'knob') { knobDrag = { x: ev.clientX, y: ev.clientY, v: trk, moved: false }; try { art.setPointerCapture(ev.pointerId); } catch (e) {} }
+    else swipe = { x: ev.clientX, y: ev.clientY };
+  });
+  art.addEventListener('pointerup', ev => {
+    if (knobDrag) {
+      if (!knobDrag.moved) {
+        const bx = art.getBoundingClientRect(), now = performance.now();
+        const rx = (ev.clientX - bx.left) / bx.width * L.W - (L.remote.x + KNOB + 4.5);
+        if (now - lastKnobTap < 350) autoTrack(); else setTrk(trk + (rx < 0 ? -.04 : .04));
+        lastKnobTap = now;
+      }
+      knobDrag = null; return;
+    }
+    if (swipe && !volDrag && state === 'shelf') {
+      const dx = ev.clientX - swipe.x, dy = ev.clientY - swipe.y;
+      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) { zap(dx < 0 ? 1 : -1); swallowClick = true; }
+    }
+    swipe = null;
   });
   art.addEventListener('pointermove', ev => {
+    if (knobDrag) {
+      const dd = (ev.clientX - knobDrag.x) - (ev.clientY - knobDrag.y);
+      if (Math.abs(dd) > 4) knobDrag.moved = true;
+      if (knobDrag.moved) setTrk(knobDrag.v + dd / 180);
+      return;
+    }
     if (!volDrag) return;
     const bx = art.getBoundingClientRect();
     const rx = (ev.clientX - bx.left) / bx.width * L.W - L.remote.x;
@@ -1041,14 +1188,27 @@
   art.addEventListener('pointerup', endDrag); art.addEventListener('pointercancel', endDrag);
   art.addEventListener('wheel', ev => {
     const h = hit(ev);
-    if (typeof h !== 'string' || h === 'power') return;
+    if (h === 'knob') { ev.preventDefault(); return setTrk(trk + (ev.deltaY < 0 ? .03 : -.03)); }
+    if (!(h === 'mute' || h === 'vdown' || h === 'vup' || (typeof h === 'string' && h.startsWith('seg')))) return;
     ev.preventDefault();
     setLevel(level + (ev.deltaY < 0 ? 1 : -1));
   }, { passive: false });
 
   document.addEventListener('click', ev => {
+    if (swallowClick) { swallowClick = false; return; }
     const h = ev.target === art ? hit(ev) : null;
     if (h === 'power') return state === 'off' ? powerOn() : powerOff();
+    if (h === 'chdown' || h === 'chup') {
+      const dir = h === 'chup' ? 1 : -1;
+      chBlink = dir; irPulse();
+      if (state === 'shelf') return zap(dir);
+      if (state === 'off') return powerOn();
+      if (state === 'title') return enterShelf(false);
+      return;
+    }
+    if (h === 'knob') return;
+    if (h === 'slot') return rewind();
+    if (h === 'logo') logoTap();
     if (h === 'mute') { toggleSound(); return remoteFeedback(); }
     if (h === 'vdown') return setLevel(level - 1);
     if (h === 'vup') return setLevel(level + 1);
@@ -1058,7 +1218,12 @@
     if (state === 'shelf' && typeof h === 'number') { if (h === sel) play(); else select(h); }
   });
   document.addEventListener('keydown', e => {
+    audioInit();
+    if (konami(e.key)) return;
     if (e.key === 'm' || e.key === 'M') { toggleSound(); return remoteFeedback(); }
+    if (e.key === '[' || e.key === ',') return setTrk(trk - .03);
+    if (e.key === ']' || e.key === '.') return setTrk(trk + .03);
+    if (e.key === 't' || e.key === 'T') return autoTrack();
     if (e.key === '+' || e.key === '=') return setLevel(level + 1);
     if (e.key === '-') return setLevel(level - 1);
     startMusic();
@@ -1071,14 +1236,19 @@
     else if (k === 'ArrowLeft') { e.preventDefault(); move(-1, 0); }
     else if (k === 'ArrowRight') { e.preventDefault(); move(1, 0); }
     else if (k === 'Enter' || k === ' ') { e.preventDefault(); play(); }
+    else if (k === 'PageUp') { e.preventDefault(); chBlink = 1; irPulse(); zap(1); }
+    else if (k === 'PageDown') { e.preventDefault(); chBlink = -1; irPulse(); zap(-1); }
+    else if (k >= '1' && k <= '9') zapTo(+k - 1);
+    else if (k === '0' && secretOn) zapTo(SECRET);
+    else if (k === 'r' || k === 'R') rewind();
   });
   addEventListener('pageshow', e => {
-    if (e.persisted && state === 'playing') { screen.classList.remove('inserting'); state = 'shelf'; zoomed = false; applyView(true); render(); }
+    if (e.persisted && state === 'playing') { settlePlay(); screen.classList.remove('inserting'); state = 'shelf'; zoomed = false; applyView(true); render(); updateWear(); tick(); applyTracking(); }
   });
 
   // Linkliste für Screenreader und Suchmaschinen
   const list = document.getElementById('list');
-  TAPES.forEach(t => { if (t.url) { const a = document.createElement('a'); a.href = t.url; a.textContent = t.name; list.appendChild(a); } });
+  TAPES.forEach(t => { if (t.url && !t.secret) { const a = document.createElement('a'); a.href = t.url; a.textContent = t.name; list.appendChild(a); } });
 
   // ================= VHS-Schleier + regelmäßiger Glitch =================
   const vn = document.getElementById('vhsNoise'), vctx = vn.getContext('2d'), vimg = vctx.createImageData(160, 90);
@@ -1110,9 +1280,327 @@
   }
   (function schedule() { setTimeout(() => { if (state !== 'off') bigGlitch(); schedule(); }, 3000 + Math.random() * 3500); })();
 
+  // ================= Raumgeräusche + Effekt-Sounds (Web Audio, startet erst nach Klick / Taste) =================
+  const ambBtn = document.getElementById('amb');
+  let ambOn = true;
+  try { ambOn = localStorage.getItem('vhs-amb') !== '0'; } catch (e) {}
+  const showAmb = () => { ambBtn.innerHTML = `☂<span class="lbl"> RAUM</span> ${ambOn ? 'AN' : 'AUS'}`; ambBtn.classList.toggle('off', !ambOn); };
+  showAmb();
+  ambBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    ambOn = !ambOn;
+    try { localStorage.setItem('vhs-amb', ambOn ? '1' : '0'); } catch (e2) {}
+    showAmb(); audioInit(); updateAudio();
+  });
+  const AU = {};
+  function audioInit() {
+    if (AU.ctx) { if (AU.ctx.state === 'suspended') AU.ctx.resume().catch(() => {}); return; }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    let c;
+    try { c = AU.ctx = new AC(); } catch (e) { return; }
+    AU.master = c.createGain(); AU.master.gain.value = 0; AU.master.connect(c.destination);
+    AU.sfx = c.createGain(); AU.sfx.connect(AU.master);
+    AU.amb = c.createGain(); AU.amb.gain.value = 0; AU.amb.connect(AU.master);
+    const nb = c.createBuffer(1, c.sampleRate * 2, c.sampleRate), nd = nb.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    AU.noise = nb;
+    // Regen am Fenster: Rauschen, dumpf wie durch Glas, schwillt langsam an und ab, dazu einzelne Tropfen
+    const rain = c.createBufferSource(); rain.buffer = nb; rain.loop = true;
+    const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 280;
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1500;
+    const rg = c.createGain(); rg.gain.value = .15;
+    rain.connect(hp); hp.connect(lp); lp.connect(rg); rg.connect(AU.amb); rain.start();
+    const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = .06; lg.gain.value = .05;
+    lfo.connect(lg); lg.connect(rg.gain); lfo.start();
+    AU.drops = setInterval(() => { if (ambOn && !muted && Math.random() < .5) drop(); }, 110);
+    // Röhrenbrummen: 50 Hz mit Obertönen und ganz leisem Zeilentrafo-Fiepen, nur wenn der Fernseher an ist
+    AU.hum = c.createGain(); AU.hum.gain.value = 0; AU.hum.connect(AU.amb);
+    [[50, .05, 'sine'], [100, .035, 'sine'], [150, .016, 'triangle'], [250, .006, 'sine'], [15625, .0012, 'sine']].forEach(([f, v, ty]) => {
+      const o = c.createOscillator(), og = c.createGain(); o.type = ty; o.frequency.value = f; og.gain.value = v;
+      o.connect(og); og.connect(AU.hum); o.start();
+    });
+    updateAudio();
+  }
+  function updateAudio() {
+    if (!AU.ctx) return;
+    const t = AU.ctx.currentTime;
+    AU.master.gain.setTargetAtTime(muted ? 0 : vol() * 1.2, t, .08);
+    AU.amb.gain.setTargetAtTime(ambOn ? 1 : 0, t, .3);
+    AU.hum.gain.setTargetAtTime(state === 'off' ? 0 : 1, t, .15);
+  }
+  // Bausteine: gefiltertes Rauschen und ein Ton mit Hüllkurve
+  function nz(t, dur, type, freq, q, gain, dest) {
+    const c = AU.ctx, s = c.createBufferSource(); s.buffer = AU.noise;
+    const f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+    const gg = c.createGain(); gg.gain.setValueAtTime(.0001, t); gg.gain.exponentialRampToValueAtTime(gain, t + .004); gg.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    s.connect(f); f.connect(gg); gg.connect(dest || AU.sfx); s.start(t, Math.random() * 1.5, dur + .05);
+    return f;
+  }
+  function tone(t, dur, f0, f1, type, gain) {
+    const c = AU.ctx, o = c.createOscillator(), gg = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    gg.gain.setValueAtTime(.0001, t); gg.gain.exponentialRampToValueAtTime(gain, t + .006); gg.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(gg); gg.connect(AU.sfx); o.start(t); o.stop(t + dur + .05);
+    return o;
+  }
+  function drop() {
+    const t = AU.ctx.currentTime + Math.random() * .1;
+    nz(t, .03 + Math.random() * .04, 'bandpass', 1800 + Math.random() * 3200, 7, .05 + Math.random() * .1, AU.amb);
+  }
+  const SFX = {
+    zap(t) { nz(t, .24, 'highpass', 700, .7, .45); tone(t, .06, 70, 40, 'square', .06); },
+    tick(t) { nz(t, .015, 'bandpass', 3800, 5, .25); },
+    // Klappe auf, Kassette rein, Klack, dann läuft der Motor an
+    clack(t) {
+      nz(t, .04, 'bandpass', 2400, 2, .5); tone(t, .08, 150, 60, 'sine', .4);
+      nz(t + .3, .05, 'bandpass', 1300, 3, .7); tone(t + .3, .14, 120, 45, 'sine', .7);
+      nz(t + .55, .03, 'bandpass', 3000, 4, .3);
+      const m = tone(t + .6, 1.1, 48, 62, 'sawtooth', .05); m.frequency.linearRampToValueAtTime(60, t + 1.6);
+    },
+    // Zurückspulen: Surren, das immer höher wird, am Ende ein Klonk
+    rewind(t, dur) {
+      const c = AU.ctx, s = c.createBufferSource(); s.buffer = AU.noise; s.loop = true;
+      const f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 3;
+      f.frequency.setValueAtTime(500, t); f.frequency.exponentialRampToValueAtTime(2600, t + dur);
+      const gg = c.createGain(); gg.gain.setValueAtTime(.0001, t); gg.gain.exponentialRampToValueAtTime(.3, t + .15);
+      gg.gain.setValueAtTime(.3, t + dur - .05); gg.gain.exponentialRampToValueAtTime(.0001, t + dur + .05);
+      s.connect(f); f.connect(gg); gg.connect(AU.sfx); s.start(t); s.stop(t + dur + .1);
+      const o = c.createOscillator(), og = c.createGain(), ol = c.createBiquadFilter();
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(330, t + dur);
+      ol.type = 'lowpass'; ol.frequency.value = 900;
+      og.gain.setValueAtTime(.0001, t); og.gain.exponentialRampToValueAtTime(.07, t + .15); og.gain.setValueAtTime(.07, t + dur - .05); og.gain.exponentialRampToValueAtTime(.0001, t + dur + .05);
+      o.connect(ol); ol.connect(og); og.connect(AU.sfx); o.start(t); o.stop(t + dur + .1);
+      nz(t + dur, .08, 'bandpass', 900, 2, .7); tone(t + dur, .18, 130, 50, 'sine', .6);
+    },
+    degauss(t) { tone(t, .6, 95, 40, 'sine', .45); nz(t, .45, 'lowpass', 500, .7, .25); nz(t + .05, .35, 'highpass', 5000, .5, .06); },
+    off(t) { tone(t, .2, 500, 70, 'sine', .15); },
+    evil(t) { tone(t, 2.6, 55, 41, 'sawtooth', .1); tone(t, 2.6, 58, 39, 'sawtooth', .1); nz(t, 1.2, 'lowpass', 300, 1, .4); },
+  };
+  function sfxPlay(name, ...a) {
+    if (!AU.ctx || muted) return;
+    try { SFX[name](AU.ctx.currentTime + .01, ...a); } catch (e) {}
+  }
+
+  // ================= Raumlicht: Lichtschein vom Fernseher, nachts wird das Zimmer dunkler =================
+  const darkCan = document.getElementById('dark'), dkctx = darkCan.getContext('2d');
+  const glowCan = document.getElementById('glow'), glctx = glowCan.getContext('2d');
+  const qs = new URLSearchParams(location.search);
+  // ?stunde=23 zum Ausprobieren einer anderen Uhrzeit
+  const forcedHour = qs.has('stunde') ? parseFloat(qs.get('stunde')) : NaN;
+  function hourNow() {
+    if (forcedHour >= 0 && forcedHour < 24) return forcedHour;
+    const d = new Date(); return d.getHours() + d.getMinutes() / 60;
+  }
+  function nightAmount() {
+    const h = hourNow(), P = [[0, .66], [5, .66], [7, .3], [9, 0], [17, 0], [19, .3], [21, .52], [23, .66], [24, .66]];
+    for (let k = 1; k < P.length; k++) if (h <= P[k][0]) { const [h0, a0] = P[k - 1], [h1, a1] = P[k]; return a0 + (a1 - a0) * (h - h0) / (h1 - h0); }
+    return 0;
+  }
+  let night = 0, glowRGB = [150, 215, 255], glowKick = 0;
+  function drawDark() {
+    if (!L) return;
+    night = nightAmount();
+    const { W, H } = L, s = L.screen;
+    darkCan.width = W; darkCan.height = H;
+    if (night < .01) return;
+    const im = dkctx.createImageData(W, H), d = im.data;
+    const cx = s.x + s.w / 2, cy = s.y + s.h * .75, rx = L.portrait ? W * .8 : W * .4, ry = L.portrait ? H * .45 : H * .7;
+    const on = state !== 'off';
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const dx = (x - cx) / rx, dy = (y - cy) / ry;
+      const lit = on ? Math.max(0, 1 - Math.sqrt(dx * dx + dy * dy)) : 0;
+      const v = night * (1 - lit * .9) * 6, lo = Math.floor(v);
+      const i = (y * W + x) * 4;
+      d[i] = 4; d[i + 1] = 2; d[i + 2] = 16; d[i + 3] = (lo + (bay(x, y) < v - lo ? 1 : 0)) / 6 * 255;
+    }
+    dkctx.putImageData(im, 0, 0);
+  }
+  function drawGlow() {
+    if (!L) return;
+    const { W, H, tv } = L, s = L.screen;
+    glowCan.width = W; glowCan.height = H;
+    const im = glctx.createImageData(W, H), d = im.data, [r, gr, b] = glowRGB;
+    const cx = s.x + s.w / 2, cy = s.y + s.h * .6, rx = L.portrait ? W * .62 : W * .3, ry = L.portrait ? H * .3 : H * .55;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const dx = (x - cx) / rx, dy = (y - cy) / ry;
+      let l = 1 - Math.sqrt(dx * dx + dy * dy);
+      if (l <= 0) continue;
+      l *= l;
+      if (x >= tv.x && x < tv.x + tv.w && y >= tv.y - 8 && y < tv.y + tv.h) l *= .3;
+      const v = l * 5, lo = Math.floor(v), q = (lo + (bay(x, y) < v - lo ? 1 : 0)) / 5;
+      if (!q) continue;
+      const i = (y * W + x) * 4;
+      d[i] = r; d[i + 1] = gr; d[i + 2] = b; d[i + 3] = q * .75 * 255;
+    }
+    glctx.putImageData(im, 0, 0);
+  }
+  function setGlow(rgb) {
+    if (rgb.join() === glowRGB.join()) return;
+    glowRGB = rgb; drawGlow();
+  }
+  // Farbe des Lichtscheins = mittlere Farbe der Spielvorschau, etwas aufgehellt
+  const colorCache = {};
+  function glowFromPic() {
+    if (!pPic.complete || !pPic.naturalWidth || sel < 0 || TAPES[sel].secret) return;
+    if (!colorCache[pPic.src]) {
+      try {
+        const c = document.createElement('canvas'); c.width = c.height = 8;
+        const x = c.getContext('2d'); x.drawImage(pPic, 0, 0, 8, 8);
+        const d = x.getImageData(0, 0, 8, 8).data; let r = 0, gr = 0, b = 0;
+        for (let i = 0; i < d.length; i += 4) { r += d[i]; gr += d[i + 1]; b += d[i + 2]; }
+        const m = Math.max(r, gr, b, 1);
+        colorCache[pPic.src] = [r, gr, b].map(v => Math.round(v / m * 255 * .65 + 255 * .35));
+      } catch (e) { colorCache[pPic.src] = [150, 215, 255]; }
+    }
+    setGlow(colorCache[pPic.src]);
+  }
+  pPic.addEventListener('load', glowFromPic);
+  // Flackern: Helligkeit springt leicht, bei Rauschen und Umschalten blitzt es
+  setInterval(() => {
+    if (state === 'off' || !L) { glowCan.style.opacity = '0'; return; }
+    let o = (.6 + night * .55) * (.85 + Math.random() * .15);
+    if (Math.random() < .04) o *= .6;
+    if (screen.classList.contains('zap') || screen.classList.contains('static')) o *= 1.35 + Math.random() * .3;
+    if (performance.now() < glowKick) o *= 1.4;
+    glowCan.style.opacity = Math.min(1, o).toFixed(3);
+  }, 70);
+  setInterval(() => { if (Math.abs(nightAmount() - night) > .02) drawDark(); }, 60000);
+
+  // ================= Kanal-Zapping =================
+  const chOsd = document.getElementById('chOsd');
+  let chT = null;
+  function osdMsg(txt, ms = 1800) {
+    chOsd.textContent = txt;
+    chOsd.style.fontSize = txt.length > 6 ? '5.5cqw' : '';
+    chOsd.classList.add('show');
+    clearTimeout(chT); chT = setTimeout(() => chOsd.classList.remove('show'), ms);
+  }
+  const chName = i => 'CH ' + (TAPES[i].secret ? '00' : String(i + 1).padStart(2, '0'));
+  const chans = () => secretOn ? [SECRET, 0, 1, 2, 3, 4, 5, 6, 7, 8] : [0, 1, 2, 3, 4, 5, 6, 7, 8];
+  function zapTo(i) {
+    if (rewinding || !TAPES[i] || (TAPES[i].secret && !secretOn)) return;
+    if (state === 'title') return enterShelf(false);
+    if (state !== 'shelf') return;
+    screen.classList.add('zap');
+    glowKick = performance.now() + 260;
+    sfxPlay('zap');
+    clearTimeout(zapTo.t); zapTo.t = setTimeout(() => screen.classList.remove('zap'), 260);
+    select(i);
+    osdMsg(chName(i));
+  }
+  function zap(dir) {
+    const c = chans(), k = c.indexOf(sel);
+    zapTo(c[((k < 0 ? 0 : k) + dir + c.length) % c.length]);
+  }
+
+  // ================= Zählerstand, Abnutzung, Zurückspulen =================
+  const modeEl = document.querySelector('.osd.mode');
+  const pWear = document.getElementById('pWear');
+  function updateWear() {
+    if (sel < 0 || TAPES[sel].secret) { pWear.textContent = sel >= 0 ? '■■■■■ ??? · NICHT ZURÜCKGESPULT' : ''; return; }
+    const w = wear(sel), n = 5 - Math.ceil(w / 2);
+    const lab = w === 0 ? 'NEU' : w <= 3 ? 'GUT' : w <= 6 ? 'ABGENUTZT' : w <= 9 ? 'MITGENOMMEN' : 'HINÜBER';
+    const cls = w <= 3 ? '' : w <= 6 ? 'mid' : 'bad';
+    pWear.innerHTML = `<b class="${cls}">${'■'.repeat(n)}${'□'.repeat(5 - n)}</b> ${lab}` +
+      (td(sel).c > 0 ? ` · <em>${touch ? 'SCHLITZ = SPULEN' : 'R = SPULEN'}</em>` : '');
+  }
+  function settlePlay() {
+    let p = null;
+    try { p = JSON.parse(sessionStorage.getItem('vhs-play')); sessionStorage.removeItem('vhs-play'); } catch (e) {}
+    if (!p || !(p.i >= 0 && p.i < NT)) return;
+    const d = td(p.i);
+    d.p += p.r ? 1 : 2;   // nicht zurückgespult abgespielt nutzt das Band stärker ab
+    d.c = Math.min(99 * 3600, d.c + Math.max(20, Math.min(3 * 3600, (Date.now() - p.t) / 1000 | 0)));
+    saveTapes();
+  }
+  function rewind() {
+    if (state !== 'shelf' || sel < 0 || rewinding) return;
+    const d = td(sel);
+    if (TAPES[sel].secret) { sfxPlay('zap'); return osdMsg('KLEMMT'); }
+    if (d.c <= 0) return osdMsg('■ SCHON AM ANFANG');
+    rewinding = true;
+    const from = d.c, dur = Math.min(3200, 900 + from / 3), start = performance.now();
+    screen.classList.add('rew'); modeEl.textContent = '◀◀ REW';
+    sfxPlay('rewind', dur / 1000);
+    (function st(now) {
+      const u = Math.min(1, (now - start) / dur);
+      d.c = Math.round(from * (1 - u));
+      tick();
+      if (u < 1) return requestAnimationFrame(st);
+      d.c = 0; saveTapes(); rewinding = false;
+      screen.classList.remove('rew'); modeEl.textContent = 'PLAY ▶';
+      osdMsg('■ STOP'); updateWear(); tick(); render();
+    })(start);
+  }
+
+  // ================= Tracking-Regler =================
+  const trkOsd = document.getElementById('trkOsd');
+  let trkT = null;
+  function trkErr() { return Math.abs(trk - sweet(sel)); }
+  function trkAmt() { return Math.min(1, Math.max(0, (trkErr() - .035) / .28)); }
+  function applyTracking() {
+    const a = state === 'off' ? 0 : trkAmt();
+    screen.style.setProperty('--nz', (.22 + a * .5).toFixed(3));
+    screen.style.setProperty('--blur', (a * .8).toFixed(2) + 'px');
+  }
+  function setTrk(v, label = 'TRACKING') {
+    const old = trk;
+    trk = Math.max(0, Math.min(1, v));
+    try { localStorage.setItem('vhs-trk', trk.toFixed(3)); } catch (e) {}
+    if (Math.round(old * 30) !== Math.round(trk * 30)) sfxPlay('tick');
+    applyTracking(); irPulse();
+    const n = 21, p = Math.round(trk * (n - 1));
+    const bar = Array.from({ length: n }, (_, k) => k === p ? '█' : k === (n - 1) / 2 ? '|' : '-').join('');
+    trkOsd.textContent = `${label}${trkErr() < .035 ? ' OK' : ''}\n◄${bar}►`;
+    trkOsd.classList.add('show');
+    clearTimeout(trkT); trkT = setTimeout(() => trkOsd.classList.remove('show'), 1600);
+  }
+  function autoTrack() {
+    const from = trk, to = sweet(sel), start = performance.now();
+    (function st(now) {
+      const u = Math.min(1, (now - start) / 700), e = (1 - Math.cos(Math.PI * u)) / 2;
+      setTrk(from + (to - from) * e, 'AUTO TRACKING');
+      if (u < 1) requestAnimationFrame(st);
+    })(start);
+  }
+
+  // ================= Geheimkassette =================
+  const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+  let kIdx = 0, logoTaps = [];
+  function konami(key) {
+    const k = key && key.length === 1 ? key.toLowerCase() : key;
+    if (k === KONAMI[kIdx]) { if (++kIdx === KONAMI.length) { kIdx = 0; unlockSecret(); return true; } }
+    else kIdx = k === KONAMI[0] ? 1 : 0;
+    return false;
+  }
+  // 5x schnell auf das VHS·VISION-Schild am Fernseher tippen (für Handys ohne Pfeiltasten)
+  function logoTap() {
+    const n = performance.now();
+    logoTaps = logoTaps.filter(x => n - x < 2500);
+    logoTaps.push(n);
+    if (logoTaps.length >= 5) { logoTaps = []; unlockSecret(); }
+  }
+  function unlockSecret() {
+    const first = !secretOn;
+    secretOn = true;
+    try { localStorage.setItem('vhs-secret', '1'); } catch (e) {}
+    sfxPlay('evil');
+    bigGlitch(); setTimeout(bigGlitch, 200); setTimeout(bigGlitch, 420);
+    if (state === 'shelf') setTimeout(() => zapTo(SECRET), 300); else render();
+    if (first) {
+      hint.textContent = 'EINE KASSETTE IST AUFGETAUCHT…';
+      setTimeout(() => { if (state === 'shelf') hint.textContent = shelfHint(); }, 3500);
+    }
+  }
+  function shelfHint() {
+    return touch ? 'ANTIPPEN · WISCHEN = KANAL' : '↑↓←→ WÄHLEN · ENTER START · BILD↑↓ KANAL · R SPULEN · T TRACKING';
+  }
+
   // ================= Start =================
   (async () => {
     try { await document.fonts.load('12px VT323'); } catch (e) {}
+    settlePlay();
     setupLayout();
     zoomed = !seen();
     applyView(true);
